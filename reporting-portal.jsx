@@ -272,7 +272,7 @@ function PageHome({ nav }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 22 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text, margin: 0 }}>營運總覽</h1>
-          <div style={{ fontSize: 12, color: C.textTer, marginTop: 5 }}>台灣大宇集團 ・ 最後更新 2026/03/20 09:30</div>
+          <div style={{ fontSize: 12, color: C.textTer, marginTop: 5 }}>台灣寶工 ・ 最後更新 2026/03/20 09:30</div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Chip label="本月" active icon={Filter} /><Chip label="區域: 全部" /><Chip label="部門: 全部" /><Chip icon={RefreshCw} label="更新" />
@@ -543,7 +543,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif", background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <TopNav company="台灣大宇集團" />
+      <TopNav company="台灣寶工" />
       <div style={{ display: "flex", flex: 1 }}>
         <Sidebar page={page} dept={dept}
           onNav={(t, d) => nav(t === "home" ? "home" : "dept", d)}
