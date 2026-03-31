@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ReportCenter.Web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "ReportCenter.Web"],
+      "port": 5276
+    }
+  ]
+}

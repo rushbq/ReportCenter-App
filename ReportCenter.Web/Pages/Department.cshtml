@@ -37,11 +37,12 @@
         </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="flex overflow-x-auto border-b-2 border-bdr mb-4">
+    <!-- Tabs: desktop=underline, mobile=pills wrap -->
+    <!-- Desktop tabs -->
+    <div class="hidden md:flex border-b-2 border-bdr mb-4">
         <button @@click="tab='all'"
                 :class="tab==='all' ? 'font-semibold text-pri border-b-2 border-pri' : 'text-txt-sec border-b-2 border-transparent'"
-                class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent">
+                class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent whitespace-nowrap">
             全部
             <span :class="tab==='all' ? 'bg-pri-light text-pri' : 'bg-bdr-light text-txt-ter'"
                   class="text-[10px] font-semibold px-2 py-0.5 rounded-full">@Model.Reports.Count</span>
@@ -51,12 +52,36 @@
             var subCount = Model.Reports.Count(r => r.Cat == sub);
             <button @@click="tab='@sub'"
                     :class="tab==='@sub' ? 'font-semibold text-pri border-b-2 border-pri' : 'text-txt-sec border-b-2 border-transparent'"
-                    class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent">
+                    class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent whitespace-nowrap">
                 @sub
                 @if (subCount > 0)
                 {
                     <span :class="tab==='@sub' ? 'bg-pri-light text-pri' : 'bg-bdr-light text-txt-ter'"
                           class="text-[10px] font-semibold px-2 py-0.5 rounded-full">@subCount</span>
+                }
+            </button>
+        }
+    </div>
+    <!-- Mobile tabs: pill style with wrap -->
+    <div class="flex md:hidden flex-wrap gap-2 mb-4">
+        <button @@click="tab='all'"
+                :class="tab==='all' ? 'bg-pri text-white border-pri' : 'bg-white text-txt-sec border-bdr'"
+                class="px-3 py-1.5 text-[13px] cursor-pointer rounded-full border flex items-center gap-1.5">
+            全部
+            <span :class="tab==='all' ? 'bg-white/20 text-white' : 'bg-bdr-light text-txt-ter'"
+                  class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full">@Model.Reports.Count</span>
+        </button>
+        @foreach (var sub in Model.Dept.Subs)
+        {
+            var subCount = Model.Reports.Count(r => r.Cat == sub);
+            <button @@click="tab='@sub'"
+                    :class="tab==='@sub' ? 'bg-pri text-white border-pri' : 'bg-white text-txt-sec border-bdr'"
+                    class="px-3 py-1.5 text-[13px] cursor-pointer rounded-full border flex items-center gap-1.5">
+                @sub
+                @if (subCount > 0)
+                {
+                    <span :class="tab==='@sub' ? 'bg-white/20 text-white' : 'bg-bdr-light text-txt-ter'"
+                          class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full">@subCount</span>
                 }
             </button>
         }

@@ -1,4 +1,5 @@
-<nav class="h-14 bg-pri flex items-center px-3 md:px-5 gap-2 md:gap-3 text-white sticky top-0 z-50 shadow-[0_2px_8px_rgba(0,87,88,0.15)]">
+<nav class="h-14 bg-pri flex items-center px-3 md:px-5 gap-2 md:gap-3 text-white sticky top-0 z-50 shadow-[0_2px_8px_rgba(0,87,88,0.15)]"
+     x-data="{ mobileSearch: false }">
     <!-- Mobile hamburger -->
     <button @@click="sidebarOpen = !sidebarOpen" class="lg:hidden p-1.5 rounded-md bg-white/10 border border-white/10 cursor-pointer">
         <i data-lucide="menu" class="w-5 h-5"></i>
@@ -16,8 +17,8 @@
         <span class="font-semibold">台灣寶工</span>
         <i data-lucide="chevron-down" class="w-3 h-3 opacity-50"></i>
     </div>
-    <!-- Search -->
-    <div class="hidden sm:flex flex-1 max-w-[400px] bg-white/[0.08] rounded-lg px-3.5 py-[7px] items-center gap-2.5 border border-white/10 ml-2">
+    <!-- Search (desktop) -->
+    <div class="hidden sm:flex flex-1 max-w-[400px] bg-white/[0.08] rounded-lg px-3.5 h-9 items-center gap-2.5 border border-white/10 ml-2">
         <i data-lucide="search" class="w-3.5 h-3.5 opacity-50"></i>
         <span class="opacity-40 text-[13px]">搜尋報表、儀表板…</span>
         <span class="ml-auto text-[10px] opacity-35 border border-white/20 rounded px-1.5 py-0.5">⌘K</span>
@@ -26,15 +27,34 @@
     <!-- Right -->
     <div class="flex items-center gap-3 md:gap-4">
         <!-- Mobile search icon -->
-        <div class="sm:hidden cursor-pointer p-1">
+        <button @@click="mobileSearch = !mobileSearch" class="sm:hidden cursor-pointer p-1 bg-transparent border-0 text-white">
             <i data-lucide="search" class="w-[18px] h-[18px] opacity-80"></i>
-        </div>
-        <div class="relative cursor-pointer p-1">
-            <i data-lucide="bell" class="w-[18px] h-[18px] opacity-80"></i>
-            <div class="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-[#ff6b6b] border-2 border-pri"></div>
-        </div>
+        </button>
         <div class="w-[34px] h-[34px] rounded-full bg-white/15 flex items-center justify-center text-[13px] font-bold cursor-pointer border border-white/10">
             CY
+        </div>
+    </div>
+
+    <!-- Mobile search overlay -->
+    <div x-show="mobileSearch" x-cloak
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 -translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-100"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-2"
+         class="sm:hidden absolute top-14 left-0 right-0 bg-white shadow-lg border-b border-bdr z-50 p-3"
+         @@click.outside="mobileSearch = false">
+        <div class="flex items-center gap-2">
+            <div class="flex-1 flex items-center gap-2 bg-surface border border-bdr rounded-lg px-3 py-2.5">
+                <i data-lucide="search" class="w-4 h-4 text-txt-ter"></i>
+                <input type="text" placeholder="搜尋報表、儀表板…"
+                       class="flex-1 bg-transparent border-0 outline-none text-sm text-txt placeholder:text-txt-ter"
+                       x-ref="mobileSearchInput" />
+            </div>
+            <button @@click="mobileSearch = false" class="text-txt-sec text-sm cursor-pointer bg-transparent border-0 shrink-0 px-2">
+                取消
+            </button>
         </div>
     </div>
 </nav>
