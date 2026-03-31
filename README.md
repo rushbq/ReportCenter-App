@@ -11,26 +11,23 @@
 
 ## 技術
 
-- React 18
-- Vite
-- Recharts（圖表）
-- Lucide React（圖示）
+- .NET 10 Razor Pages
+- Tailwind CSS（CDN）
+- Alpine.js（輕量互動）
+- Chart.js（圖表）
+- HTMX（局部更新）
+- Lucide Icons
 
 ## 開發
 
 ```bash
-npm install
-npm run dev
+cd ReportCenter.Web
+dotnet run
 ```
 
 ## 建置
 
 ```bash
-npm run build
+cd ReportCenter.Web
+dotnet build
 ```
-
-## 部署
-
-透過 GitHub Pages 部署，push 至 `gh-pages` 分支即可自動上線。
-
-線上網址：https://rushbq.github.io/ReportCenter-App/

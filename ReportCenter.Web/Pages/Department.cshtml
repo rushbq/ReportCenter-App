@@ -2,7 +2,7 @@
 @using ReportCenter.Web.Models
 @model ReportCenter.Web.Pages.DepartmentModel
 
-<div class="p-6 pb-10 max-w-[1200px]" x-data="{ view: 'card', tab: 'all' }">
+<div class="p-4 md:p-6 pb-10 max-w-[1200px]" x-data="{ view: 'card', tab: 'all' }">
     <!-- Breadcrumb -->
     <div class="text-[12px] text-txt-ter mb-3.5">
         <a href="/" class="hover:text-pri no-underline text-txt-ter">首頁</a> /
@@ -11,13 +11,13 @@
     </div>
 
     <!-- Header -->
-    <div class="flex justify-between items-start mb-5">
+    <div class="flex flex-col sm:flex-row justify-between items-start mb-5 gap-3">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-[10px] bg-pri-light flex items-center justify-center">
+            <div class="w-10 h-10 rounded-[10px] bg-pri-light flex items-center justify-center shrink-0">
                 <i data-lucide="@Model.Dept.Icon" class="w-5 h-5 text-pri"></i>
             </div>
             <div>
-                <h1 class="text-[20px] font-bold text-txt">@Model.Dept.Label 報表</h1>
+                <h1 class="text-lg md:text-[20px] font-bold text-txt">@Model.Dept.Label 報表</h1>
                 <div class="text-[12px] text-txt-ter mt-0.5">共 @Model.Dept.Count 份報表</div>
             </div>
         </div>
@@ -38,7 +38,7 @@
     </div>
 
     <!-- Tabs -->
-    <div class="flex border-b-2 border-bdr mb-4">
+    <div class="flex overflow-x-auto border-b-2 border-bdr mb-4">
         <button @@click="tab='all'"
                 :class="tab==='all' ? 'font-semibold text-pri border-b-2 border-pri' : 'text-txt-sec border-b-2 border-transparent'"
                 class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent">
@@ -69,7 +69,7 @@
     </div>
 
     <!-- Card View -->
-    <div x-show="view==='card'" class="grid grid-cols-3 gap-3.5">
+    <div x-show="view==='card'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
         @foreach (var r in Model.Reports)
         {
             <a href="/Report?dept=@Model.DeptId&name=@System.Net.WebUtility.UrlEncode(r.Name)"
@@ -93,7 +93,7 @@
     </div>
 
     <!-- Table View -->
-    <div x-show="view==='table'" x-cloak class="bg-white border border-bdr rounded-[10px] overflow-hidden shadow-sm">
+    <div x-show="view==='table'" x-cloak class="bg-white border border-bdr rounded-[10px] overflow-hidden shadow-sm overflow-x-auto">
         <div class="grid grid-cols-[2.2fr_3fr_1fr_0.8fr_80px] px-5 py-2.5 bg-surface text-[11px] font-bold text-txt-ter uppercase tracking-wider">
             <span>報表名稱</span><span>說明</span><span>分類</span><span>更新</span><span>操作</span>
         </div>

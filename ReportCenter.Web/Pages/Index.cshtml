@@ -2,11 +2,11 @@
 @using ReportCenter.Web.Models
 @model ReportCenter.Web.Pages.IndexModel
 
-<div class="p-6 pb-10 max-w-[1200px]">
+<div class="p-4 md:p-6 pb-10 max-w-[1200px]">
     <!-- Header -->
-    <div class="flex justify-between items-start mb-5">
+    <div class="flex flex-col sm:flex-row justify-between items-start mb-5 gap-3">
         <div>
-            <h1 class="text-[22px] font-bold text-txt">營運總覽</h1>
+            <h1 class="text-[20px] md:text-[22px] font-bold text-txt">營運總覽</h1>
             <div class="text-[12px] text-txt-ter mt-1">台灣寶工 ・ 最後更新 2026/03/20 09:30</div>
         </div>
         <div class="flex gap-2 flex-wrap">
@@ -18,7 +18,7 @@
     </div>
 
     <!-- KPIs -->
-    <div class="grid grid-cols-4 gap-3.5 mb-5">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
         <partial name="_KpiCard" view-data='new ViewDataDictionary(ViewData) { { "title", "本月營收" }, { "value", "$12.8M" }, { "trend", "8.3" }, { "note", "vs 上月" } }' />
         <partial name="_KpiCard" view-data='new ViewDataDictionary(ViewData) { { "title", "採購成本" }, { "value", "$4.2M" }, { "trend", "-3.1" }, { "note", "vs 上月" } }' />
         <partial name="_KpiCard" view-data='new ViewDataDictionary(ViewData) { { "title", "毛利率" }, { "value", "67.2%" }, { "trend", "2.4" }, { "note", "" } }' />
@@ -26,7 +26,7 @@
     </div>
 
     <!-- Charts Row -->
-    <div class="grid grid-cols-[1.6fr_1fr] gap-4 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 mb-6">
         <!-- Revenue Trend -->
         <div class="bg-white border border-bdr rounded-xl p-5 shadow-sm">
             <div class="flex justify-between items-center mb-1">
@@ -37,12 +37,16 @@
                     <span class="chip">年</span>
                 </div>
             </div>
-            <canvas id="revenueChart" height="220"></canvas>
+            <div class="relative h-[220px]">
+                <canvas id="revenueChart"></canvas>
+            </div>
         </div>
         <!-- Department Comparison -->
         <div class="bg-white border border-bdr rounded-xl p-5 shadow-sm">
             <span class="font-semibold text-sm text-txt">部門比較（百萬）</span>
-            <canvas id="deptChart" height="220" class="mt-2"></canvas>
+            <div class="relative h-[220px] mt-2">
+                <canvas id="deptChart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -51,7 +55,7 @@
         <span class="font-semibold text-[15px] text-txt">快速存取</span>
         <span class="text-[12px] text-pri font-medium cursor-pointer">管理釘選 →</span>
     </div>
-    <div class="grid grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         @foreach (var r in ReportData.QuickAccessItems)
         {
             <a href="/Report?dept=@r.DeptId&name=@System.Net.WebUtility.UrlEncode(r.Name)"
