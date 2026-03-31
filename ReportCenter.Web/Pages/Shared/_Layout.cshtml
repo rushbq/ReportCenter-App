@@ -1,0 +1,62 @@
+@using ReportCenter.Web.Models
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ReportCenter</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pri: { DEFAULT: '#005758', hover: '#006d6e', light: '#e8f4f4' },
+                        acc: '#00b4b6',
+                        surface: '#f5f7f8',
+                        txt: { DEFAULT: '#1a2e2f', sec: '#5c7576', ter: '#94aeb0' },
+                        ok: '#0d9668',
+                        bad: '#dc4a4a',
+                        bdr: { DEFAULT: '#e2e8ea', light: '#eef2f3' },
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <!-- Noto Sans TC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+        [x-cloak] { display: none !important; }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="bg-surface min-h-screen flex flex-col">
+    @await Html.PartialAsync("_TopNav")
+
+    <div class="flex flex-1">
+        @await Html.PartialAsync("_Sidebar")
+
+        <main class="flex-1 overflow-y-auto" style="height: calc(100vh - 56px)">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+        document.addEventListener('htmx:afterSwap', () => lucide.createIcons());
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

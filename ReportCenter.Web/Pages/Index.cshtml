@@ -1,0 +1,143 @@
+@page
+@using ReportCenter.Web.Models
+@model ReportCenter.Web.Pages.IndexModel
+
+<div class="p-6 pb-10 max-w-[1200px]">
+    <!-- Header -->
+    <div class="flex justify-between items-start mb-5">
+        <div>
+            <h1 class="text-[22px] font-bold text-txt">營運總覽</h1>
+            <div class="text-[12px] text-txt-ter mt-1">台灣寶工 ・ 最後更新 2026/03/20 09:30</div>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            <span class="chip chip-active"><i data-lucide="filter" class="w-3 h-3"></i>本月</span>
+            <span class="chip">區域: 全部</span>
+            <span class="chip">部門: 全部</span>
+            <span class="chip"><i data-lucide="refresh-cw" class="w-3 h-3"></i>更新</span>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-4 gap-3.5 mb-5">
+        <partial name="_KpiCard" view-data='new ViewDataDictionary(ViewData) { { "title", "本月營收" }, { "value", "$12.8M" }, { "trend", "8.3" }, { "note", "vs 上月" } }' />
+        <partial name="_KpiCard" view-data='new ViewDataDictionary(ViewData) { { "title", "採購成本" }, { "value", "$4.2M" }, { "trend", "-3.1" }, { "note", "vs 上月" } }' />
+        <partial name="_KpiCard" view-data='new ViewDataDictionary(ViewData) { { "title", "毛利率" }, { "value", "67.2%" }, { "trend", "2.4" }, { "note", "" } }' />
+        <partial name="_KpiCard" view-data='new ViewDataDictionary(ViewData) { { "title", "訂單數" }, { "value", "1,847" }, { "trend", "12.6" }, { "note", "vs 上月" } }' />
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-[1.6fr_1fr] gap-4 mb-6">
+        <!-- Revenue Trend -->
+        <div class="bg-white border border-bdr rounded-xl p-5 shadow-sm">
+            <div class="flex justify-between items-center mb-1">
+                <span class="font-semibold text-sm text-txt">營收趨勢</span>
+                <div class="flex gap-1">
+                    <span class="chip chip-active">月</span>
+                    <span class="chip">季</span>
+                    <span class="chip">年</span>
+                </div>
+            </div>
+            <canvas id="revenueChart" height="220"></canvas>
+        </div>
+        <!-- Department Comparison -->
+        <div class="bg-white border border-bdr rounded-xl p-5 shadow-sm">
+            <span class="font-semibold text-sm text-txt">部門比較（百萬）</span>
+            <canvas id="deptChart" height="220" class="mt-2"></canvas>
+        </div>
+    </div>
+
+    <!-- Quick Access -->
+    <div class="flex justify-between items-center mb-3.5">
+        <span class="font-semibold text-[15px] text-txt">快速存取</span>
+        <span class="text-[12px] text-pri font-medium cursor-pointer">管理釘選 →</span>
+    </div>
+    <div class="grid grid-cols-4 gap-3">
+        @foreach (var r in ReportData.QuickAccessItems)
+        {
+            <a href="/Report?dept=@r.DeptId&name=@System.Net.WebUtility.UrlEncode(r.Name)"
+               class="bg-white border border-bdr rounded-[10px] p-4 flex flex-col gap-1.5 shadow-sm no-underline
+                      hover:shadow-md hover:border-pri transition-all">
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pri-light text-pri">@r.Dept</span>
+                    <i data-lucide="star" class="w-[13px] h-[13px] text-[#f5a623] fill-[#f5a623]"></i>
+                </div>
+                <span class="text-[13px] font-semibold text-txt leading-tight">@r.Name</span>
+                <span class="text-[11px] text-txt-ter">#@r.Tag</span>
+            </a>
+        }
+    </div>
+</div>
+
+@section Styles {
+<style>
+    .chip {
+        font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+        border: 1px solid #e2e8ea; background: white; color: #5c7576;
+        white-space: nowrap; user-select: none; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .chip-active {
+        border-color: #005758; background: #e8f4f4; color: #005758; font-weight: 600;
+    }
+</style>
+}
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const C = { pri: '#005758', acc: '#00b4b6', priH: '#006d6e', ter: '#94aeb0', borderL: '#eef2f3' };
+
+    // Revenue Trend Chart
+    new Chart(document.getElementById('revenueChart'), {
+        type: 'line',
+        data: {
+            labels: ['10月','11月','12月','1月','2月','3月'],
+            datasets: [
+                {
+                    label: '本年', data: [10.2,11.1,12.5,10.8,11.6,12.8],
+                    borderColor: C.pri, backgroundColor: C.pri + '20',
+                    borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 0,
+                },
+                {
+                    label: '去年', data: [9.8,10.3,11.0,9.5,10.1,10.9],
+                    borderColor: C.acc, borderWidth: 1.5, borderDash: [4,3],
+                    fill: false, tension: 0.4, pointRadius: 0,
+                },
+                {
+                    label: '預算', data: [10.5,10.8,11.2,11.0,11.3,11.5],
+                    borderColor: C.ter, borderWidth: 1, borderDash: [2,2],
+                    fill: false, tension: 0.4, pointRadius: 0,
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter } },
+                y: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter, callback: v => v + 'M' } }
+            }
+        }
+    });
+
+    // Dept Comparison Chart
+    new Chart(document.getElementById('deptChart'), {
+        type: 'bar',
+        data: {
+            labels: ['採購部','業務部','財務部','人資部','資訊部'],
+            datasets: [
+                { label: '實際', data: [4.2,5.8,1.2,0.8,1.6], backgroundColor: C.pri, borderRadius: 4, barPercentage: 0.6 },
+                { label: '目標', data: [4.5,5.2,1.3,0.9,1.8], backgroundColor: C.borderL, borderRadius: 4, barPercentage: 0.6 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 10 }, color: C.ter } },
+                y: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter } }
+            }
+        }
+    });
+});
+</script>
+}

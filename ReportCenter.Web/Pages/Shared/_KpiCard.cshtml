@@ -1,0 +1,29 @@
+@{
+    var title = ViewData["title"]?.ToString() ?? "";
+    var value = ViewData["value"]?.ToString() ?? "";
+    var trendStr = ViewData["trend"]?.ToString() ?? "0";
+    var note = ViewData["note"]?.ToString() ?? "";
+    var trend = double.Parse(trendStr);
+    var isUp = trend > 0;
+}
+
+<div class="bg-white border border-bdr rounded-xl px-5 py-[18px] shadow-sm min-w-[155px]">
+    <div class="text-[12px] text-txt-sec font-medium mb-1.5">@title</div>
+    <div class="text-[26px] font-bold text-pri tracking-tight leading-none">@value</div>
+    <div class="flex items-center gap-1 mt-2 text-[12px] font-semibold @(isUp ? "text-ok" : "text-bad")">
+        @if (isUp)
+        {
+            <i data-lucide="arrow-up-right" class="w-[13px] h-[13px]"></i>
+            <span>+@trendStr%</span>
+        }
+        else
+        {
+            <i data-lucide="arrow-down-right" class="w-[13px] h-[13px]"></i>
+            <span>@trendStr%</span>
+        }
+        @if (!string.IsNullOrEmpty(note))
+        {
+            <span class="text-txt-ter font-normal ml-0.5">@note</span>
+        }
+    </div>
+</div>
