@@ -1,4 +1,6 @@
 @using ReportCenter.Web.Models
+@using ReportCenter.Web.Services
+@inject IReportService ReportService
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -28,6 +30,8 @@
     </script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Site JS (Alpine Store 初始化，須在 Alpine 之前載入) -->
+    <script src="/js/site.js"></script>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Chart.js -->
@@ -70,8 +74,69 @@
         </main>
     </div>
 
+    <!-- 全站搜尋 Modal -->
+    <div x-data x-show="$store.search.open" x-cloak
+         class="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
+        <div class="absolute inset-0 bg-black/40" @@click="$store.search.open = false"></div>
+        <div class="relative bg-white rounded-xl shadow-2xl border border-bdr w-full max-w-[520px] mx-4"
+             x-transition:enter="transition ease-out duration-150"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            <div class="flex items-center gap-3 px-4 py-3 border-b border-bdr">
+                <i data-lucide="search" class="w-5 h-5 text-txt-ter shrink-0"></i>
+                <input id="globalSearchInput" type="text" placeholder="搜尋報表、儀表板…"
+                       class="flex-1 bg-transparent border-0 outline-none text-[15px] text-txt placeholder:text-txt-ter"
+                       x-model="$store.search.query"
+                       @@input.debounce.200ms="$store.search.search()" />
+                <kbd class="text-[11px] text-txt-ter bg-surface border border-bdr rounded px-1.5 py-0.5">ESC</kbd>
+            </div>
+            <div class="max-h-[360px] overflow-y-auto">
+                <template x-if="$store.search.query && $store.search.results.length === 0">
+                    <div class="px-4 py-8 text-center text-txt-ter text-sm">找不到符合的結果</div>
+                </template>
+                <template x-for="r in $store.search.results" :key="r.url">
+                    <button class="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-surface border-0 bg-transparent cursor-pointer border-b border-bdr-light"
+                            @@click="$store.search.go(r.url)">
+                        <i data-lucide="file-text" class="w-4 h-4 text-pri mt-0.5 shrink-0"></i>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[13px] font-semibold text-txt truncate" x-text="r.name"></div>
+                            <div class="text-[11px] text-txt-sec truncate" x-text="r.desc"></div>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-pri-light text-pri font-semibold" x-text="r.dept"></span>
+                                <span class="text-[10px] text-txt-ter" x-text="r.cat"></span>
+                            </div>
+                        </div>
+                    </button>
+                </template>
+            </div>
+            <template x-if="!$store.search.query">
+                <div class="px-4 py-3 text-[12px] text-txt-ter border-t border-bdr-light">
+                    <span class="font-medium">提示：</span>輸入報表名稱、部門或分類來搜尋
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- 搜尋索引注入 -->
+    @{
+        var allDepts = ReportService.GetDepartments();
+        var searchIndex = new List<object>();
+        foreach (var dept in allDepts)
+        {
+            foreach (var report in ReportService.GetReports(dept.Id))
+            {
+                searchIndex.Add(new { name = report.Name, desc = report.Desc, dept = dept.Label, deptId = dept.Id, cat = report.Cat, url = $"/Report?dept={dept.Id}&name={System.Net.WebUtility.UrlEncode(report.Name)}" });
+            }
+        }
+    }
     <script>
-        document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            // 注入搜尋索引
+            if (Alpine && Alpine.store) {
+                Alpine.store('search').index = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(searchIndex));
+            }
+        });
         document.addEventListener('htmx:afterSwap', () => lucide.createIcons());
     </script>
     @await RenderSectionAsync("Scripts", required: false)

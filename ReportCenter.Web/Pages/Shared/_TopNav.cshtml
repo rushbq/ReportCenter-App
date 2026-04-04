@@ -42,17 +42,18 @@
             }
         </div>
     </div>
-    <!-- Search (desktop) -->
-    <div class="hidden sm:flex flex-1 max-w-[400px] bg-white/[0.08] rounded-lg px-3.5 h-9 items-center gap-2.5 border border-white/10 ml-2">
+    <!-- Search (desktop) — 點擊開啟全站搜尋 Modal -->
+    <button @@click="$store.search.toggle()"
+            class="hidden sm:flex flex-1 max-w-[400px] bg-white/[0.08] rounded-lg px-3.5 h-9 items-center gap-2.5 border border-white/10 ml-2 cursor-pointer text-white">
         <i data-lucide="search" class="w-3.5 h-3.5 opacity-50"></i>
         <span class="opacity-40 text-[13px]">搜尋報表、儀表板…</span>
         <span class="ml-auto text-[10px] opacity-35 border border-white/20 rounded px-1.5 py-0.5">⌘K</span>
-    </div>
+    </button>
     <div class="flex-1"></div>
     <!-- Right -->
     <div class="flex items-center gap-3 md:gap-4">
         <!-- Mobile search icon -->
-        <button @@click="mobileSearch = !mobileSearch" class="sm:hidden cursor-pointer p-1 bg-transparent border-0 text-white">
+        <button @@click="$store.search.toggle()" class="sm:hidden cursor-pointer p-1 bg-transparent border-0 text-white">
             <i data-lucide="search" class="w-[18px] h-[18px] opacity-80"></i>
         </button>
         <!-- User Info -->
@@ -67,26 +68,4 @@
         </div>
     </div>
 
-    <!-- Mobile search overlay -->
-    <div x-show="mobileSearch" x-cloak
-         x-transition:enter="transition ease-out duration-150"
-         x-transition:enter-start="opacity-0 -translate-y-2"
-         x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-100"
-         x-transition:leave-start="opacity-100 translate-y-0"
-         x-transition:leave-end="opacity-0 -translate-y-2"
-         class="sm:hidden absolute top-14 left-0 right-0 bg-white shadow-lg border-b border-bdr z-50 p-3"
-         @@click.outside="mobileSearch = false">
-        <div class="flex items-center gap-2">
-            <div class="flex-1 flex items-center gap-2 bg-surface border border-bdr rounded-lg px-3 py-2.5">
-                <i data-lucide="search" class="w-4 h-4 text-txt-ter"></i>
-                <input type="text" placeholder="搜尋報表、儀表板…"
-                       class="flex-1 bg-transparent border-0 outline-none text-sm text-txt placeholder:text-txt-ter"
-                       x-ref="mobileSearchInput" />
-            </div>
-            <button @@click="mobileSearch = false" class="text-txt-sec text-sm cursor-pointer bg-transparent border-0 shrink-0 px-2">
-                取消
-            </button>
-        </div>
-    </div>
 </nav>
