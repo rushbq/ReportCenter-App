@@ -81,14 +81,18 @@
     <div class="bg-white border border-bdr rounded-xl overflow-hidden shadow-sm overflow-x-auto">
         <div class="flex justify-between items-center px-5 py-3.5 border-b border-bdr">
             <span class="font-semibold text-sm text-txt">明細資料</span>
-            <span class="text-[11px] text-txt-ter">顯示 1-20 / 共 156 筆</span>
+            @{
+                var startRow = (Model.CurrentPage - 1) * 20 + 1;
+                var endRow = Math.Min(Model.CurrentPage * 20, Model.TotalRows);
+            }
+            <span class="text-[11px] text-txt-ter">顯示 @startRow-@endRow / 共 @Model.TotalRows 筆</span>
         </div>
         <!-- Header -->
         <div class="grid grid-cols-[2fr_1.5fr_1fr_0.8fr_1fr_0.8fr] min-w-[700px] px-5 py-2.5 bg-surface text-[11px] font-bold text-txt-ter uppercase tracking-wider">
             <span>物料名稱</span><span>供應商</span><span>數量</span><span>單價</span><span>金額</span><span>變化</span>
         </div>
         <!-- Rows -->
-        @foreach (var r in ReportData.MaterialRows)
+        @foreach (var r in Model.MaterialRows)
         {
             var isDown = r.Change < 0;
             <div class="grid grid-cols-[2fr_1.5fr_1fr_0.8fr_1fr_0.8fr] min-w-[700px] px-5 py-3 border-t border-bdr-light text-[13px] items-center">

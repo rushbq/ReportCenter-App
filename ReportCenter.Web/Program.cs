@@ -1,7 +1,10 @@
+using ReportCenter.Web.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddSingleton<IReportService, MockReportService>();
 
 var app = builder.Build();
 

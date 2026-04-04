@@ -1,7 +1,10 @@
 @using ReportCenter.Web.Models
+@using ReportCenter.Web.Services
+@inject IReportService ReportService
 @{
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
     var currentDept = Context.Request.Query["dept"].ToString();
+    var departments = ReportService.GetDepartments();
 }
 
 <aside class="w-[248px] min-w-[248px] bg-white border-r border-bdr flex flex-col sticky top-14 overflow-y-auto"
@@ -24,7 +27,7 @@
 
     <!-- Departments -->
     <div class="px-3.5">
-        @foreach (var d in ReportData.Departments)
+        @foreach (var d in departments)
         {
             var isActive = currentDept == d.Id && currentPage != "/Index";
             <div>

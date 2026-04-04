@@ -1,10 +1,15 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using ReportCenter.Web.Models;
+using ReportCenter.Web.Services;
 
 namespace ReportCenter.Web.Pages;
 
 public class DepartmentModel : PageModel
 {
+    private readonly IReportService _svc;
+
+    public DepartmentModel(IReportService svc) => _svc = svc;
+
     public string DeptId { get; set; } = "procurement";
     public Department Dept { get; set; } = null!;
     public List<Report> Reports { get; set; } = [];
@@ -12,7 +17,7 @@ public class DepartmentModel : PageModel
     public void OnGet(string dept)
     {
         DeptId = dept ?? "procurement";
-        Dept = ReportData.Departments.Find(d => d.Id == DeptId) ?? ReportData.Departments[0];
-        Reports = ReportData.Reports.GetValueOrDefault(DeptId) ?? ReportData.Reports["procurement"];
+        Dept = _svc.GetDepartment(DeptId) ?? _svc.GetDepartments()[0];
+        Reports = _svc.GetReports(DeptId);
     }
 }
