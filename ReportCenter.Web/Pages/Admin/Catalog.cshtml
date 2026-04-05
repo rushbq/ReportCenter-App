@@ -31,11 +31,18 @@
     var depObjectsJson = JsonSerializer.Serialize(Model.AllDependencies, jsonOpts);
     var categoriesJson = JsonSerializer.Serialize(Model.Categories.Select(c => new {
         categoryID = c.CategoryID,
-        deptID = c.DeptID,
         categoryName = c.CategoryName,
         isActive = c.IsActive
     }), jsonOpts);
-    // 取得不重複的部門路徑清單供篩選使用
+    var reportFoldersJson = JsonSerializer.Serialize(Model.ReportFolders.Select(f => new {
+        value = (int)f.Value,
+        label = f.Label
+    }), jsonOpts);
+    var baseUrlsJson = JsonSerializer.Serialize(new {
+        smartQuery = Model.BaseUrls.SmartQuery,
+        ssrs = Model.BaseUrls.SSRS
+    }, jsonOpts);
+    // 取得不重複的報表資料夾清單供篩選使用
     var reportPaths = Model.CatalogItems.Select(i => i.ReportPath).Where(p => !string.IsNullOrWhiteSpace(p) && p != "-").Distinct().OrderBy(p => p).ToList();
     var reportPathsJson = JsonSerializer.Serialize(reportPaths, jsonOpts);
 }
@@ -109,10 +116,10 @@
         <!-- 分隔線 -->
         <div class="w-px h-6 bg-bdr"></div>
 
-        <!-- 部門路徑篩選 -->
+        <!-- 報表資料夾篩選 -->
         <select x-model="pathFilter"
                 class="px-3 py-1 rounded-lg border border-bdr text-[11px] outline-none focus:border-pri transition-colors bg-white text-txt-sec">
-            <option value="">全部部門路徑</option>
+            <option value="">全部資料夾</option>
             <template x-for="p in allPaths" :key="p">
                 <option :value="p" x-text="p"></option>
             </template>
@@ -241,7 +248,7 @@
                            placeholder="輸入報表名稱">
                 </div>
 
-                <!-- 工具類型 + 路徑 -->
+                <!-- 工具類型 + 報表資料夾 -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">工具類型</label>
@@ -253,12 +260,12 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">部門路徑</label>
+                        <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">報表資料夾</label>
                         <select x-model="form.reportPath"
                                 class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-white">
                             <option value="">請選擇</option>
-                            <template x-for="dept in catalogDepts" :key="dept.deptID">
-                                <option :value="dept.label" x-text="dept.label"></option>
+                            <template x-for="folder in reportFolders" :key="folder.value">
+                                <option :value="folder.label" x-text="folder.label"></option>
                             </template>
                         </select>
                     </div>
@@ -269,10 +276,10 @@
                     <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">
                         <span x-text="form.reportTool === 'Internal' ? '內部路由' : (form.reportTool === 'SmartQuery' ? 'SmartQuery 路徑' : 'SSRS 路徑')"></span>
                     </label>
-                    <!-- BASE URL 提示 -->
+                    <!-- BASE URL 提示 (從 appsettings 讀取) -->
                     <div x-show="form.reportTool !== 'Internal'" class="flex items-center gap-0 mb-0">
                         <span class="inline-flex items-center px-3 py-2 rounded-l-lg border border-r-0 border-bdr bg-surface text-[11px] text-txt-ter font-mono whitespace-nowrap"
-                              x-text="form.reportTool === 'SmartQuery' ? 'https://sq.proskit.com/report/' : 'https://ssrs.proskit.com/Reports/'"></span>
+                              x-text="form.reportTool === 'SmartQuery' ? baseUrls.smartQuery : baseUrls.ssrs"></span>
                         <input type="text" x-model="form.reportCode"
                                class="flex-1 px-3 py-2 rounded-r-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors font-mono"
                                :placeholder="form.reportTool === 'SmartQuery' ? 'GUID 路徑' : '報表路徑'">
@@ -304,13 +311,6 @@
                     <span class="text-[11px] shrink-0" :class="form.isActive ? 'text-ok' : 'text-bad'" x-text="form.isActive ? '啟用' : '停用'"></span>
                 </div>
 
-                <div>
-                    <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">備註</label>
-                    <textarea x-model="form.remarks" rows="2"
-                              class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors resize-none"
-                              placeholder="選填"></textarea>
-                </div>
-
                 <!-- 分類 -->
                 <div>
                     <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">報表分類</label>
@@ -318,7 +318,7 @@
                             class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-white">
                         <option :value="null">未分類</option>
                         <template x-for="cat in filteredCategories" :key="cat.categoryID">
-                            <option :value="cat.categoryID" x-text="getCategoryLabel(cat)" :selected="form.categoryID == cat.categoryID"></option>
+                            <option :value="cat.categoryID" x-text="cat.categoryName" :selected="form.categoryID == cat.categoryID"></option>
                         </template>
                     </select>
                     <p class="text-[10px] text-txt-ter mt-1" x-show="allCategories.length === 0">尚未建立分類，請先至資料庫新增 ReportCategory 資料</p>
@@ -374,6 +374,14 @@
                             </template>
                         </div>
                     </div>
+                </div>
+
+                <!-- 備註 (最下方) -->
+                <div class="border-t border-bdr pt-4">
+                    <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">備註</label>
+                    <textarea x-model="form.remarks" rows="2"
+                              class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors resize-none"
+                              placeholder="選填"></textarea>
                 </div>
             </div>
 
@@ -454,6 +462,8 @@ function catalogPage() {
         allDepObjects: [],
         allCategories: [],
         allPaths: [],
+        reportFolders: [],
+        baseUrls: { smartQuery: '', ssrs: '' },
 
         // Modal
         modalOpen: false,
@@ -485,10 +495,7 @@ function catalogPage() {
         },
 
         get filteredCategories() {
-            // 依選取的部門篩選分類，若無選部門則顯示全部
-            if (this.selectedDepts.length === 0) return this.allCategories.filter(c => c.isActive);
-            const selectedNumIds = this.selectedDepts.map(id => parseInt(id));
-            return this.allCategories.filter(c => c.isActive && selectedNumIds.includes(c.deptID));
+            return this.allCategories.filter(c => c.isActive);
         },
 
         get depSuggestions() {
@@ -505,6 +512,8 @@ function catalogPage() {
             this.allDepObjects = @Html.Raw(depObjectsJson);
             this.allCategories = @Html.Raw(categoriesJson);
             this.allPaths = @Html.Raw(reportPathsJson);
+            this.reportFolders = @Html.Raw(reportFoldersJson);
+            this.baseUrls = @Html.Raw(baseUrlsJson);
 
             // 檢查 URL 訊息
             const params = new URLSearchParams(window.location.search);
@@ -606,11 +615,6 @@ function catalogPage() {
         doDelete() {
             this.$refs.deleteId.value = this.deleteItem.reportID;
             this.$refs.deleteForm.submit();
-        },
-
-        getCategoryLabel(cat) {
-            const dept = this.catalogDepts.find(d => parseInt(d.deptID) === cat.deptID);
-            return dept ? dept.deptName + '-' + cat.categoryName : cat.categoryName;
         },
 
         toolClasses(tool) {

@@ -3,7 +3,7 @@ namespace ReportCenter.Web.Services;
 using ReportCenter.Web.Models;
 
 /// <summary>
-/// 報表資料服務介面 — 實作此介面即可切換為真實 API 資料來源
+/// 報表資料服務介面 — 負責儀表板、部門、報表明細等核心資料
 /// </summary>
 public interface IReportService
 {
@@ -33,21 +33,4 @@ public interface IReportService
     ChartData GetRevenueChartData(string companyId, string period = "month");
     ChartData GetDeptComparisonData(string companyId);
     ChartData GetReportChartData(string deptId, string reportName, string chartType);
-
-    // ─── 報表目錄管理 ───
-    List<ReportCatalogItem> GetCatalogItems(string? toolFilter = null, bool? isActive = null, string? search = null);
-    ReportCatalogItem? GetCatalogItem(int reportId);
-    ReportCatalogItem SaveCatalogItem(ReportCatalogItem item);
-    bool DeleteCatalogItem(int reportId);
-    AdminStats GetAdminStats();
-    List<string> GetAllDependencyObjects();
-
-    // ─── 報表分類管理 ───
-    List<ReportCategory> GetCategories(int? deptId = null);
-    ReportCategory? GetCategory(int categoryId);
-    ReportCategory SaveCategory(ReportCategory category);
-    bool DeleteCategory(int categoryId);
-
-    // ─── 部門 (User_Dept) ───
-    List<CatalogDept> GetCatalogDepartments(string? area = null);
 }

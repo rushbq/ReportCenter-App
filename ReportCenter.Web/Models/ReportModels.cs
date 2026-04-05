@@ -100,7 +100,7 @@ public class ReportCatalogItem
     public int ReportID { get; set; }
     public string ReportName { get; set; } = "";
     public string ReportTool { get; set; } = "Internal";  // Internal / SmartQuery / SSRS
-    public string ReportPath { get; set; } = "";           // 部門路徑
+    public string ReportPath { get; set; } = "";           // 報表資料夾
     public string ReportCode { get; set; } = "";           // URL 或內部路由
     public string SourceName { get; set; } = "";           // SP/函數名稱
     public DateTime CreateDate { get; set; } = DateTime.Now;
@@ -116,7 +116,6 @@ public class ReportCatalogItem
 public class ReportCategory
 {
     public int CategoryID { get; set; }
-    public int DeptID { get; set; }
     public string CategoryName { get; set; } = "";
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;

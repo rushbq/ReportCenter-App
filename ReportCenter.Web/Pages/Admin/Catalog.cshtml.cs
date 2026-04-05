@@ -1,21 +1,29 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using ReportCenter.Web.Models;
+using ReportCenter.Web.Models.Enums;
+using ReportCenter.Web.Models.Settings;
 using ReportCenter.Web.Services;
 
 namespace ReportCenter.Web.Pages.Admin;
 
 public class CatalogModel : PageModel
 {
-    private readonly IReportService _svc;
+    private readonly ICatalogService _catalogSvc;
+    private readonly IHttpContextAccessor _httpCtx;
 
-    public CatalogModel(IReportService svc) => _svc = svc;
+    public CatalogModel(ICatalogService catalogSvc, IHttpContextAccessor httpCtx)
+    {
+        _catalogSvc = catalogSvc;
+        _httpCtx = httpCtx;
+    }
 
     public List<ReportCatalogItem> CatalogItems { get; set; } = [];
-    public List<Department> Departments { get; set; } = [];
     public List<string> AllDependencies { get; set; } = [];
     public List<ReportCategory> Categories { get; set; } = [];
     public List<CatalogDept> CatalogDepts { get; set; } = [];
+    public IReadOnlyList<(ReportFolder Value, string Label)> ReportFolders { get; set; } = [];
+    public ReportBaseUrlSettings BaseUrls { get; set; } = new();
 
     public void OnGet(string? tool, string? active, string? search)
     {
@@ -25,11 +33,15 @@ public class CatalogModel : PageModel
             "false" => false,
             _ => null
         };
-        CatalogItems = _svc.GetCatalogItems(tool, isActive, search);
-        Departments = _svc.GetDepartments();
-        AllDependencies = _svc.GetAllDependencyObjects();
-        Categories = _svc.GetCategories();
-        CatalogDepts = _svc.GetCatalogDepartments();
+
+        var companyId = _httpCtx.HttpContext?.Request.Cookies["companyId"] ?? "tw";
+
+        CatalogItems = _catalogSvc.GetCatalogItems(tool, isActive, search);
+        AllDependencies = _catalogSvc.GetAllDependencyObjects();
+        Categories = _catalogSvc.GetCategories();
+        CatalogDepts = _catalogSvc.GetCatalogDepartments(companyId);
+        ReportFolders = _catalogSvc.GetReportFolders();
+        BaseUrls = _catalogSvc.GetBaseUrls();
     }
 
     public IActionResult OnPostSave(
@@ -37,7 +49,7 @@ public class CatalogModel : PageModel
         string reportCode, string sourceName, bool isActive, string? remarks,
         string? deptIds, string? dependencies, int? categoryId)
     {
-        var item = reportId > 0 ? _svc.GetCatalogItem(reportId) ?? new() : new();
+        var item = reportId > 0 ? _catalogSvc.GetCatalogItem(reportId) ?? new() : new();
         item.ReportID = reportId;
         item.ReportName = reportName ?? "";
         item.ReportTool = reportTool ?? "Internal";
@@ -65,24 +77,19 @@ public class CatalogModel : PageModel
             ? []
             : dependencies.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
 
-        _svc.SaveCatalogItem(item);
+        _catalogSvc.SaveCatalogItem(item);
         return RedirectToPage(new { msg = "saved" });
     }
 
     public IActionResult OnPostDelete(int reportId)
     {
-        _svc.DeleteCatalogItem(reportId);
+        _catalogSvc.DeleteCatalogItem(reportId);
         return RedirectToPage(new { msg = "deleted" });
     }
 
     public IActionResult OnPostToggle(int reportId)
     {
-        var item = _svc.GetCatalogItem(reportId);
-        if (item != null)
-        {
-            item.IsActive = !item.IsActive;
-            _svc.SaveCatalogItem(item);
-        }
+        _catalogSvc.ToggleCatalogItem(reportId);
         return RedirectToPage(new { msg = "toggled" });
     }
 }
