@@ -15,6 +15,11 @@
 ```
 ReportCenter.Web/
 ├── Models/ReportModels.cs          # 資料模型 (Company, UserInfo, Department, Report, KPI, ChartData, ReportCatalogItem 等)
+├── Middleware/
+│   └── DevWindowsAuthMiddleware.cs # 開發環境模擬 Windows AD 驗證中介層
+├── Models/Settings/
+│   ├── ReportBaseUrlSettings.cs    # 報表外部連結 BaseUrl 設定
+│   └── MockWindowsAuthSettings.cs  # 開發環境模擬 AD 使用者設定
 ├── Services/
 │   ├── IReportService.cs           # 資料服務介面 (切換 API 時實作此介面)
 │   └── MockReportService.cs        # Mock 實作 (模擬資料，含 14 筆報表目錄 seed data)
@@ -35,6 +40,7 @@ ReportCenter.Web/
 │   ├── favicon.svg                 # 品牌 Favicon
 │   ├── css/site.css                # 自訂樣式 (極少，主要用 Tailwind)
 │   └── js/site.js                  # Alpine Store (搜尋、收藏、最近瀏覽)
+├── web.config                         # IIS 部署設定 (Windows 驗證)
 └── docs/frontend-spec.md           # 前端技術規格文件
 ```
 
@@ -76,6 +82,39 @@ IReportService (介面)
 - TopNav 切換時寫入 Cookie 並重新載入頁面
 - 後端透過 `IHttpContextAccessor` 讀取 Cookie 決定資料來源
 - 未來兩個公司別的報表權限將分開管理
+
+## Windows 驗證機制
+
+### 環境切換策略
+
+| 環境 | 驗證方式 | 實作 |
+|------|---------|------|
+| Development (macOS) | 模擬 Windows AD 身份 | `DevWindowsAuthMiddleware` 讀取 `appsettings.Development.json` 的 `MockWindowsAuth` 區段 |
+| Production (IIS) | Windows 驗證 (Negotiate) | `Microsoft.AspNetCore.Authentication.Negotiate` + IIS Windows Authentication |
+
+### 開發環境設定 (`appsettings.Development.json`)
+
+```json
+"MockWindowsAuth": {
+  "UserName": "PROSKIT\\10255",
+  "DisplayName": "高先生",
+  "EmployeeId": "10255",
+  "Department": "資訊部",
+  "DepartmentId": "109"
+}
+```
+
+### IIS 部署
+
+- `web.config` 已設定 `windowsAuthentication enabled="true"` 與 `anonymousAuthentication enabled="false"`
+- `forwardWindowsAuthToken="true"` 確保 Windows 驗證 Token 傳遞至 ASP.NET Core
+- 部署前需在 IIS 伺服器安裝「Windows Authentication」功能
+
+### 使用者資訊解析流程
+
+1. **Development**: `DevWindowsAuthMiddleware` → Claims → `SqlReportService.GetCurrentUser()`
+2. **Production**: IIS Negotiate → Claims (僅 `ClaimTypes.Name`) → `SqlReportService.GetCurrentUser()`
+3. Production 環境僅提供 Windows 帳號名稱 (`DOMAIN\username`)，未來可透過 AD/DB 查詢補充 DisplayName、Department 等詳細資料
 
 ## 篩選功能
 

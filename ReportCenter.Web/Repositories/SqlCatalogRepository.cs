@@ -26,6 +26,7 @@ public class SqlCatalogRepository : ICatalogRepository
 
     // ═══════════════════════════════════════════
     //  報表目錄 CRUD
+    //  等 SQL Server 升級後才改用 Entity Framework Core 實作，暫時維持 Dapper 以兼容舊版本
     // ═══════════════════════════════════════════
 
     public List<ReportCatalogItem> GetCatalogItems(string? toolFilter = null, bool? isActive = null, string? search = null)
