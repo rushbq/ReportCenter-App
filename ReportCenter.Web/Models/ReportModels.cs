@@ -107,13 +107,34 @@ public class ReportCatalogItem
     public DateTime? ModifyDate { get; set; }
     public bool IsActive { get; set; } = true;
     public string Remarks { get; set; } = "";
+    public int? CategoryID { get; set; }
+    public string CategoryName { get; set; } = "";         // 顯示用，由 JOIN 帶出
     public List<DeptAssignment> Departments { get; set; } = [];
     public List<string> Dependencies { get; set; } = [];
+}
+
+public class ReportCategory
+{
+    public int CategoryID { get; set; }
+    public int DeptID { get; set; }
+    public string CategoryName { get; set; } = "";
+    public int SortOrder { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public class DeptAssignment
 {
     public int DeptID { get; set; }
+    public string DeptName { get; set; } = "";
+}
+
+/// <summary>
+/// User_Dept 資料表對應 — 目錄管理用的部門清單
+/// </summary>
+public class CatalogDept
+{
+    public string Area { get; set; } = "";
+    public string DeptID { get; set; } = "";
     public string DeptName { get; set; } = "";
 }
 

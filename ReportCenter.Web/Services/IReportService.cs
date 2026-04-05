@@ -41,4 +41,13 @@ public interface IReportService
     bool DeleteCatalogItem(int reportId);
     AdminStats GetAdminStats();
     List<string> GetAllDependencyObjects();
+
+    // ─── 報表分類管理 ───
+    List<ReportCategory> GetCategories(int? deptId = null);
+    ReportCategory? GetCategory(int categoryId);
+    ReportCategory SaveCategory(ReportCategory category);
+    bool DeleteCategory(int categoryId);
+
+    // ─── 部門 (User_Dept) ───
+    List<CatalogDept> GetCatalogDepartments(string? area = null);
 }

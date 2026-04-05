@@ -412,4 +412,66 @@ public class MockReportService : IReportService
 
     public List<string> GetAllDependencyObjects() =>
         _catalog.SelectMany(i => i.Dependencies).Distinct().OrderBy(d => d).ToList();
+
+    // ─── 報表分類管理 ───
+
+    private int _nextCatId = 1;
+    private readonly List<ReportCategory> _categories = [];
+
+    public List<ReportCategory> GetCategories(int? deptId = null)
+    {
+        IEnumerable<ReportCategory> items = _categories;
+        if (deptId.HasValue)
+            items = items.Where(c => c.DeptID == deptId.Value);
+        return items.OrderBy(c => c.SortOrder).ThenBy(c => c.CategoryName).ToList();
+    }
+
+    public ReportCategory? GetCategory(int categoryId) =>
+        _categories.Find(c => c.CategoryID == categoryId);
+
+    public ReportCategory SaveCategory(ReportCategory category)
+    {
+        if (category.CategoryID == 0)
+        {
+            category.CategoryID = _nextCatId++;
+            _categories.Add(category);
+        }
+        else
+        {
+            var existing = _categories.Find(c => c.CategoryID == category.CategoryID);
+            if (existing != null)
+            {
+                existing.CategoryName = category.CategoryName;
+                existing.DeptID = category.DeptID;
+                existing.SortOrder = category.SortOrder;
+                existing.IsActive = category.IsActive;
+                return existing;
+            }
+        }
+        return category;
+    }
+
+    public bool DeleteCategory(int categoryId)
+    {
+        var item = _categories.Find(c => c.CategoryID == categoryId);
+        if (item == null) return false;
+        _categories.Remove(item);
+        return true;
+    }
+
+    // ─── 部門 (User_Dept) ───
+
+    public List<CatalogDept> GetCatalogDepartments(string? area = null) =>
+    [
+        new() { Area = "TW", DeptID = "100", DeptName = "總經理室" },
+        new() { Area = "TW", DeptID = "109", DeptName = "資訊部" },
+        new() { Area = "TW", DeptID = "110", DeptName = "管理部" },
+        new() { Area = "TW", DeptID = "120", DeptName = "外銷業務部" },
+        new() { Area = "TW", DeptID = "130", DeptName = "內銷業務部" },
+        new() { Area = "TW", DeptID = "140", DeptName = "品保部" },
+        new() { Area = "TW", DeptID = "150", DeptName = "生產部" },
+        new() { Area = "TW", DeptID = "151", DeptName = "採購部" },
+        new() { Area = "TW", DeptID = "180", DeptName = "行銷企劃部" },
+        new() { Area = "TW", DeptID = "190", DeptName = "資材部" },
+    ];
 }

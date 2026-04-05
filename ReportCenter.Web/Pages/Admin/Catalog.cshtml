@@ -17,22 +17,27 @@
         displayDate = (i.ModifyDate ?? i.CreateDate).ToString("yyyy/MM/dd"),
         isActive = i.IsActive,
         remarks = i.Remarks,
+        categoryID = i.CategoryID,
+        categoryName = i.CategoryName,
         departments = i.Departments.Select(d => new { deptID = d.DeptID, deptName = d.DeptName }),
         dependencies = i.Dependencies
     }), jsonOpts);
-    var deptsJson = JsonSerializer.Serialize(Model.Departments.Select(d => new {
-        id = d.Id,
-        label = d.Label,
-        numId = d.Id switch {
-            "procurement" => 1,
-            "sales" => 2,
-            "finance" => 3,
-            "hr" => 4,
-            "it" => 5,
-            _ => 0
-        }
+    var catalogDeptsJson = JsonSerializer.Serialize(Model.CatalogDepts.Select(d => new {
+        area = d.Area,
+        deptID = d.DeptID,
+        deptName = d.DeptName,
+        label = d.DeptID + "-" + d.DeptName
     }), jsonOpts);
     var depObjectsJson = JsonSerializer.Serialize(Model.AllDependencies, jsonOpts);
+    var categoriesJson = JsonSerializer.Serialize(Model.Categories.Select(c => new {
+        categoryID = c.CategoryID,
+        deptID = c.DeptID,
+        categoryName = c.CategoryName,
+        isActive = c.IsActive
+    }), jsonOpts);
+    // 取得不重複的部門路徑清單供篩選使用
+    var reportPaths = Model.CatalogItems.Select(i => i.ReportPath).Where(p => !string.IsNullOrWhiteSpace(p) && p != "-").Distinct().OrderBy(p => p).ToList();
+    var reportPathsJson = JsonSerializer.Serialize(reportPaths, jsonOpts);
 }
 
 <div class="p-4 md:p-6 pb-10 max-w-[1200px]"
@@ -85,6 +90,9 @@
                     class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">SSRS</button>
         </div>
 
+        <!-- 分隔線 -->
+        <div class="w-px h-6 bg-bdr"></div>
+
         <!-- 狀態 chips -->
         <div class="flex gap-1.5">
             <button @@click="activeFilter = ''"
@@ -97,6 +105,18 @@
                     :class="activeFilter === 'false' ? 'bg-bad/10 text-bad border-bad/30' : 'bg-white text-txt-sec border-bdr hover:border-bad/40'"
                     class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">停用</button>
         </div>
+
+        <!-- 分隔線 -->
+        <div class="w-px h-6 bg-bdr"></div>
+
+        <!-- 部門路徑篩選 -->
+        <select x-model="pathFilter"
+                class="px-3 py-1 rounded-lg border border-bdr text-[11px] outline-none focus:border-pri transition-colors bg-white text-txt-sec">
+            <option value="">全部部門路徑</option>
+            <template x-for="p in allPaths" :key="p">
+                <option :value="p" x-text="p"></option>
+            </template>
+        </select>
 
         <!-- 報表數 -->
         <div class="ml-auto text-[11px] text-txt-ter">
@@ -116,6 +136,7 @@
                         <th class="px-3 py-2.5 text-left font-semibold hidden lg:table-cell">資料來源</th>
                         <th class="px-3 py-2.5 text-center font-semibold w-[60px]">狀態</th>
                         <th class="px-3 py-2.5 text-left font-semibold hidden md:table-cell">部門</th>
+                        <th class="px-3 py-2.5 text-left font-semibold hidden lg:table-cell w-[90px]">分類</th>
                         <th class="px-3 py-2.5 text-center font-semibold w-[90px] hidden sm:table-cell">更新日期</th>
                         <th class="px-4 py-2.5 text-center font-semibold w-[100px]">操作</th>
                     </tr>
@@ -153,6 +174,10 @@
                                           x-text="'+' + (item.departments.length - 3)"></span>
                                     <span x-show="item.departments.length === 0" class="text-[10px] text-bad">未指派</span>
                                 </div>
+                            </td>
+                            <td class="px-3 py-3 hidden lg:table-cell">
+                                <span x-show="item.categoryName" class="text-[10px] px-1.5 py-0.5 rounded-full bg-pri-light text-pri font-medium" x-text="item.categoryName"></span>
+                                <span x-show="!item.categoryName" class="text-[10px] text-txt-ter">-</span>
                             </td>
                             <td class="px-3 py-3 text-center text-[11px] text-txt-sec hidden sm:table-cell" x-text="item.displayDate"></td>
                             <td class="px-4 py-3 text-center">
@@ -229,20 +254,34 @@
                     </div>
                     <div>
                         <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">部門路徑</label>
-                        <input type="text" x-model="form.reportPath"
-                               class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors"
-                               placeholder="例: 採購部">
+                        <select x-model="form.reportPath"
+                                class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-white">
+                            <option value="">請選擇</option>
+                            <template x-for="dept in catalogDepts" :key="dept.deptID">
+                                <option :value="dept.label" x-text="dept.label"></option>
+                            </template>
+                        </select>
                     </div>
                 </div>
 
                 <!-- 報表代碼/連結 -->
                 <div>
                     <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">
-                        <span x-text="form.reportTool === 'Internal' ? '內部路由' : (form.reportTool === 'SmartQuery' ? 'SmartQuery 連結' : 'SSRS 連結')"></span>
+                        <span x-text="form.reportTool === 'Internal' ? '內部路由' : (form.reportTool === 'SmartQuery' ? 'SmartQuery 路徑' : 'SSRS 路徑')"></span>
                     </label>
-                    <input type="text" x-model="form.reportCode"
-                           class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors font-mono"
-                           :placeholder="form.reportTool === 'Internal' ? '/Report?dept=...' : 'https://...'">
+                    <!-- BASE URL 提示 -->
+                    <div x-show="form.reportTool !== 'Internal'" class="flex items-center gap-0 mb-0">
+                        <span class="inline-flex items-center px-3 py-2 rounded-l-lg border border-r-0 border-bdr bg-surface text-[11px] text-txt-ter font-mono whitespace-nowrap"
+                              x-text="form.reportTool === 'SmartQuery' ? 'https://sq.proskit.com/report/' : 'https://ssrs.proskit.com/Reports/'"></span>
+                        <input type="text" x-model="form.reportCode"
+                               class="flex-1 px-3 py-2 rounded-r-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors font-mono"
+                               :placeholder="form.reportTool === 'SmartQuery' ? 'GUID 路徑' : '報表路徑'">
+                    </div>
+                    <div x-show="form.reportTool === 'Internal'">
+                        <input type="text" x-model="form.reportCode"
+                               class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors font-mono"
+                               placeholder="/Report?dept=...">
+                    </div>
                 </div>
 
                 <!-- 資料來源 -->
@@ -253,18 +292,16 @@
                            placeholder="例: usp_Rpt_SalesRanking">
                 </div>
 
-                <!-- 啟用開關 + 備註 -->
-                <div class="grid grid-cols-[auto_1fr] gap-3">
-                    <div class="flex items-center gap-3 pr-4">
-                        <label class="text-[12px] font-semibold text-txt-sec">狀態</label>
-                        <button @@click="form.isActive = !form.isActive" type="button"
-                                :class="form.isActive ? 'bg-ok' : 'bg-gray-300'"
-                                class="relative w-10 h-5 rounded-full border-0 cursor-pointer transition-colors">
-                            <span :class="form.isActive ? 'translate-x-5' : 'translate-x-0.5'"
-                                  class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
-                        </button>
-                        <span class="text-[11px]" :class="form.isActive ? 'text-ok' : 'text-bad'" x-text="form.isActive ? '啟用' : '停用'"></span>
-                    </div>
+                <!-- 啟用開關 -->
+                <div class="flex items-center gap-3">
+                    <label class="text-[12px] font-semibold text-txt-sec shrink-0">狀態</label>
+                    <button @@click="form.isActive = !form.isActive" type="button"
+                            :class="form.isActive ? 'bg-ok' : 'bg-gray-300'"
+                            class="relative shrink-0 w-10 h-5 rounded-full border-0 cursor-pointer transition-colors">
+                        <span :class="form.isActive ? 'translate-x-5' : 'translate-x-0.5'"
+                              class="absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
+                    </button>
+                    <span class="text-[11px] shrink-0" :class="form.isActive ? 'text-ok' : 'text-bad'" x-text="form.isActive ? '啟用' : '停用'"></span>
                 </div>
 
                 <div>
@@ -274,18 +311,31 @@
                               placeholder="選填"></textarea>
                 </div>
 
+                <!-- 分類 -->
+                <div>
+                    <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">報表分類</label>
+                    <select x-model="form.categoryID"
+                            class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-white">
+                        <option :value="null">未分類</option>
+                        <template x-for="cat in filteredCategories" :key="cat.categoryID">
+                            <option :value="cat.categoryID" x-text="getCategoryLabel(cat)" :selected="form.categoryID == cat.categoryID"></option>
+                        </template>
+                    </select>
+                    <p class="text-[10px] text-txt-ter mt-1" x-show="allCategories.length === 0">尚未建立分類，請先至資料庫新增 ReportCategory 資料</p>
+                </div>
+
                 <!-- 分隔線 -->
                 <div class="border-t border-bdr pt-4">
                     <label class="block text-[12px] font-semibold text-txt-sec mb-2.5">部門指派</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        <template x-for="dept in allDepts" :key="dept.id">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto">
+                        <template x-for="dept in catalogDepts" :key="dept.deptID">
                             <label class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-[12px]"
-                                   :class="selectedDepts.includes(dept.id) ? 'bg-pri-light border-pri/30 text-pri font-medium' : 'border-bdr text-txt-sec hover:border-pri/20'">
-                                <input type="checkbox" :value="dept.id"
-                                       :checked="selectedDepts.includes(dept.id)"
-                                       @@change="toggleDept(dept.id)"
+                                   :class="selectedDepts.includes(dept.deptID) ? 'bg-pri-light border-pri/30 text-pri font-medium' : 'border-bdr text-txt-sec hover:border-pri/20'">
+                                <input type="checkbox" :value="dept.deptID"
+                                       :checked="selectedDepts.includes(dept.deptID)"
+                                       @@change="toggleDept(dept.deptID)"
                                        class="accent-pri w-3.5 h-3.5">
-                                <span x-text="dept.label"></span>
+                                <span x-text="dept.deptName"></span>
                             </label>
                         </template>
                     </div>
@@ -374,6 +424,7 @@
         <input type="hidden" name="sourceName" x-bind:value="form.sourceName">
         <input type="hidden" name="isActive" x-bind:value="form.isActive">
         <input type="hidden" name="remarks" x-bind:value="form.remarks">
+        <input type="hidden" name="categoryId" x-bind:value="form.categoryID || ''">
         <input type="hidden" name="deptIds" x-bind:value="deptIdsString()">
         <input type="hidden" name="dependencies" x-bind:value="deps.join(',')">
     </form>
@@ -395,11 +446,14 @@ function catalogPage() {
         search: '',
         toolFilter: '',
         activeFilter: '',
+        pathFilter: '',
 
         // 資料
         items: [],
-        allDepts: [],
+        catalogDepts: [],
         allDepObjects: [],
+        allCategories: [],
+        allPaths: [],
 
         // Modal
         modalOpen: false,
@@ -419,6 +473,7 @@ function catalogPage() {
                 if (this.toolFilter && i.reportTool !== this.toolFilter) return false;
                 if (this.activeFilter === 'true' && !i.isActive) return false;
                 if (this.activeFilter === 'false' && i.isActive) return false;
+                if (this.pathFilter && i.reportPath !== this.pathFilter) return false;
                 if (this.search) {
                     const q = this.search.toLowerCase();
                     return i.reportName.toLowerCase().includes(q) ||
@@ -427,6 +482,13 @@ function catalogPage() {
                 }
                 return true;
             });
+        },
+
+        get filteredCategories() {
+            // 依選取的部門篩選分類，若無選部門則顯示全部
+            if (this.selectedDepts.length === 0) return this.allCategories.filter(c => c.isActive);
+            const selectedNumIds = this.selectedDepts.map(id => parseInt(id));
+            return this.allCategories.filter(c => c.isActive && selectedNumIds.includes(c.deptID));
         },
 
         get depSuggestions() {
@@ -439,8 +501,10 @@ function catalogPage() {
 
         init() {
             this.items = @Html.Raw(itemsJson);
-            this.allDepts = @Html.Raw(deptsJson);
+            this.catalogDepts = @Html.Raw(catalogDeptsJson);
             this.allDepObjects = @Html.Raw(depObjectsJson);
+            this.allCategories = @Html.Raw(categoriesJson);
+            this.allPaths = @Html.Raw(reportPathsJson);
 
             // 檢查 URL 訊息
             const params = new URLSearchParams(window.location.search);
@@ -466,7 +530,7 @@ function catalogPage() {
             this.form = {
                 reportID: 0, reportName: '', reportTool: 'Internal',
                 reportPath: '', reportCode: '', sourceName: '',
-                isActive: true, remarks: ''
+                isActive: true, remarks: '', categoryID: null
             };
             this.selectedDepts = [];
             this.deps = [];
@@ -488,13 +552,10 @@ function catalogPage() {
                 reportCode: item.reportCode,
                 sourceName: item.sourceName,
                 isActive: item.isActive,
-                remarks: item.remarks || ''
+                remarks: item.remarks || '',
+                categoryID: item.categoryID || null
             };
-            this.selectedDepts = item.departments.map(d => {
-                // 從 allDepts 找到對應的 id
-                const match = this.allDepts.find(ad => ad.label === d.deptName);
-                return match ? match.id : '';
-            }).filter(Boolean);
+            this.selectedDepts = item.departments.map(d => String(d.deptID)).filter(Boolean);
             this.deps = [...(item.dependencies || [])];
             this.depInput = '';
             this.isEdit = true;
@@ -517,10 +578,10 @@ function catalogPage() {
         },
 
         deptIdsString() {
-            // 格式: numId|label,numId|label,...
+            // 格式: deptID|deptName,deptID|deptName,...
             return this.selectedDepts.map(id => {
-                const dept = this.allDepts.find(d => d.id === id);
-                return dept ? dept.numId + '|' + dept.label : '';
+                const dept = this.catalogDepts.find(d => d.deptID === id);
+                return dept ? dept.deptID + '|' + dept.deptName : '';
             }).filter(Boolean).join(',');
         },
 
@@ -545,6 +606,11 @@ function catalogPage() {
         doDelete() {
             this.$refs.deleteId.value = this.deleteItem.reportID;
             this.$refs.deleteForm.submit();
+        },
+
+        getCategoryLabel(cat) {
+            const dept = this.catalogDepts.find(d => parseInt(d.deptID) === cat.deptID);
+            return dept ? dept.deptName + '-' + cat.categoryName : cat.categoryName;
         },
 
         toolClasses(tool) {

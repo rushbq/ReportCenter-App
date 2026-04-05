@@ -5,7 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<IReportService, MockReportService>();
+builder.Services.AddScoped<IReportService, SqlReportService>();
 
 var app = builder.Build();
 

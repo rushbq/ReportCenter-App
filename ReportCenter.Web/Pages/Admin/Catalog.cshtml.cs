@@ -14,6 +14,8 @@ public class CatalogModel : PageModel
     public List<ReportCatalogItem> CatalogItems { get; set; } = [];
     public List<Department> Departments { get; set; } = [];
     public List<string> AllDependencies { get; set; } = [];
+    public List<ReportCategory> Categories { get; set; } = [];
+    public List<CatalogDept> CatalogDepts { get; set; } = [];
 
     public void OnGet(string? tool, string? active, string? search)
     {
@@ -26,12 +28,14 @@ public class CatalogModel : PageModel
         CatalogItems = _svc.GetCatalogItems(tool, isActive, search);
         Departments = _svc.GetDepartments();
         AllDependencies = _svc.GetAllDependencyObjects();
+        Categories = _svc.GetCategories();
+        CatalogDepts = _svc.GetCatalogDepartments();
     }
 
     public IActionResult OnPostSave(
         int reportId, string reportName, string reportTool, string reportPath,
         string reportCode, string sourceName, bool isActive, string? remarks,
-        string? deptIds, string? dependencies)
+        string? deptIds, string? dependencies, int? categoryId)
     {
         var item = reportId > 0 ? _svc.GetCatalogItem(reportId) ?? new() : new();
         item.ReportID = reportId;
@@ -42,6 +46,7 @@ public class CatalogModel : PageModel
         item.SourceName = sourceName ?? "";
         item.IsActive = isActive;
         item.Remarks = remarks ?? "";
+        item.CategoryID = categoryId;
 
         // 解析部門
         item.Departments = [];
