@@ -58,6 +58,23 @@
     <!-- Divider -->
     <div class="h-px bg-bdr mx-3.5 my-2.5"></div>
 
+    <!-- 系統管理 -->
+    <div class="px-3.5">
+        <div class="text-[10px] font-bold text-txt-ter uppercase tracking-wider pl-2.5 mb-1">系統管理</div>
+        @{
+            var isAdminPage = currentPage?.Contains("Admin") == true;
+        }
+        <a href="/Admin"
+           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] no-underline transition-all
+                  @(isAdminPage ? "font-semibold text-pri bg-pri-light" : "text-txt hover:bg-[#f8fafa]")">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+            <span>報表目錄管理</span>
+        </a>
+    </div>
+
+    <!-- Divider -->
+    <div class="h-px bg-bdr mx-3.5 my-2.5"></div>
+
     <!-- Quick Access -->
     <div class="px-3.5">
         <div class="text-[10px] font-bold text-txt-ter uppercase tracking-wider pl-2.5 mb-1">快捷存取</div>

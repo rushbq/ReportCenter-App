@@ -33,4 +33,12 @@ public interface IReportService
     ChartData GetRevenueChartData(string companyId, string period = "month");
     ChartData GetDeptComparisonData(string companyId);
     ChartData GetReportChartData(string deptId, string reportName, string chartType);
+
+    // ─── 報表目錄管理 ───
+    List<ReportCatalogItem> GetCatalogItems(string? toolFilter = null, bool? isActive = null, string? search = null);
+    ReportCatalogItem? GetCatalogItem(int reportId);
+    ReportCatalogItem SaveCatalogItem(ReportCatalogItem item);
+    bool DeleteCatalogItem(int reportId);
+    AdminStats GetAdminStats();
+    List<string> GetAllDependencyObjects();
 }

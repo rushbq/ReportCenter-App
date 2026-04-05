@@ -92,3 +92,47 @@ public class ChartData
     public List<string> Labels { get; set; } = [];
     public List<ChartDataset> Datasets { get; set; } = [];
 }
+
+// ─── 報表目錄管理 ───
+
+public class ReportCatalogItem
+{
+    public int ReportID { get; set; }
+    public string ReportName { get; set; } = "";
+    public string ReportTool { get; set; } = "Internal";  // Internal / SmartQuery / SSRS
+    public string ReportPath { get; set; } = "";           // 部門路徑
+    public string ReportCode { get; set; } = "";           // URL 或內部路由
+    public string SourceName { get; set; } = "";           // SP/函數名稱
+    public DateTime CreateDate { get; set; } = DateTime.Now;
+    public DateTime? ModifyDate { get; set; }
+    public bool IsActive { get; set; } = true;
+    public string Remarks { get; set; } = "";
+    public List<DeptAssignment> Departments { get; set; } = [];
+    public List<string> Dependencies { get; set; } = [];
+}
+
+public class DeptAssignment
+{
+    public int DeptID { get; set; }
+    public string DeptName { get; set; } = "";
+}
+
+public class AdminStats
+{
+    public int TotalReports { get; set; }
+    public int ActiveReports { get; set; }
+    public int InactiveReports { get; set; }
+    public int InternalCount { get; set; }
+    public int SmartQueryCount { get; set; }
+    public int SsrsCount { get; set; }
+    public int OrphanCount { get; set; }
+    public List<ReportCatalogItem> RecentItems { get; set; } = [];
+    public List<ReportCatalogItem> OrphanItems { get; set; } = [];
+    public List<DeptUsage> DeptUsages { get; set; } = [];
+}
+
+public class DeptUsage
+{
+    public string DeptName { get; set; } = "";
+    public List<ReportCatalogItem> Reports { get; set; } = [];
+}

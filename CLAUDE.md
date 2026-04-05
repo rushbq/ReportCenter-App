@@ -14,18 +14,21 @@
 
 ```
 ReportCenter.Web/
-├── Models/ReportModels.cs          # 資料模型 (Company, UserInfo, Department, Report, KPI, ChartData 等)
+├── Models/ReportModels.cs          # 資料模型 (Company, UserInfo, Department, Report, KPI, ChartData, ReportCatalogItem 等)
 ├── Services/
 │   ├── IReportService.cs           # 資料服務介面 (切換 API 時實作此介面)
-│   └── MockReportService.cs        # Mock 實作 (模擬資料)
+│   └── MockReportService.cs        # Mock 實作 (模擬資料，含 14 筆報表目錄 seed data)
 ├── Pages/
 │   ├── Index.cshtml(.cs)           # 首頁儀表板 (KPI、圖表、篩選、快速存取)
 │   ├── Department.cshtml(.cs)      # 部門報表列表 (搜尋、篩選、排序、卡片/表格切換)
 │   ├── Report.cshtml(.cs)          # 報表明細 (圖表切換、篩選、收藏、匯出、分頁)
+│   ├── Admin/
+│   │   ├── Index.cshtml(.cs)       # 管理總覽 (KPI、部門矩陣、孤立報表、相依性分析)
+│   │   └── Catalog.cshtml(.cs)     # 報表目錄管理 (CRUD、篩選、編輯 Modal)
 │   └── Shared/
 │       ├── _Layout.cshtml          # 主版面配置 (TopNav + Sidebar + Content + 搜尋 Modal)
 │       ├── _TopNav.cshtml          # 頂部導航列 (Logo、公司選單、搜尋、使用者資訊)
-│       ├── _Sidebar.cshtml         # 側邊欄 (部門選單、收藏、最近瀏覽)
+│       ├── _Sidebar.cshtml         # 側邊欄 (部門選單、系統管理、收藏、最近瀏覽)
 │       └── _KpiCard.cshtml         # KPI 卡片元件
 ├── wwwroot/
 │   ├── images/logo.png             # 公司 Logo
@@ -42,6 +45,8 @@ ReportCenter.Web/
 | `/` | Index | 營運總覽儀表板 |
 | `/Department?dept={id}` | Department | 部門報表列表 |
 | `/Report?dept={id}&name={name}&page={n}` | Report | 報表明細頁 |
+| `/Admin` | Admin/Index | 報表管理總覽 (KPI、部門矩陣、孤立報表) |
+| `/Admin/Catalog` | Admin/Catalog | 報表目錄管理 (CRUD) |
 
 ## 資料架構 (Service Layer)
 
@@ -84,6 +89,31 @@ IReportService (介面)
 | Report | 日期期間（2026/03 等） | 前端依 `period` 欄位篩選 |
 | Report | 物料類別（原料/包材/設備/耗材） | 前端依 `category` 欄位篩選 |
 | Report | 供應商 | 前端依 `supplier` 欄位篩選 |
+| Admin/Catalog | 工具類型（全部/Internal/SmartQuery/SSRS） | 前端 Alpine 篩選 |
+| Admin/Catalog | 狀態（全部/啟用/停用） | 前端 Alpine 篩選 |
+| Admin/Catalog | 搜尋（名稱、來源、路徑） | 前端 Alpine 篩選 |
+
+## 報表目錄管理
+
+### 報表來源類型
+
+| 類型 | 說明 | 色彩標記 |
+|------|------|---------|
+| Internal | 開發於本系統的報表 | emerald (綠) |
+| SmartQuery | 外部 SmartQuery 報表，開新視窗連結 | amber (橙) |
+| SSRS | SQL Server Reporting Services，開新視窗連結 | indigo (靛藍) |
+
+### 資料模型
+
+- `ReportCatalogItem` — 報表清冊主表 (對應 DB `ReportCatalog`)
+- `DeptAssignment` — 部門指派 (對應 DB `ReportDepartment`)
+- `Dependencies` — 相依物件清單 (對應 DB `ReportDependency`)
+- `AdminStats` / `DeptUsage` — 管理總覽用的 View Model
+
+### 管理功能
+
+- **總覽頁 (`/Admin`)**: KPI 卡片、部門使用矩陣、孤立報表警示、最近異動、相依性分析
+- **目錄管理 (`/Admin/Catalog`)**: 搜尋篩選 (工具類型/啟停狀態)、新增/編輯 Modal (含部門指派 checkbox + 相依物件 tag input)、啟停切換、刪除確認
 
 ## 匯出功能
 
