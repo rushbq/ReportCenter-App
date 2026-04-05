@@ -110,24 +110,82 @@
     <div class="flex justify-between items-center mb-3.5">
         <span class="font-semibold text-[15px] text-txt">快速存取</span>
         <span class="text-[12px] text-pri font-medium cursor-pointer"
-              x-data @@click="$store.search.toggle()">管理釘選 →</span>
+              @@click="pinModalOpen = true">管理釘選 →</span>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        @foreach (var r in Model.QuickAccessItems)
-        {
-            <a href="/Report?dept=@r.DeptId&name=@System.Net.WebUtility.UrlEncode(r.Name)"
+        <!-- 使用者釘選的項目 -->
+        <template x-for="p in $store.pins.items" :key="p.deptId + '|' + p.name">
+            <a :href="'/Report?dept=' + p.deptId + '&name=' + encodeURIComponent(p.name)"
                class="bg-white border border-bdr rounded-[10px] p-4 flex flex-col gap-1.5 shadow-sm no-underline
                       hover:shadow-md hover:border-pri transition-all">
                 <div class="flex justify-between items-center">
-                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pri-light text-pri">@r.Dept</span>
-                    <span @@click.prevent="$store.favorites.toggle('@r.DeptId', '@r.Name', '@r.Dept')">
-                        <svg class="w-[13px] h-[13px]" :class="$store.favorites.has('@r.DeptId', '@r.Name') ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#ddd] fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pri-light text-pri" x-text="p.dept"></span>
+                    <span @@click.prevent="$store.favorites.toggle(p.deptId, p.name, p.dept)">
+                        <svg class="w-[13px] h-[13px]" :class="$store.favorites.has(p.deptId, p.name) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#ddd] fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     </span>
                 </div>
-                <span class="text-[13px] font-semibold text-txt leading-tight">@r.Name</span>
-                <span class="text-[11px] text-txt-ter">#@r.Tag</span>
+                <span class="text-[13px] font-semibold text-txt leading-tight" x-text="p.name"></span>
+                <span class="text-[11px] text-txt-ter" x-text="'#' + p.tag"></span>
             </a>
-        }
+        </template>
+        <!-- 尚無釘選時顯示預設項目 -->
+        <template x-if="$store.pins.items.length === 0">
+            <div class="col-span-2 lg:col-span-4 text-center py-8 text-txt-ter text-sm">
+                尚未釘選任何報表，點擊「管理釘選」來新增
+            </div>
+        </template>
+    </div>
+
+    <!-- 管理釘選 Modal -->
+    <div x-show="pinModalOpen" x-cloak
+         class="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh]">
+        <div class="absolute inset-0 bg-black/40" @@click="pinModalOpen = false"></div>
+        <div class="relative bg-white rounded-xl shadow-2xl border border-bdr w-full max-w-[560px] mx-4 max-h-[70vh] flex flex-col"
+             x-transition:enter="transition ease-out duration-150"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-3.5 border-b border-bdr shrink-0">
+                <span class="font-semibold text-[15px] text-txt">管理釘選報表</span>
+                <button class="text-txt-ter hover:text-txt border-0 bg-transparent cursor-pointer p-1" @@click="pinModalOpen = false">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+            <!-- 搜尋 -->
+            <div class="px-5 py-3 border-b border-bdr shrink-0">
+                <input type="text" placeholder="搜尋報表名稱…"
+                       class="w-full bg-surface border border-bdr rounded-lg px-3 py-2 text-[13px] text-txt placeholder:text-txt-ter outline-none focus:border-pri"
+                       x-model="pinSearch" />
+            </div>
+            <!-- 報表列表 -->
+            <div class="overflow-y-auto flex-1 px-2 py-2">
+                <template x-for="item in filteredPinItems" :key="item.deptId + '|' + item.name">
+                    <div class="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface">
+                        <div class="flex-1 min-w-0 mr-3">
+                            <div class="text-[13px] font-semibold text-txt truncate" x-text="item.name"></div>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-pri-light text-pri font-semibold" x-text="item.dept"></span>
+                                <span class="text-[10px] text-txt-ter" x-text="item.cat"></span>
+                            </div>
+                        </div>
+                        <button class="shrink-0 text-[12px] px-3 py-1.5 rounded-md border cursor-pointer transition-colors"
+                                :class="$store.pins.has(item.deptId, item.name) ? 'bg-pri text-white border-pri' : 'bg-white text-pri border-bdr hover:border-pri'"
+                                @@click="$store.pins.toggle(item.deptId, item.name, item.dept, item.tag || item.cat)">
+                            <span x-text="$store.pins.has(item.deptId, item.name) ? '已釘選' : '釘選'"></span>
+                        </button>
+                    </div>
+                </template>
+                <template x-if="filteredPinItems.length === 0">
+                    <div class="text-center py-6 text-txt-ter text-[13px]">找不到符合的報表</div>
+                </template>
+            </div>
+            <!-- Footer -->
+            <div class="px-5 py-3 border-t border-bdr shrink-0 flex justify-between items-center">
+                <span class="text-[12px] text-txt-ter">已釘選 <span class="font-semibold text-pri" x-text="$store.pins.count"></span> 個報表</span>
+                <button class="text-[12px] px-4 py-1.5 bg-pri text-white rounded-md border-0 cursor-pointer hover:bg-pri-hover transition-colors"
+                        @@click="pinModalOpen = false">完成</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -147,6 +205,11 @@
 @section Scripts {
 <script>
 function indexPage() {
+    // 圖表相關資料放在閉包中，避免 Alpine proxy 與 Chart.js 衝突
+    let _revenueDataSets = null;
+    let _revenueChart = null;
+    let _deptChart = null;
+
     return {
         period: '本月',
         region: '全部',
@@ -155,8 +218,9 @@ function indexPage() {
         periodOpen: false,
         regionOpen: false,
         deptOpen: false,
-        revenueChart: null,
-        deptChart: null,
+        pinModalOpen: false,
+        pinSearch: '',
+        allReports: [],
 
         // 各篩選條件對應的 Mock KPI 資料
         kpiData: {
@@ -179,6 +243,16 @@ function indexPage() {
             '資訊部': { actual: [0,0,0,0,1.6], target: [0,0,0,0,1.8] },
         },
 
+        get filteredPinItems() {
+            const q = this.pinSearch.trim().toLowerCase();
+            if (!q) return this.allReports;
+            return this.allReports.filter(r =>
+                r.name.toLowerCase().includes(q) ||
+                r.dept.toLowerCase().includes(q) ||
+                r.cat.toLowerCase().includes(q)
+            );
+        },
+
         get filteredKpis() {
             const base = this.kpiData[this.period] || this.kpiData['本月'];
             const factor = this.regionFactor[this.region] || 1.0;
@@ -195,6 +269,7 @@ function indexPage() {
         },
 
         init() {
+            this.allReports = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllReports, new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
             this.$nextTick(() => this.initCharts());
             this.$watch('region', () => this.updateDeptChart());
             this.$watch('dept', () => this.updateDeptChart());
@@ -203,22 +278,22 @@ function indexPage() {
 
         initCharts() {
             const C = { pri: '#005758', acc: '#00b4b6', priH: '#006d6e', ter: '#94aeb0', borderL: '#eef2f3' };
-            this._C = C;
 
-            this._revenueDataSets = {
+            _revenueDataSets = {
                 '月': { labels: ['10月','11月','12月','1月','2月','3月'], current: [10.2,11.1,12.5,10.8,11.6,12.8], last: [9.8,10.3,11.0,9.5,10.1,10.9], budget: [10.5,10.8,11.2,11.0,11.3,11.5] },
                 '季': { labels: ['Q1','Q2','Q3','Q4'], current: [33.8,35.2,34.6,37.1], last: [30.2,32.1,31.5,33.8], budget: [32.0,33.5,34.0,35.0] },
                 '年': { labels: ['2022','2023','2024','2025','2026(預)'], current: [105.3,118.6,128.2,140.5,152.0], last: [95.1,105.3,118.6,128.2,140.5], budget: [100.0,112.0,125.0,138.0,150.0] }
             };
 
-            this.revenueChart = new Chart(document.getElementById('revenueChart'), {
+            const monthData = _revenueDataSets['月'];
+            _revenueChart = new Chart(document.getElementById('revenueChart'), {
                 type: 'line',
                 data: {
-                    labels: this._revenueDataSets['月'].labels,
+                    labels: [...monthData.labels],
                     datasets: [
-                        { label: '本年', data: this._revenueDataSets['月'].current, borderColor: C.pri, backgroundColor: C.pri + '20', borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 0 },
-                        { label: '去年', data: this._revenueDataSets['月'].last, borderColor: C.acc, borderWidth: 1.5, borderDash: [4,3], fill: false, tension: 0.4, pointRadius: 0 },
-                        { label: '預算', data: this._revenueDataSets['月'].budget, borderColor: C.ter, borderWidth: 1, borderDash: [2,2], fill: false, tension: 0.4, pointRadius: 0 }
+                        { label: '本年', data: [...monthData.current], borderColor: C.pri, backgroundColor: C.pri + '20', borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 0 },
+                        { label: '去年', data: [...monthData.last], borderColor: C.acc, borderWidth: 1.5, borderDash: [4,3], fill: false, tension: 0.4, pointRadius: 0 },
+                        { label: '預算', data: [...monthData.budget], borderColor: C.ter, borderWidth: 1, borderDash: [2,2], fill: false, tension: 0.4, pointRadius: 0 }
                     ]
                 },
                 options: {
@@ -231,7 +306,7 @@ function indexPage() {
                 }
             });
 
-            this.deptChart = new Chart(document.getElementById('deptChart'), {
+            _deptChart = new Chart(document.getElementById('deptChart'), {
                 type: 'bar',
                 data: {
                     labels: ['採購部','業務部','財務部','人資部','資訊部'],
@@ -252,21 +327,21 @@ function indexPage() {
         },
 
         updateRevenueChart(period) {
-            const ds = this._revenueDataSets[period];
+            const ds = _revenueDataSets[period];
             const factor = this.regionFactor[this.region] || 1.0;
-            this.revenueChart.data.labels = ds.labels;
-            this.revenueChart.data.datasets[0].data = ds.current.map(v => +(v * factor).toFixed(1));
-            this.revenueChart.data.datasets[1].data = ds.last.map(v => +(v * factor).toFixed(1));
-            this.revenueChart.data.datasets[2].data = ds.budget.map(v => +(v * factor).toFixed(1));
-            this.revenueChart.update();
+            _revenueChart.data.labels = [...ds.labels];
+            _revenueChart.data.datasets[0].data = ds.current.map(v => +(v * factor).toFixed(1));
+            _revenueChart.data.datasets[1].data = ds.last.map(v => +(v * factor).toFixed(1));
+            _revenueChart.data.datasets[2].data = ds.budget.map(v => +(v * factor).toFixed(1));
+            _revenueChart.update();
         },
 
         updateDeptChart() {
             const data = this.deptCompData[this.dept] || this.deptCompData['全部'];
             const factor = this.regionFactor[this.region] || 1.0;
-            this.deptChart.data.datasets[0].data = data.actual.map(v => +(v * factor).toFixed(1));
-            this.deptChart.data.datasets[1].data = data.target.map(v => +(v * factor).toFixed(1));
-            this.deptChart.update();
+            _deptChart.data.datasets[0].data = data.actual.map(v => +(v * factor).toFixed(1));
+            _deptChart.data.datasets[1].data = data.target.map(v => +(v * factor).toFixed(1));
+            _deptChart.update();
         }
     };
 }

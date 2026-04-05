@@ -75,6 +75,33 @@ document.addEventListener('alpine:init', () => {
         get count() { return this.items.length; }
     });
 
+    // 釘選 Store (localStorage 持久化)
+    Alpine.store('pins', {
+        items: JSON.parse(localStorage.getItem('rc_pins') || '[]'),
+
+        has(deptId, name) {
+            return this.items.some(p => p.deptId === deptId && p.name === name);
+        },
+
+        toggle(deptId, name, dept, tag) {
+            const wasAdded = !this.has(deptId, name);
+            if (wasAdded) {
+                this.items.push({ deptId, name, dept, tag, time: Date.now() });
+            } else {
+                this.items = this.items.filter(p => !(p.deptId === deptId && p.name === name));
+            }
+            localStorage.setItem('rc_pins', JSON.stringify(this.items));
+            Alpine.store('toast').show(wasAdded ? '已釘選至快速存取' : '已取消釘選');
+        },
+
+        remove(deptId, name) {
+            this.items = this.items.filter(p => !(p.deptId === deptId && p.name === name));
+            localStorage.setItem('rc_pins', JSON.stringify(this.items));
+        },
+
+        get count() { return this.items.length; }
+    });
+
     // 最近瀏覽 Store (localStorage 持久化)
     Alpine.store('recent', {
         items: JSON.parse(localStorage.getItem('rc_recent') || '[]'),
