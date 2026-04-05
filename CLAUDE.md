@@ -61,8 +61,34 @@ IReportService (介面)
 | Store | 用途 | 持久化 |
 |-------|------|--------|
 | `$store.search` | 全站搜尋 Modal、⌘K 快捷鍵 | 否 |
-| `$store.favorites` | 報表收藏管理 | localStorage |
+| `$store.favorites` | 報表收藏管理（toggle 時自動顯示 Toast） | localStorage |
 | `$store.recent` | 最近瀏覽紀錄 (最多 20 筆) | localStorage |
+| `$store.toast` | 全域 Toast 提示（`show(msg)` 呼叫，2.5 秒後自動消失） | 否 |
+
+## 公司切換機制
+
+- 使用 Cookie (`companyId`) 儲存選擇的公司
+- TopNav 切換時寫入 Cookie 並重新載入頁面
+- 後端透過 `IHttpContextAccessor` 讀取 Cookie 決定資料來源
+- 未來兩個公司別的報表權限將分開管理
+
+## 篩選功能
+
+| 頁面 | 篩選器 | 實作方式 |
+|------|--------|---------|
+| Index | 期間（本月/上月/本季/本年） | 前端 Alpine 切換 Mock KPI 資料集 |
+| Index | 區域（全部/北中南東） | 前端依區域比例調整數值與圖表 |
+| Index | 部門（全部/各部門） | 前端篩選部門比較圖表 |
+| Department | 日期（全部/本週/本月/本季） | 前端依報表更新日期相對篩選 |
+| Department | 排序（最近更新/最早更新/名稱 A-Z） | 前端排序 |
+| Report | 日期期間（2026/03 等） | 前端依 `period` 欄位篩選 |
+| Report | 物料類別（原料/包材/設備/耗材） | 前端依 `category` 欄位篩選 |
+| Report | 供應商 | 前端依 `supplier` 欄位篩選 |
+
+## 匯出功能
+
+- **Excel:** UI 按鈕已存在，目前僅顯示 Toast 提示，未來改用後端套件（如 ClosedXML）實作實際下載
+- **PDF:** 已移除，未來不開放
 
 ## 設計系統 (Tailwind 色彩 Token)
 
@@ -101,3 +127,6 @@ cd ReportCenter.Web && dotnet build
 - 商業邏輯放在 `Services/` 層，透過 DI 注入
 - 頁面邏輯放在對應的 `.cshtml.cs` PageModel
 - 不使用 npm/webpack，所有前端依賴走 CDN
+- 動態圖示（如收藏星號）使用 inline SVG 搭配 Alpine `:class`，不使用 Lucide 動態渲染（避免 `createIcons()` 替換後失去響應性）
+- `<script>` 區塊內的中文字串須透過 `@Html.Raw(JsonSerializer.Serialize(..., jsonOpts))` 注入，避免 Razor HTML 編碼產生亂碼
+- JSON 序列化統一使用 `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` 避免中文被轉義為 `\uXXXX`
