@@ -17,13 +17,21 @@ public class IndexModel : PageModel
     public ChartData RevenueChart { get; set; } = null!;
     public ChartData DeptChart { get; set; } = null!;
 
+    public string ActiveCompanyId { get; set; } = "";
+
     public void OnGet()
     {
         CurrentUser = _svc.GetCurrentUser();
         Companies = _svc.GetCompanies();
-        Kpi = _svc.GetDashboardKpi(CurrentUser.CompanyId);
+
+        var cookieCompanyId = HttpContext.Request.Cookies["companyId"];
+        ActiveCompanyId = !string.IsNullOrEmpty(cookieCompanyId) && Companies.Any(c => c.Id == cookieCompanyId)
+            ? cookieCompanyId
+            : CurrentUser.CompanyId;
+
+        Kpi = _svc.GetDashboardKpi(ActiveCompanyId);
         QuickAccessItems = _svc.GetQuickAccessItems();
-        RevenueChart = _svc.GetRevenueChartData(CurrentUser.CompanyId);
-        DeptChart = _svc.GetDeptComparisonData(CurrentUser.CompanyId);
+        RevenueChart = _svc.GetRevenueChartData(ActiveCompanyId);
+        DeptChart = _svc.GetDeptComparisonData(ActiveCompanyId);
     }
 }

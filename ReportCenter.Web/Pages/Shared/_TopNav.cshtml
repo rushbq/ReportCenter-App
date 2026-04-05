@@ -1,9 +1,14 @@
 @using ReportCenter.Web.Services
 @inject IReportService ReportService
+@inject IHttpContextAccessor HttpContextAccessor
 @{
     var user = ReportService.GetCurrentUser();
     var companies = ReportService.GetCompanies();
-    var defaultCompany = companies.FirstOrDefault(c => c.Id == user.CompanyId)?.ShortName ?? "台灣寶工";
+    var cookieCompanyId = HttpContextAccessor.HttpContext?.Request.Cookies["companyId"];
+    var activeCompanyId = !string.IsNullOrEmpty(cookieCompanyId) && companies.Any(c => c.Id == cookieCompanyId)
+        ? cookieCompanyId
+        : user.CompanyId;
+    var defaultCompany = companies.FirstOrDefault(c => c.Id == activeCompanyId)?.ShortName ?? "台灣寶工";
 }
 <nav class="h-14 bg-pri flex items-center px-3 md:px-5 gap-2 md:gap-3 text-white sticky top-0 z-50 shadow-[0_2px_8px_rgba(0,87,88,0.15)]"
      x-data="{ mobileSearch: false, companyOpen: false, selectedCompany: '@defaultCompany' }">
@@ -33,7 +38,7 @@
              class="absolute top-full left-0 mt-1.5 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[160px] z-50">
             @foreach (var company in companies)
             {
-                <button @@click="selectedCompany = '@company.ShortName'; companyOpen = false"
+                <button @@click="document.cookie = 'companyId=@company.Id;path=/;max-age=31536000'; selectedCompany = '@company.ShortName'; companyOpen = false; window.location.reload()"
                         :class="selectedCompany === '@company.ShortName' ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
                         class="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2 cursor-pointer border-0 bg-transparent">
                     <i data-lucide="building-2" class="w-3.5 h-3.5"></i>

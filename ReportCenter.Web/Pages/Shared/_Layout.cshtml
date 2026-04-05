@@ -117,8 +117,22 @@
         </div>
     </div>
 
+    <!-- 全域 Toast -->
+    <div x-data x-show="$store.toast.visible" x-cloak
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-4"
+         class="fixed bottom-6 right-6 bg-pri text-white px-5 py-3 rounded-lg shadow-lg text-[13px] font-medium z-[200] flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-linecap="round" stroke-linejoin="round"/><polyline points="22 4 12 14.01 9 11.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span x-text="$store.toast.msg"></span>
+    </div>
+
     <!-- 搜尋索引注入 -->
     @{
+        var jsonOpts = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
         var allDepts = ReportService.GetDepartments();
         var searchIndex = new List<object>();
         foreach (var dept in allDepts)
@@ -134,7 +148,7 @@
             lucide.createIcons();
             // 注入搜尋索引
             if (Alpine && Alpine.store) {
-                Alpine.store('search').index = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(searchIndex));
+                Alpine.store('search').index = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(searchIndex, jsonOpts));
             }
         });
         document.addEventListener('htmx:afterSwap', () => lucide.createIcons());

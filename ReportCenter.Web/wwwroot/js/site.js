@@ -1,6 +1,17 @@
 // ─── ReportCenter 全站共用 Alpine Store ───
 document.addEventListener('alpine:init', () => {
 
+    // ─── 全域 Toast Store ───
+    Alpine.store('toast', {
+        msg: '',
+        visible: false,
+        show(msg) {
+            this.msg = msg;
+            this.visible = true;
+            setTimeout(() => this.visible = false, 2500);
+        }
+    });
+
     // 全站搜尋 Store
     Alpine.store('search', {
         open: false,
@@ -51,12 +62,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         toggle(deptId, name, dept) {
-            if (this.has(deptId, name)) {
-                this.items = this.items.filter(f => !(f.deptId === deptId && f.name === name));
-            } else {
+            const wasAdded = !this.has(deptId, name);
+            if (wasAdded) {
                 this.items.push({ deptId, name, dept, time: Date.now() });
+            } else {
+                this.items = this.items.filter(f => !(f.deptId === deptId && f.name === name));
             }
             localStorage.setItem('rc_favorites', JSON.stringify(this.items));
+            Alpine.store('toast').show(wasAdded ? '已加入收藏' : '已取消收藏');
         },
 
         get count() { return this.items.length; }

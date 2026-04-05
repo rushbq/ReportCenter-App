@@ -3,20 +3,12 @@
 @model ReportCenter.Web.Pages.IndexModel
 
 <div class="p-4 md:p-6 pb-10 max-w-[1200px]"
-     x-data="{
-        period: '本月',
-        region: '全部',
-        dept: '全部',
-        chartPeriod: '月',
-        periodOpen: false,
-        regionOpen: false,
-        deptOpen: false
-     }">
+     x-data="indexPage()" x-init="init()">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row justify-between items-start mb-5 gap-3">
         <div>
             <h1 class="text-[20px] md:text-[22px] font-bold text-txt">營運總覽</h1>
-            <div class="text-[12px] text-txt-ter mt-1">@Model.Companies.FirstOrDefault(c => c.Id == Model.CurrentUser.CompanyId)?.ShortName ・ 最後更新 @Model.Kpi.LastUpdated</div>
+            <div class="text-[12px] text-txt-ter mt-1">@Model.Companies.FirstOrDefault(c => c.Id == Model.ActiveCompanyId)?.ShortName ・ 最後更新 @Model.Kpi.LastUpdated</div>
         </div>
         <div class="flex gap-2 flex-wrap">
             <!-- 時間篩選 -->
@@ -68,10 +60,24 @@
 
     <!-- KPIs -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
-        @foreach (var kpi in Model.Kpi.Items)
-        {
-            <partial name="_KpiCard" view-data='new ViewDataDictionary(ViewData) { { "title", kpi.Title }, { "value", kpi.Value }, { "trend", kpi.Trend.ToString() }, { "note", kpi.Note } }' />
-        }
+        <template x-for="kpi in filteredKpis" :key="kpi.title">
+            <div class="bg-white border border-bdr rounded-[10px] p-[18px] shadow-sm">
+                <div class="text-[11px] text-txt-ter font-semibold uppercase tracking-wider mb-2" x-text="kpi.title"></div>
+                <div class="text-[22px] font-bold text-txt leading-none mb-1.5" x-text="kpi.value"></div>
+                <div class="flex items-center gap-1">
+                    <template x-if="kpi.trend !== 0">
+                        <span class="inline-flex items-center gap-0.5 text-[12px] font-semibold"
+                              :class="kpi.trend > 0 ? 'text-ok' : 'text-bad'">
+                            <i :data-lucide="kpi.trend > 0 ? 'arrow-up-right' : 'arrow-down-right'" class="w-3 h-3"></i>
+                            <span x-text="(kpi.trend > 0 ? '+' : '') + kpi.trend + '%'"></span>
+                        </span>
+                    </template>
+                    <template x-if="kpi.note">
+                        <span class="text-[11px] text-txt-ter" x-text="kpi.note"></span>
+                    </template>
+                </div>
+            </div>
+        </template>
     </div>
 
     <!-- Charts Row -->
@@ -83,7 +89,7 @@
                 <div class="flex gap-1">
                     <template x-for="cp in ['月','季','年']">
                         <span class="chip" :class="chartPeriod === cp && 'chip-active'"
-                              @@click="chartPeriod = cp; updateRevenueChart(cp)" x-text="cp"></span>
+                              @@click="chartPeriod = cp; updateRevenueChart(cp); $nextTick(() => lucide.createIcons())" x-text="cp"></span>
                     </template>
                 </div>
             </div>
@@ -114,10 +120,8 @@
                       hover:shadow-md hover:border-pri transition-all">
                 <div class="flex justify-between items-center">
                     <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pri-light text-pri">@r.Dept</span>
-                    <span x-data="{ fav: $store.favorites.has('@r.DeptId', '@r.Name') }"
-                          @@click.prevent="$store.favorites.toggle('@r.DeptId', '@r.Name', '@r.Dept'); fav = !fav">
-                        <i data-lucide="star" class="w-[13px] h-[13px]"
-                           :class="fav ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#ddd]'"></i>
+                    <span @@click.prevent="$store.favorites.toggle('@r.DeptId', '@r.Name', '@r.Dept')">
+                        <svg class="w-[13px] h-[13px]" :class="$store.favorites.has('@r.DeptId', '@r.Name') ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#ddd] fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     </span>
                 </div>
                 <span class="text-[13px] font-semibold text-txt leading-tight">@r.Name</span>
@@ -142,94 +146,129 @@
 
 @section Scripts {
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const C = { pri: '#005758', acc: '#00b4b6', priH: '#006d6e', ter: '#94aeb0', borderL: '#eef2f3' };
+function indexPage() {
+    return {
+        period: '本月',
+        region: '全部',
+        dept: '全部',
+        chartPeriod: '月',
+        periodOpen: false,
+        regionOpen: false,
+        deptOpen: false,
+        revenueChart: null,
+        deptChart: null,
 
-    // 月/季/年圖表資料
-    const chartDataSets = {
-        '月': {
-            labels: ['10月','11月','12月','1月','2月','3月'],
-            current: [10.2,11.1,12.5,10.8,11.6,12.8],
-            last: [9.8,10.3,11.0,9.5,10.1,10.9],
-            budget: [10.5,10.8,11.2,11.0,11.3,11.5]
+        // 各篩選條件對應的 Mock KPI 資料
+        kpiData: {
+            '本月':  [{ title: '本月營收', value: '$12.8M', trend: 8.3, note: 'vs 上月' }, { title: '採購成本', value: '$4.2M', trend: -3.1, note: 'vs 上月' }, { title: '毛利率', value: '67.2%', trend: 2.4, note: '' }, { title: '訂單數', value: '1,847', trend: 12.6, note: 'vs 上月' }],
+            '上月':  [{ title: '上月營收', value: '$11.6M', trend: 5.1, note: 'vs 前月' }, { title: '採購成本', value: '$4.0M', trend: -1.5, note: 'vs 前月' }, { title: '毛利率', value: '65.5%', trend: 1.8, note: '' }, { title: '訂單數', value: '1,723', trend: 8.4, note: 'vs 前月' }],
+            '本季':  [{ title: '本季營收', value: '$35.2M', trend: 10.2, note: 'vs 上季' }, { title: '採購成本', value: '$12.1M', trend: -2.4, note: 'vs 上季' }, { title: '毛利率', value: '65.6%', trend: 1.5, note: '' }, { title: '訂單數', value: '5,417', trend: 11.3, note: 'vs 上季' }],
+            '本年':  [{ title: '本年營收', value: '$140.5M', trend: 9.6, note: 'vs 去年' }, { title: '採購成本', value: '$48.3M', trend: -1.9, note: 'vs 去年' }, { title: '毛利率', value: '65.6%', trend: 0.8, note: '' }, { title: '訂單數', value: '21,530', trend: 14.2, note: 'vs 去年' }],
         },
-        '季': {
-            labels: ['Q1','Q2','Q3','Q4'],
-            current: [33.8,35.2,34.6,37.1],
-            last: [30.2,32.1,31.5,33.8],
-            budget: [32.0,33.5,34.0,35.0]
-        },
-        '年': {
-            labels: ['2022','2023','2024','2025','2026(預)'],
-            current: [105.3,118.6,128.2,140.5,152.0],
-            last: [95.1,105.3,118.6,128.2,140.5],
-            budget: [100.0,112.0,125.0,138.0,150.0]
-        }
-    };
 
-    // Revenue Trend Chart
-    const revenueCtx = document.getElementById('revenueChart');
-    const revenueChart = new Chart(revenueCtx, {
-        type: 'line',
-        data: {
-            labels: chartDataSets['月'].labels,
-            datasets: [
-                {
-                    label: '本年', data: chartDataSets['月'].current,
-                    borderColor: C.pri, backgroundColor: C.pri + '20',
-                    borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 0,
+        // 區域篩選對應的營收倍率
+        regionFactor: { '全部': 1.0, '北區': 0.42, '中區': 0.25, '南區': 0.22, '東區': 0.11 },
+
+        // 部門比較資料
+        deptCompData: {
+            '全部':   { actual: [4.2,5.8,1.2,0.8,1.6], target: [4.5,5.2,1.3,0.9,1.8] },
+            '採購部': { actual: [4.2,0,0,0,0], target: [4.5,0,0,0,0] },
+            '業務部': { actual: [0,5.8,0,0,0], target: [0,5.2,0,0,0] },
+            '財務部': { actual: [0,0,1.2,0,0], target: [0,0,1.3,0,0] },
+            '人資部': { actual: [0,0,0,0.8,0], target: [0,0,0,0.9,0] },
+            '資訊部': { actual: [0,0,0,0,1.6], target: [0,0,0,0,1.8] },
+        },
+
+        get filteredKpis() {
+            const base = this.kpiData[this.period] || this.kpiData['本月'];
+            const factor = this.regionFactor[this.region] || 1.0;
+            if (this.region === '全部' && this.dept === '全部') return base;
+            return base.map(k => {
+                if (k.title.includes('毛利率')) return k;
+                const numMatch = k.value.match(/([\$¥]?)([\d,.]+)(.*)/);
+                if (!numMatch) return k;
+                const prefix = numMatch[1], num = parseFloat(numMatch[2].replace(/,/g, '')), suffix = numMatch[3];
+                const adjusted = num * factor;
+                const formatted = adjusted >= 1000 ? adjusted.toLocaleString('en-US', { maximumFractionDigits: 1 }) : adjusted.toFixed(1);
+                return { ...k, value: prefix + formatted + suffix };
+            });
+        },
+
+        init() {
+            this.$nextTick(() => this.initCharts());
+            this.$watch('region', () => this.updateDeptChart());
+            this.$watch('dept', () => this.updateDeptChart());
+            this.$watch('period', () => { this.$nextTick(() => lucide.createIcons()); });
+        },
+
+        initCharts() {
+            const C = { pri: '#005758', acc: '#00b4b6', priH: '#006d6e', ter: '#94aeb0', borderL: '#eef2f3' };
+            this._C = C;
+
+            this._revenueDataSets = {
+                '月': { labels: ['10月','11月','12月','1月','2月','3月'], current: [10.2,11.1,12.5,10.8,11.6,12.8], last: [9.8,10.3,11.0,9.5,10.1,10.9], budget: [10.5,10.8,11.2,11.0,11.3,11.5] },
+                '季': { labels: ['Q1','Q2','Q3','Q4'], current: [33.8,35.2,34.6,37.1], last: [30.2,32.1,31.5,33.8], budget: [32.0,33.5,34.0,35.0] },
+                '年': { labels: ['2022','2023','2024','2025','2026(預)'], current: [105.3,118.6,128.2,140.5,152.0], last: [95.1,105.3,118.6,128.2,140.5], budget: [100.0,112.0,125.0,138.0,150.0] }
+            };
+
+            this.revenueChart = new Chart(document.getElementById('revenueChart'), {
+                type: 'line',
+                data: {
+                    labels: this._revenueDataSets['月'].labels,
+                    datasets: [
+                        { label: '本年', data: this._revenueDataSets['月'].current, borderColor: C.pri, backgroundColor: C.pri + '20', borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 0 },
+                        { label: '去年', data: this._revenueDataSets['月'].last, borderColor: C.acc, borderWidth: 1.5, borderDash: [4,3], fill: false, tension: 0.4, pointRadius: 0 },
+                        { label: '預算', data: this._revenueDataSets['月'].budget, borderColor: C.ter, borderWidth: 1, borderDash: [2,2], fill: false, tension: 0.4, pointRadius: 0 }
+                    ]
                 },
-                {
-                    label: '去年', data: chartDataSets['月'].last,
-                    borderColor: C.acc, borderWidth: 1.5, borderDash: [4,3],
-                    fill: false, tension: 0.4, pointRadius: 0,
-                },
-                {
-                    label: '預算', data: chartDataSets['月'].budget,
-                    borderColor: C.ter, borderWidth: 1, borderDash: [2,2],
-                    fill: false, tension: 0.4, pointRadius: 0,
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter } },
+                        y: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter, callback: v => v + 'M' } }
+                    }
                 }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter } },
-                y: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter, callback: v => v + 'M' } }
-            }
-        }
-    });
+            });
 
-    // 全域函式：更新營收圖表
-    window.updateRevenueChart = function(period) {
-        const ds = chartDataSets[period];
-        revenueChart.data.labels = ds.labels;
-        revenueChart.data.datasets[0].data = ds.current;
-        revenueChart.data.datasets[1].data = ds.last;
-        revenueChart.data.datasets[2].data = ds.budget;
-        revenueChart.update();
+            this.deptChart = new Chart(document.getElementById('deptChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['採購部','業務部','財務部','人資部','資訊部'],
+                    datasets: [
+                        { label: '實際', data: [4.2,5.8,1.2,0.8,1.6], backgroundColor: C.pri, borderRadius: 4, barPercentage: 0.6 },
+                        { label: '目標', data: [4.5,5.2,1.3,0.9,1.8], backgroundColor: C.borderL, borderRadius: 4, barPercentage: 0.6 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: C.ter } },
+                        y: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter } }
+                    }
+                }
+            });
+        },
+
+        updateRevenueChart(period) {
+            const ds = this._revenueDataSets[period];
+            const factor = this.regionFactor[this.region] || 1.0;
+            this.revenueChart.data.labels = ds.labels;
+            this.revenueChart.data.datasets[0].data = ds.current.map(v => +(v * factor).toFixed(1));
+            this.revenueChart.data.datasets[1].data = ds.last.map(v => +(v * factor).toFixed(1));
+            this.revenueChart.data.datasets[2].data = ds.budget.map(v => +(v * factor).toFixed(1));
+            this.revenueChart.update();
+        },
+
+        updateDeptChart() {
+            const data = this.deptCompData[this.dept] || this.deptCompData['全部'];
+            const factor = this.regionFactor[this.region] || 1.0;
+            this.deptChart.data.datasets[0].data = data.actual.map(v => +(v * factor).toFixed(1));
+            this.deptChart.data.datasets[1].data = data.target.map(v => +(v * factor).toFixed(1));
+            this.deptChart.update();
+        }
     };
-
-    // Dept Comparison Chart
-    new Chart(document.getElementById('deptChart'), {
-        type: 'bar',
-        data: {
-            labels: ['採購部','業務部','財務部','人資部','資訊部'],
-            datasets: [
-                { label: '實際', data: [4.2,5.8,1.2,0.8,1.6], backgroundColor: C.pri, borderRadius: 4, barPercentage: 0.6 },
-                { label: '目標', data: [4.5,5.2,1.3,0.9,1.8], backgroundColor: C.borderL, borderRadius: 4, barPercentage: 0.6 }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { display: false }, ticks: { font: { size: 10 }, color: C.ter } },
-                y: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter } }
-            }
-        }
-    });
-});
+}
 </script>
 }

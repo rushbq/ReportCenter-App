@@ -55,6 +55,8 @@ public class MaterialRow
     public string UnitPrice { get; set; } = "";
     public string Amount { get; set; } = "";
     public double Change { get; set; }
+    public string Category { get; set; } = "";
+    public string Period { get; set; } = "";
 }
 
 // ─── 儀表板 KPI ───

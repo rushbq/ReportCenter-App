@@ -79,7 +79,7 @@
                 <template x-for="f in $store.favorites.items" :key="f.deptId + f.name">
                     <a :href="'/Report?dept=' + f.deptId + '&name=' + encodeURIComponent(f.name)"
                        class="flex items-center gap-1.5 text-[11px] text-txt-sec px-2.5 py-[5px] rounded-[5px] no-underline hover:bg-pri-light hover:text-pri truncate">
-                        <i data-lucide="star" class="w-3 h-3 text-[#f5a623] fill-[#f5a623] shrink-0"></i>
+                        <svg class="w-3 h-3 text-[#f5a623] fill-[#f5a623] shrink-0" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                         <span class="truncate" x-text="f.name"></span>
                     </a>
                 </template>
@@ -103,7 +103,7 @@
                 <template x-for="r in $store.recent.items.slice(0, 5)" :key="r.deptId + r.name">
                     <a :href="'/Report?dept=' + r.deptId + '&name=' + encodeURIComponent(r.name)"
                        class="flex items-center gap-1.5 text-[11px] text-txt-sec px-2.5 py-[5px] rounded-[5px] no-underline hover:bg-pri-light hover:text-pri truncate">
-                        <i data-lucide="clock" class="w-3 h-3 shrink-0"></i>
+                        <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <span class="truncate" x-text="r.name"></span>
                     </a>
                 </template>
