@@ -4,18 +4,11 @@
 @model ReportCenter.Web.Pages.Admin.IndexModel
 
 @{
+    // 序列化選項：避免中文轉義為 \uXXXX
     var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-    var allCatalogItems = Model.Stats.RecentItems
-        .Concat(Model.Stats.OrphanItems)
-        .DistinctBy(r => r.ReportID)
-        .ToList();
+    // 相依性分析資料由 PageModel.BuildDependencyAnalysis() 預先計算
     var depAnalysisJson = JsonSerializer.Serialize(
-        allCatalogItems
-            .SelectMany(r => r.Dependencies.Select(d => new { Dep = d, Report = r.ReportName }))
-            .GroupBy(x => x.Dep)
-            .Select(g => new { name = g.Key, reports = g.Select(x => x.Report).Distinct().ToList() })
-            .OrderByDescending(x => x.reports.Count)
-            .ToList(),
+        Model.DepAnalysis.Select(g => new { name = g.Name, reports = g.Reports }),
         jsonOpts);
 }
 

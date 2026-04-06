@@ -57,9 +57,18 @@ ReportCenter.Web/
 ## 資料架構 (Service Layer)
 
 ```
-IReportService (介面)
+IReportService (介面)               # 首頁/部門頁資料
   └── MockReportService (目前使用)
-  └── ApiReportService (未來 — 實作此類別並在 Program.cs 替換即可)
+  └── ApiReportService (未來)
+
+ICatalogService (介面)              # 報表目錄管理 BLL
+  └── CatalogService                # 依賴 ICatalogRepository + DepartmentDisplaySettings
+      ├── GetAdminStats()           → 統計 KPI + 部門矩陣 (分 TW/SH，依 appsettings 過濾)
+      ├── BuildDeptUsagesForRegion() → 私有方法：建置單一區域部門矩陣
+      └── CRUD / 分類 / 部門 / 資料夾 / BaseUrl
+
+ICatalogRepository (介面)           # 資料存取層
+  └── SqlCatalogRepository          # Dapper + SQL Server
 ```
 
 **切換真實 API 只需：**
@@ -147,12 +156,29 @@ IReportService (介面)
 - `ReportCatalogItem` — 報表清冊主表 (對應 DB `ReportCatalog`)
 - `DeptAssignment` — 部門指派 (對應 DB `ReportDepartment`)
 - `Dependencies` — 相依物件清單 (對應 DB `ReportDependency`)
-- `AdminStats` / `DeptUsage` — 管理總覽用的 View Model
+- `AdminStats` — 管理總覽 KPI ViewModel，含 `DeptUsagesTW` / `DeptUsagesSH` (依區域分開)
+- `DeptUsage` — 部門 → 報表對照
+- `DependencyGroup` — 相依性分析 ViewModel (Admin/Index.cshtml.cs)
 
 ### 管理功能
 
-- **總覽頁 (`/Admin`)**: KPI 卡片、部門使用矩陣、孤立報表警示、最近異動、相依性分析
-- **目錄管理 (`/Admin/Catalog`)**: 搜尋篩選 (工具類型/啟停狀態)、新增/編輯 Modal (含部門指派 checkbox + 相依物件 tag input)、啟停切換、刪除確認
+- **總覽頁 (`/Admin`)**: KPI 卡片、部門使用矩陣 (台灣/上海雙欄)、孤立報表警示、最近異動、相依性分析
+- **目錄管理 (`/Admin/Catalog`)**: 搜尋篩選 (工具類型/啟停狀態/資料夾)、新增/編輯 Modal (Tab 分頁: 基本設定、部門指派、進階設定)、啟停切換、刪除確認
+
+### 部門過濾規則
+
+**所有 Service 層取得部門的方法，都必須依 `appsettings.json` → `DepartmentDisplay.Regions` 設定過濾，僅回傳設定中存在的 DeptID。** 這是全域規則，不限於特定頁面。
+
+目前遵循此規則的方法：
+
+| Service | 方法 | 過濾方式 |
+|---------|------|---------|
+| `SqlReportService` | `GetDepartments()` | 迴圈比對 `config.Depts` |
+| `CatalogService` | `BuildDeptUsagesForRegion()` | `allowedDeptIds` HashSet |
+| `CatalogService` | `GetCatalogDepartments()` | `allowedDeptIds` HashSet |
+
+新增任何取得部門的方法時，務必加入相同的過濾邏輯。
+若需新增/移除顯示的部門，修改 `appsettings.json` 的 `DepartmentDisplay` 區段即可。
 
 ## 匯出功能
 
@@ -199,3 +225,7 @@ cd ReportCenter.Web && dotnet build
 - 動態圖示（如收藏星號）使用 inline SVG 搭配 Alpine `:class`，不使用 Lucide 動態渲染（避免 `createIcons()` 替換後失去響應性）
 - `<script>` 區塊內的中文字串須透過 `@Html.Raw(JsonSerializer.Serialize(..., jsonOpts))` 注入，避免 Razor HTML 編碼產生亂碼
 - JSON 序列化統一使用 `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` 避免中文被轉義為 `\uXXXX`
+- View (`.cshtml`) 僅負責呈現，不放 LINQ 商業邏輯；需計算的資料在 PageModel 預先處理後透過屬性傳遞
+- POST handler 中的字串解析邏輯抽為 `private static` 方法，保持 handler 簡潔
+- Service 中的長方法拆分為具名私有方法 (如 `BuildDeptUsagesForRegion`)，提升可讀性與可測試性
+- 所有 Service 介面與 PageModel 加入 XML `<summary>` 註解
