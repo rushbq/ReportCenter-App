@@ -13,6 +13,8 @@ builder.Services.AddHttpContextAccessor();
 // 設定 (appsettings.json)
 builder.Services.Configure<ReportBaseUrlSettings>(
     builder.Configuration.GetSection(ReportBaseUrlSettings.SectionName));
+builder.Services.Configure<DepartmentDisplaySettings>(
+    builder.Configuration.GetSection(DepartmentDisplaySettings.SectionName));
 
 // ── Windows 驗證設定 ──────────────────────────────
 if (builder.Environment.IsDevelopment())

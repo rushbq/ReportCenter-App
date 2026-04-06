@@ -24,4 +24,19 @@ public interface ICatalogRepository
 
     // ─── 部門 (User_Dept) ───
     List<CatalogDept> GetCatalogDepartments(string? area = null);
+
+    // ─── 前端查詢 (依部門取啟用中報表) ───
+    List<ReportCatalogItem> GetActiveReportsByDepartment(int deptId);
+    List<string> GetCategoriesByDepartment(int deptId);
+    int GetActiveReportCountByDepartment(int deptId);
+
+    // ─── 使用者收藏 ───
+    List<int> GetUserFavorites(string userId);
+    void AddFavorite(string userId, int reportId);
+    void RemoveFavorite(string userId, int reportId);
+
+    // ─── 使用者釘選 ───
+    List<ReportCatalogItem> GetUserPins(string userId);
+    void AddPin(string userId, int reportId);
+    void RemovePin(string userId, int reportId);
 }

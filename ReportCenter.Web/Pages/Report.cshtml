@@ -34,8 +34,8 @@
         </div>
         <div class="flex gap-2">
             <span class="chip" @@click="toggleFav()">
-                <svg class="w-3 h-3" :class="$store.favorites.has('@Model.DeptId', '@Model.ReportName') ? 'text-[#f5a623] fill-[#f5a623]' : 'fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <span x-text="$store.favorites.has('@Model.DeptId', '@Model.ReportName') ? '已收藏' : '收藏'"></span>
+                <svg class="w-3 h-3" :class="isFav ? 'text-[#f5a623] fill-[#f5a623]' : 'fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span x-text="isFav ? '已收藏' : '收藏'"></span>
             </span>
             <!-- Excel 匯出功能暫時維持 toast 提示，未來改用後端套件實作實際下載 -->
             <span class="chip" @@click="exportData('excel')"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i>Excel</span>
@@ -202,7 +202,8 @@
 const _rp = {
     deptId: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DeptId, jsonOpts)),
     reportName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ReportName, jsonOpts)),
-    deptLabel: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dept.Label, jsonOpts))
+    deptLabel: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dept.Label, jsonOpts)),
+    reportId: @Model.ReportID
 };
 function reportPage() {
     return {
@@ -213,6 +214,7 @@ function reportPage() {
         dateOpen: false,
         materialOpen: false,
         supplierOpen: false,
+        isFav: @(Model.IsFavorite ? "true" : "false"),
         allRows: [],
         suppliers: [],
         totalRows: @Model.TotalRows,
@@ -240,8 +242,21 @@ function reportPage() {
             this.supplierFilter = '全部';
         },
 
-        toggleFav() {
-            this.$store.favorites.toggle(_rp.deptId, _rp.reportName, _rp.deptLabel);
+        async toggleFav() {
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                const res = await fetch('/Api/Favorite?handler=Toggle&reportId=' + _rp.reportId, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token || '' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.isFav = data.isFavorite;
+                    Alpine.store('toast').show(data.isFavorite ? '已加入收藏' : '已取消收藏');
+                }
+            } catch (e) {
+                console.error('收藏切換失敗', e);
+            }
         },
 
         exportData(format) {

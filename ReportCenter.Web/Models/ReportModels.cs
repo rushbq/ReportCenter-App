@@ -30,11 +30,14 @@ public class Department
 
 public class Report
 {
+    public int ReportID { get; set; }
     public string Name { get; set; } = "";
     public string Desc { get; set; } = "";
     public string Cat { get; set; } = "";
     public string Updated { get; set; } = "";
     public bool Fav { get; set; }
+    public string ReportTool { get; set; } = "Internal";  // Internal / SmartQuery / SSRS
+    public string ReportCode { get; set; } = "";           // URL path 或內部路由
 }
 
 public class QuickAccess

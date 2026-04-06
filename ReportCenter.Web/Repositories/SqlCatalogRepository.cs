@@ -284,4 +284,129 @@ public class SqlCatalogRepository : ICatalogRepository
         sql += " ORDER BY Area_Sort, Sort";
         return conn.Query<CatalogDept>(sql, parameters).ToList();
     }
+
+    // ═══════════════════════════════════════════
+    //  前端查詢 (依部門取啟用中報表)
+    // ═══════════════════════════════════════════
+
+    public List<ReportCatalogItem> GetActiveReportsByDepartment(int deptId)
+    {
+        using var conn = OpenConn();
+
+        var items = conn.Query<ReportCatalogItem>(
+            """
+            SELECT c.ReportID, c.ReportName, c.ReportTool, c.ReportPath, c.ReportCode,
+                   c.SourceName, c.CreateDate, c.ModifyDate, c.IsActive, c.Remarks,
+                   c.CategoryID, cat.CategoryName
+            FROM ReportCatalog c
+            INNER JOIN ReportDepartment rd ON c.ReportID = rd.ReportID
+            LEFT JOIN ReportCategory cat ON c.CategoryID = cat.CategoryID
+            WHERE c.IsActive = 1 AND rd.DeptID = @DeptID
+            ORDER BY ISNULL(c.ModifyDate, c.CreateDate) DESC
+            """, new { DeptID = deptId }).ToList();
+
+        return items;
+    }
+
+    public List<string> GetCategoriesByDepartment(int deptId)
+    {
+        using var conn = OpenConn();
+
+        return conn.Query<string>(
+            """
+            SELECT DISTINCT cat.CategoryName
+            FROM ReportCatalog c
+            INNER JOIN ReportDepartment rd ON c.ReportID = rd.ReportID
+            INNER JOIN ReportCategory cat ON c.CategoryID = cat.CategoryID
+            WHERE c.IsActive = 1 AND rd.DeptID = @DeptID AND cat.CategoryName IS NOT NULL
+            ORDER BY cat.CategoryName
+            """, new { DeptID = deptId }).ToList();
+    }
+
+    public int GetActiveReportCountByDepartment(int deptId)
+    {
+        using var conn = OpenConn();
+
+        return conn.QuerySingle<int>(
+            """
+            SELECT COUNT(DISTINCT c.ReportID)
+            FROM ReportCatalog c
+            INNER JOIN ReportDepartment rd ON c.ReportID = rd.ReportID
+            WHERE c.IsActive = 1 AND rd.DeptID = @DeptID
+            """, new { DeptID = deptId });
+    }
+
+    // ═══════════════════════════════════════════
+    //  使用者收藏
+    // ═══════════════════════════════════════════
+
+    public List<int> GetUserFavorites(string userId)
+    {
+        using var conn = OpenConn();
+        return conn.Query<int>(
+            "SELECT ReportID FROM UserFavorite WHERE UserID = @UserID",
+            new { UserID = userId }).ToList();
+    }
+
+    public void AddFavorite(string userId, int reportId)
+    {
+        using var conn = OpenConn();
+        conn.Execute(
+            """
+            IF NOT EXISTS (SELECT 1 FROM UserFavorite WHERE UserID = @UserID AND ReportID = @ReportID)
+                INSERT INTO UserFavorite (UserID, ReportID) VALUES (@UserID, @ReportID)
+            """,
+            new { UserID = userId, ReportID = reportId });
+    }
+
+    public void RemoveFavorite(string userId, int reportId)
+    {
+        using var conn = OpenConn();
+        conn.Execute(
+            "DELETE FROM UserFavorite WHERE UserID = @UserID AND ReportID = @ReportID",
+            new { UserID = userId, ReportID = reportId });
+    }
+
+    // ═══════════════════════════════════════════
+    //  使用者釘選
+    // ═══════════════════════════════════════════
+
+    public List<ReportCatalogItem> GetUserPins(string userId)
+    {
+        using var conn = OpenConn();
+
+        return conn.Query<ReportCatalogItem>(
+            """
+            SELECT c.ReportID, c.ReportName, c.ReportTool, c.ReportPath, c.ReportCode,
+                   c.SourceName, c.CreateDate, c.ModifyDate, c.IsActive, c.Remarks,
+                   c.CategoryID, cat.CategoryName
+            FROM UserPin p
+            INNER JOIN ReportCatalog c ON p.ReportID = c.ReportID
+            LEFT JOIN ReportCategory cat ON c.CategoryID = cat.CategoryID
+            WHERE p.UserID = @UserID AND c.IsActive = 1
+            ORDER BY p.SortOrder, p.CreatedDate
+            """, new { UserID = userId }).ToList();
+    }
+
+    public void AddPin(string userId, int reportId)
+    {
+        using var conn = OpenConn();
+        conn.Execute(
+            """
+            IF NOT EXISTS (SELECT 1 FROM UserPin WHERE UserID = @UserID AND ReportID = @ReportID)
+            BEGIN
+                DECLARE @MaxSort INT = ISNULL((SELECT MAX(SortOrder) FROM UserPin WHERE UserID = @UserID), 0);
+                INSERT INTO UserPin (UserID, ReportID, SortOrder) VALUES (@UserID, @ReportID, @MaxSort + 1)
+            END
+            """,
+            new { UserID = userId, ReportID = reportId });
+    }
+
+    public void RemovePin(string userId, int reportId)
+    {
+        using var conn = OpenConn();
+        conn.Execute(
+            "DELETE FROM UserPin WHERE UserID = @UserID AND ReportID = @ReportID",
+            new { UserID = userId, ReportID = reportId });
+    }
 }

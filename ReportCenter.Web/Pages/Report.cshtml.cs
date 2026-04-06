@@ -10,8 +10,10 @@ public class ReportModel : PageModel
 
     public ReportModel(IReportService svc) => _svc = svc;
 
-    public string DeptId { get; set; } = "procurement";
-    public string ReportName { get; set; } = "月度採購成本分析";
+    public string DeptId { get; set; } = "";
+    public string ReportName { get; set; } = "";
+    public int ReportID { get; set; }
+    public bool IsFavorite { get; set; }
     public Department Dept { get; set; } = null!;
     public List<MaterialRow> MaterialRows { get; set; } = [];
     public int TotalRows { get; set; }
@@ -19,10 +21,21 @@ public class ReportModel : PageModel
 
     public void OnGet(string dept, string name, int page = 1)
     {
-        DeptId = dept ?? "procurement";
-        ReportName = name ?? "月度採購成本分析";
+        DeptId = dept ?? "";
+        ReportName = name ?? "";
         CurrentPage = page < 1 ? 1 : page;
-        Dept = _svc.GetDepartment(DeptId) ?? _svc.GetDepartments()[0];
+        var departments = _svc.GetDepartments();
+        Dept = _svc.GetDepartment(DeptId) ?? (departments.Count > 0 ? departments[0] : new Department { Label = "未知部門" });
+        if (string.IsNullOrEmpty(DeptId) && departments.Count > 0)
+            DeptId = Dept.Id;
+
+        // 取得報表 ID 供收藏功能使用
+        var report = _svc.GetReport(DeptId, ReportName);
+        ReportID = report?.ReportID ?? 0;
+
+        var favorites = _svc.GetUserFavorites();
+        IsFavorite = favorites.Contains(ReportID);
+
         MaterialRows = _svc.GetMaterialRows(DeptId, ReportName, CurrentPage);
         TotalRows = _svc.GetMaterialRowCount(DeptId, ReportName);
     }

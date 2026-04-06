@@ -33,4 +33,12 @@ public interface IReportService
     ChartData GetRevenueChartData(string companyId, string period = "month");
     ChartData GetDeptComparisonData(string companyId);
     ChartData GetReportChartData(string deptId, string reportName, string chartType);
+
+    // 收藏
+    List<int> GetUserFavorites();
+    void ToggleFavorite(int reportId);
+
+    // 釘選
+    List<Report> GetUserPins();
+    void TogglePin(int reportId);
 }

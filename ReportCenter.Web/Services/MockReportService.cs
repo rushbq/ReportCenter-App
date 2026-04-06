@@ -232,4 +232,11 @@ public class MockReportService : IReportService
         };
     }
 
+    // ─── 收藏/釘選 (Mock 空實作) ───
+
+    public List<int> GetUserFavorites() => [];
+    public void ToggleFavorite(int reportId) { }
+    public List<Report> GetUserPins() => [];
+    public void TogglePin(int reportId) { }
+
 }

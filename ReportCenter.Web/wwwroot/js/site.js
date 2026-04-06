@@ -47,59 +47,15 @@ document.addEventListener('alpine:init', () => {
                 .slice(0, 8);
         },
 
-        go(url) {
+        go(url, target) {
             this.open = false;
-            window.location.href = url;
+            if (target === '_blank') {
+                // 外部報表：用動態 <a> 開新分頁
+                Object.assign(document.createElement('a'), { href: url, target: '_blank', rel: 'noopener' }).click();
+            } else {
+                window.location.href = url;
+            }
         }
-    });
-
-    // 收藏 Store (localStorage 持久化)
-    Alpine.store('favorites', {
-        items: JSON.parse(localStorage.getItem('rc_favorites') || '[]'),
-
-        has(deptId, name) {
-            return this.items.some(f => f.deptId === deptId && f.name === name);
-        },
-
-        toggle(deptId, name, dept) {
-            const wasAdded = !this.has(deptId, name);
-            if (wasAdded) {
-                this.items.push({ deptId, name, dept, time: Date.now() });
-            } else {
-                this.items = this.items.filter(f => !(f.deptId === deptId && f.name === name));
-            }
-            localStorage.setItem('rc_favorites', JSON.stringify(this.items));
-            Alpine.store('toast').show(wasAdded ? '已加入收藏' : '已取消收藏');
-        },
-
-        get count() { return this.items.length; }
-    });
-
-    // 釘選 Store (localStorage 持久化)
-    Alpine.store('pins', {
-        items: JSON.parse(localStorage.getItem('rc_pins') || '[]'),
-
-        has(deptId, name) {
-            return this.items.some(p => p.deptId === deptId && p.name === name);
-        },
-
-        toggle(deptId, name, dept, tag) {
-            const wasAdded = !this.has(deptId, name);
-            if (wasAdded) {
-                this.items.push({ deptId, name, dept, tag, time: Date.now() });
-            } else {
-                this.items = this.items.filter(p => !(p.deptId === deptId && p.name === name));
-            }
-            localStorage.setItem('rc_pins', JSON.stringify(this.items));
-            Alpine.store('toast').show(wasAdded ? '已釘選至快速存取' : '已取消釘選');
-        },
-
-        remove(deptId, name) {
-            this.items = this.items.filter(p => !(p.deptId === deptId && p.name === name));
-            localStorage.setItem('rc_pins', JSON.stringify(this.items));
-        },
-
-        get count() { return this.items.length; }
     });
 
     // 最近瀏覽 Store (localStorage 持久化)

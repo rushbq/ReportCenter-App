@@ -1,6 +1,9 @@
+@using Microsoft.Extensions.Options
 @using ReportCenter.Web.Models
+@using ReportCenter.Web.Models.Settings
 @using ReportCenter.Web.Services
 @inject IReportService ReportService
+@inject IOptions<ReportBaseUrlSettings> BaseUrlOptions
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -49,6 +52,7 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="bg-surface min-h-screen flex flex-col" x-data="{ sidebarOpen: false }">
+    @Html.AntiForgeryToken()
     @await Html.PartialAsync("_TopNav")
 
     <div class="flex flex-1 relative">
@@ -96,14 +100,19 @@
                 </template>
                 <template x-for="r in $store.search.results" :key="r.url">
                     <button class="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-surface border-0 bg-transparent cursor-pointer border-b border-bdr-light"
-                            @@click="$store.search.go(r.url)">
-                        <i data-lucide="file-text" class="w-4 h-4 text-pri mt-0.5 shrink-0"></i>
+                            @@click="$store.search.go(r.url, r.target)">
+                        <i :data-lucide="r.reportTool === 'Internal' ? 'file-text' : 'external-link'" class="w-4 h-4 text-pri mt-0.5 shrink-0"></i>
                         <div class="flex-1 min-w-0">
                             <div class="text-[13px] font-semibold text-txt truncate" x-text="r.name"></div>
                             <div class="text-[11px] text-txt-sec truncate" x-text="r.desc"></div>
                             <div class="flex items-center gap-2 mt-0.5">
                                 <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-pri-light text-pri font-semibold" x-text="r.dept"></span>
                                 <span class="text-[10px] text-txt-ter" x-text="r.cat"></span>
+                                <template x-if="r.reportTool !== 'Internal'">
+                                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                          :class="r.reportTool === 'SmartQuery' ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700'"
+                                          x-text="r.reportTool"></span>
+                                </template>
                             </div>
                         </div>
                     </button>
@@ -133,13 +142,21 @@
     <!-- 搜尋索引注入 -->
     @{
         var jsonOpts = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        var layoutBaseUrls = BaseUrlOptions.Value;
         var allDepts = ReportService.GetDepartments();
         var searchIndex = new List<object>();
         foreach (var dept in allDepts)
         {
             foreach (var report in ReportService.GetReports(dept.Id))
             {
-                searchIndex.Add(new { name = report.Name, desc = report.Desc, dept = dept.Label, deptId = dept.Id, cat = report.Cat, url = $"/Report?dept={dept.Id}&name={System.Net.WebUtility.UrlEncode(report.Name)}" });
+                var url = report.ReportTool switch
+                {
+                    "SmartQuery" => layoutBaseUrls.SmartQuery + report.ReportCode,
+                    "SSRS" => layoutBaseUrls.SSRS + report.ReportCode,
+                    _ => $"/Report?dept={dept.Id}&name={System.Net.WebUtility.UrlEncode(report.Name)}"
+                };
+                var target = report.ReportTool == "Internal" ? "_self" : "_blank";
+                searchIndex.Add(new { name = report.Name, desc = report.Desc, dept = dept.Label, deptId = dept.Id, cat = report.Cat, reportTool = report.ReportTool, url, target });
             }
         }
     }
