@@ -14,12 +14,15 @@ public class CatalogService : ICatalogService
     private readonly ICatalogRepository _repo;
     private readonly IReportService _reportSvc;
     private readonly ReportBaseUrlSettings _baseUrls;
+    private readonly DepartmentDisplaySettings _deptDisplay;
 
-    public CatalogService(ICatalogRepository repo, IReportService reportSvc, IOptions<ReportBaseUrlSettings> baseUrls)
+    public CatalogService(ICatalogRepository repo, IReportService reportSvc,
+        IOptions<ReportBaseUrlSettings> baseUrls, IOptions<DepartmentDisplaySettings> deptDisplay)
     {
         _repo = repo;
         _reportSvc = reportSvc;
         _baseUrls = baseUrls.Value;
+        _deptDisplay = deptDisplay.Value;
     }
 
     // ─── 報表目錄 CRUD ───
@@ -62,18 +65,43 @@ public class CatalogService : ICatalogService
             OrphanItems = items.Where(i => i.Departments.Count == 0).ToList(),
         };
 
-        // 部門使用矩陣
-        var deptMap = new Dictionary<string, List<ReportCatalogItem>>();
+        // 從 appsettings DepartmentDisplay 取得各區域允許的 DeptID
+        var allowedTW = _deptDisplay.Regions.TryGetValue("TW", out var twCfg)
+            ? twCfg.Depts.Select(d => d.DeptID).ToHashSet() : [];
+        var allowedSH = _deptDisplay.Regions.TryGetValue("SH", out var shCfg)
+            ? shCfg.Depts.Select(d => d.DeptID).ToHashSet() : [];
+
+        // 查詢 User_Dept 取得 DeptID → DeptName 對照（含 Area）
+        var allCatalogDepts = _repo.GetCatalogDepartments("TW").Concat(_repo.GetCatalogDepartments("SH")).ToList();
+        var deptLookup = allCatalogDepts.ToDictionary(d => d.DeptID, d => d);
+
+        // 建立部門使用矩陣（依 DeptID 分組，僅含 appsettings 允許的部門）
+        var deptMapTW = new Dictionary<string, (string DeptName, List<ReportCatalogItem> Reports)>();
+        var deptMapSH = new Dictionary<string, (string DeptName, List<ReportCatalogItem> Reports)>();
+
         foreach (var item in items.Where(i => i.IsActive))
         {
             foreach (var dept in item.Departments)
             {
-                if (!deptMap.ContainsKey(dept.DeptName))
-                    deptMap[dept.DeptName] = [];
-                deptMap[dept.DeptName].Add(item);
+                var deptIdStr = dept.DeptID.ToString();
+
+                if (allowedTW.Contains(deptIdStr))
+                {
+                    if (!deptMapTW.ContainsKey(deptIdStr))
+                        deptMapTW[deptIdStr] = (dept.DeptName, []);
+                    deptMapTW[deptIdStr].Reports.Add(item);
+                }
+                else if (allowedSH.Contains(deptIdStr))
+                {
+                    if (!deptMapSH.ContainsKey(deptIdStr))
+                        deptMapSH[deptIdStr] = (dept.DeptName, []);
+                    deptMapSH[deptIdStr].Reports.Add(item);
+                }
             }
         }
-        stats.DeptUsages = deptMap.Select(kv => new DeptUsage { DeptName = kv.Key, Reports = kv.Value }).ToList();
+
+        stats.DeptUsagesTW = deptMapTW.Select(kv => new DeptUsage { DeptName = kv.Value.DeptName, Reports = kv.Value.Reports }).ToList();
+        stats.DeptUsagesSH = deptMapSH.Select(kv => new DeptUsage { DeptName = kv.Value.DeptName, Reports = kv.Value.Reports }).ToList();
 
         return stats;
     }

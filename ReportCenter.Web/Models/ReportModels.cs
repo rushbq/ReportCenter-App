@@ -150,7 +150,8 @@ public class AdminStats
     public int OrphanCount { get; set; }
     public List<ReportCatalogItem> RecentItems { get; set; } = [];
     public List<ReportCatalogItem> OrphanItems { get; set; } = [];
-    public List<DeptUsage> DeptUsages { get; set; } = [];
+    public List<DeptUsage> DeptUsagesTW { get; set; } = [];
+    public List<DeptUsage> DeptUsagesSH { get; set; } = [];
 }
 
 public class DeptUsage
