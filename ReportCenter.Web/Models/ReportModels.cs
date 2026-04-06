@@ -107,7 +107,8 @@ public class ReportCatalogItem
     public DateTime CreateDate { get; set; } = DateTime.Now;
     public DateTime? ModifyDate { get; set; }
     public bool IsActive { get; set; } = true;
-    public string Remarks { get; set; } = "";
+    public string Remarks { get; set; } = "";              // 報表描述
+    public bool UseCompanyParam { get; set; }               // 是否帶公司別參數
     public int? CategoryID { get; set; }
     public string CategoryName { get; set; } = "";         // 顯示用，由 JOIN 帶出
     public List<DeptAssignment> Departments { get; set; } = [];

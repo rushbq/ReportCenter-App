@@ -36,7 +36,7 @@ public class SqlCatalogRepository : ICatalogRepository
         var sql = """
             SELECT c.ReportID, c.ReportName, c.ReportTool, c.ReportPath, c.ReportCode,
                    c.SourceName, c.CreateDate, c.ModifyDate, c.IsActive, c.Remarks,
-                   c.CategoryID, cat.CategoryName
+                   c.UseCompanyParam, c.CategoryID, cat.CategoryName
             FROM ReportCatalog c
             LEFT JOIN ReportCategory cat ON c.CategoryID = cat.CategoryID
             WHERE 1=1
@@ -102,7 +102,7 @@ public class SqlCatalogRepository : ICatalogRepository
             """
             SELECT c.ReportID, c.ReportName, c.ReportTool, c.ReportPath, c.ReportCode,
                    c.SourceName, c.CreateDate, c.ModifyDate, c.IsActive, c.Remarks,
-                   c.CategoryID, cat.CategoryName
+                   c.UseCompanyParam, c.CategoryID, cat.CategoryName
             FROM ReportCatalog c
             LEFT JOIN ReportCategory cat ON c.CategoryID = cat.CategoryID
             WHERE c.ReportID = @ReportID
@@ -132,11 +132,11 @@ public class SqlCatalogRepository : ICatalogRepository
             {
                 item.ReportID = conn.QuerySingle<int>(
                     """
-                    INSERT INTO ReportCatalog (ReportName, ReportTool, ReportPath, ReportCode, SourceName, CreateDate, ModifyDate, IsActive, Remarks, CategoryID)
-                    VALUES (@ReportName, @ReportTool, @ReportPath, @ReportCode, @SourceName, GETDATE(), GETDATE(), @IsActive, @Remarks, @CategoryID);
+                    INSERT INTO ReportCatalog (ReportName, ReportTool, ReportPath, ReportCode, SourceName, CreateDate, ModifyDate, IsActive, Remarks, UseCompanyParam, CategoryID)
+                    VALUES (@ReportName, @ReportTool, @ReportPath, @ReportCode, @SourceName, GETDATE(), GETDATE(), @IsActive, @Remarks, @UseCompanyParam, @CategoryID);
                     SELECT SCOPE_IDENTITY();
                     """,
-                    new { item.ReportName, item.ReportTool, item.ReportPath, item.ReportCode, item.SourceName, item.IsActive, item.Remarks, item.CategoryID },
+                    new { item.ReportName, item.ReportTool, item.ReportPath, item.ReportCode, item.SourceName, item.IsActive, item.Remarks, item.UseCompanyParam, item.CategoryID },
                     tx);
             }
             else
@@ -146,10 +146,10 @@ public class SqlCatalogRepository : ICatalogRepository
                     UPDATE ReportCatalog SET
                         ReportName = @ReportName, ReportTool = @ReportTool, ReportPath = @ReportPath,
                         ReportCode = @ReportCode, SourceName = @SourceName, ModifyDate = GETDATE(),
-                        IsActive = @IsActive, Remarks = @Remarks, CategoryID = @CategoryID
+                        IsActive = @IsActive, Remarks = @Remarks, UseCompanyParam = @UseCompanyParam, CategoryID = @CategoryID
                     WHERE ReportID = @ReportID
                     """,
-                    new { item.ReportID, item.ReportName, item.ReportTool, item.ReportPath, item.ReportCode, item.SourceName, item.IsActive, item.Remarks, item.CategoryID },
+                    new { item.ReportID, item.ReportName, item.ReportTool, item.ReportPath, item.ReportCode, item.SourceName, item.IsActive, item.Remarks, item.UseCompanyParam, item.CategoryID },
                     tx);
             }
 
@@ -297,7 +297,7 @@ public class SqlCatalogRepository : ICatalogRepository
             """
             SELECT c.ReportID, c.ReportName, c.ReportTool, c.ReportPath, c.ReportCode,
                    c.SourceName, c.CreateDate, c.ModifyDate, c.IsActive, c.Remarks,
-                   c.CategoryID, cat.CategoryName
+                   c.UseCompanyParam, c.CategoryID, cat.CategoryName
             FROM ReportCatalog c
             INNER JOIN ReportDepartment rd ON c.ReportID = rd.ReportID
             LEFT JOIN ReportCategory cat ON c.CategoryID = cat.CategoryID
@@ -379,7 +379,7 @@ public class SqlCatalogRepository : ICatalogRepository
             """
             SELECT c.ReportID, c.ReportName, c.ReportTool, c.ReportPath, c.ReportCode,
                    c.SourceName, c.CreateDate, c.ModifyDate, c.IsActive, c.Remarks,
-                   c.CategoryID, cat.CategoryName
+                   c.UseCompanyParam, c.CategoryID, cat.CategoryName
             FROM UserPin p
             INNER JOIN ReportCatalog c ON p.ReportID = c.ReportID
             LEFT JOIN ReportCategory cat ON c.CategoryID = cat.CategoryID

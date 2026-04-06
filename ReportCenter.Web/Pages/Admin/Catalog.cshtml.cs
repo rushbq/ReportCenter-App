@@ -25,6 +25,10 @@ public class CatalogModel : PageModel
     public IReadOnlyList<(ReportFolder Value, string Label)> ReportFolders { get; set; } = [];
     public ReportBaseUrlSettings BaseUrls { get; set; } = new();
 
+    // 所有部門（依區域分組，供部門指派使用）
+    public List<CatalogDept> AllDeptsTW { get; set; } = [];
+    public List<CatalogDept> AllDeptsCN { get; set; } = [];
+
     public void OnGet(string? tool, string? active, string? search)
     {
         bool? isActive = active switch
@@ -34,12 +38,16 @@ public class CatalogModel : PageModel
             _ => null
         };
 
-        var companyId = _httpCtx.HttpContext?.Request.Cookies["companyId"] ?? "tw";
-
         CatalogItems = _catalogSvc.GetCatalogItems(tool, isActive, search);
         AllDependencies = _catalogSvc.GetAllDependencyObjects();
         Categories = _catalogSvc.GetCategories();
-        CatalogDepts = _catalogSvc.GetCatalogDepartments(companyId);
+
+        // 載入所有部門（不分公司），依區域分組
+        AllDeptsTW = _catalogSvc.GetCatalogDepartments("tw");
+        AllDeptsCN = _catalogSvc.GetCatalogDepartments("sh");
+        // 合併為完整清單（供 deptIdsString 查找用）
+        CatalogDepts = [.. AllDeptsTW, .. AllDeptsCN];
+
         ReportFolders = _catalogSvc.GetReportFolders();
         BaseUrls = _catalogSvc.GetBaseUrls();
     }
@@ -47,7 +55,7 @@ public class CatalogModel : PageModel
     public IActionResult OnPostSave(
         int reportId, string reportName, string reportTool, string reportPath,
         string reportCode, string sourceName, bool isActive, string? remarks,
-        string? deptIds, string? dependencies, int? categoryId)
+        bool useCompanyParam, string? deptIds, string? dependencies, int? categoryId)
     {
         var item = reportId > 0 ? _catalogSvc.GetCatalogItem(reportId) ?? new() : new();
         item.ReportID = reportId;
@@ -58,6 +66,7 @@ public class CatalogModel : PageModel
         item.SourceName = sourceName ?? "";
         item.IsActive = isActive;
         item.Remarks = remarks ?? "";
+        item.UseCompanyParam = useCompanyParam;
         item.CategoryID = categoryId;
 
         // 解析部門

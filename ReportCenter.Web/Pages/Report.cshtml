@@ -253,6 +253,12 @@ function reportPage() {
                 if (data.success) {
                     this.isFav = data.isFavorite;
                     Alpine.store('toast').show(data.isFavorite ? '已加入收藏' : '已取消收藏');
+                    // 通知 sidebar 更新收藏
+                    const detail = { reportId: _rp.reportId, isFavorite: data.isFavorite };
+                    if (data.isFavorite) {
+                        detail.report = { reportId: _rp.reportId, name: _rp.reportName, href: window.location.href, target: '_self' };
+                    }
+                    window.dispatchEvent(new CustomEvent('fav-changed', { detail }));
                 }
             } catch (e) {
                 console.error('收藏切換失敗', e);

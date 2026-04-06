@@ -187,7 +187,7 @@ public class SqlReportService : IReportService
         var cookieCompanyId = _httpContextAccessor.HttpContext?.Request.Cookies["companyId"];
         var companies = GetCompanies();
         var company = companies.Find(c => c.Id == cookieCompanyId) ?? companies.FirstOrDefault();
-        return company?.Id ?? "TW";
+        return company?.Region ?? "TW";
     }
 
     private static Report ToReport(ReportCatalogItem item) => new()

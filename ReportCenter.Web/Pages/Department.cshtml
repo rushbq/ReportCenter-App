@@ -258,12 +258,20 @@ function deptPage() {
                 });
                 const data = await res.json();
                 if (data.success) {
+                    const r = this.reports.find(x => x.reportId === reportId);
                     if (data.isFavorite) {
                         this.favoriteIds.push(reportId);
                         Alpine.store('toast').show('已加入收藏');
+                        // 通知 sidebar 更新收藏
+                        const href = r.reportTool === 'SmartQuery' ? this.baseUrls.smartQuery + r.reportCode
+                                   : r.reportTool === 'SSRS' ? this.baseUrls.ssrs + r.reportCode
+                                   : '/Report?dept=@Model.DeptId&name=' + encodeURIComponent(r.name);
+                        const target = r.reportTool === 'Internal' ? '_self' : '_blank';
+                        window.dispatchEvent(new CustomEvent('fav-changed', { detail: { reportId, isFavorite: true, report: { reportId, name: r.name, href, target } } }));
                     } else {
                         this.favoriteIds = this.favoriteIds.filter(id => id !== reportId);
                         Alpine.store('toast').show('已取消收藏');
+                        window.dispatchEvent(new CustomEvent('fav-changed', { detail: { reportId, isFavorite: false } }));
                     }
                 }
             } catch (e) {

@@ -17,10 +17,23 @@
         displayDate = (i.ModifyDate ?? i.CreateDate).ToString("yyyy/MM/dd"),
         isActive = i.IsActive,
         remarks = i.Remarks,
+        useCompanyParam = i.UseCompanyParam,
         categoryID = i.CategoryID,
         categoryName = i.CategoryName,
         departments = i.Departments.Select(d => new { deptID = d.DeptID, deptName = d.DeptName }),
         dependencies = i.Dependencies
+    }), jsonOpts);
+    var deptsTwJson = JsonSerializer.Serialize(Model.AllDeptsTW.Select(d => new {
+        area = d.Area,
+        deptID = d.DeptID,
+        deptName = d.DeptName,
+        label = d.DeptID + "-" + d.DeptName
+    }), jsonOpts);
+    var deptsCnJson = JsonSerializer.Serialize(Model.AllDeptsCN.Select(d => new {
+        area = d.Area,
+        deptID = d.DeptID,
+        deptName = d.DeptName,
+        label = d.DeptID + "-" + d.DeptName
     }), jsonOpts);
     var catalogDeptsJson = JsonSerializer.Serialize(Model.CatalogDepts.Select(d => new {
         area = d.Area,
@@ -324,20 +337,59 @@
                     <p class="text-[10px] text-txt-ter mt-1" x-show="allCategories.length === 0">尚未建立分類，請先至資料庫新增 ReportCategory 資料</p>
                 </div>
 
+                <!-- 公司別參數 -->
+                <div class="flex items-center gap-3">
+                    <label class="text-[12px] font-semibold text-txt-sec shrink-0">帶公司別參數</label>
+                    <button @@click="form.useCompanyParam = !form.useCompanyParam" type="button"
+                            :class="form.useCompanyParam ? 'bg-pri' : 'bg-gray-300'"
+                            class="relative shrink-0 w-10 h-5 rounded-full border-0 cursor-pointer transition-colors">
+                        <span :class="form.useCompanyParam ? 'translate-x-5' : 'translate-x-0.5'"
+                              class="absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
+                    </button>
+                    <span class="text-[11px] text-txt-ter" x-show="form.useCompanyParam">URL 將自動帶入 dbs={companyId}</span>
+                    <span class="text-[11px] text-txt-ter" x-show="!form.useCompanyParam">不帶公司別</span>
+                </div>
+
                 <!-- 分隔線 -->
                 <div class="border-t border-bdr pt-4">
                     <label class="block text-[12px] font-semibold text-txt-sec mb-2.5">部門指派</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto">
-                        <template x-for="dept in catalogDepts" :key="dept.deptID">
-                            <label class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-[12px]"
-                                   :class="selectedDepts.includes(dept.deptID) ? 'bg-pri-light border-pri/30 text-pri font-medium' : 'border-bdr text-txt-sec hover:border-pri/20'">
-                                <input type="checkbox" :value="dept.deptID"
-                                       :checked="selectedDepts.includes(dept.deptID)"
-                                       @@change="toggleDept(dept.deptID)"
-                                       class="accent-pri w-3.5 h-3.5">
-                                <span x-text="dept.deptName"></span>
-                            </label>
-                        </template>
+                    <div class="max-h-[280px] overflow-y-auto space-y-3">
+                        <!-- 台灣 -->
+                        <div>
+                            <div class="text-[11px] font-bold text-txt-ter uppercase tracking-wider mb-1.5 pl-1 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-pri"></span>台灣寶工
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                <template x-for="dept in deptsTW" :key="dept.deptID">
+                                    <label class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-[12px]"
+                                           :class="selectedDepts.includes(dept.deptID) ? 'bg-pri-light border-pri/30 text-pri font-medium' : 'border-bdr text-txt-sec hover:border-pri/20'">
+                                        <input type="checkbox" :value="dept.deptID"
+                                               :checked="selectedDepts.includes(dept.deptID)"
+                                               @@change="toggleDept(dept.deptID)"
+                                               class="accent-pri w-3.5 h-3.5">
+                                        <span x-text="dept.deptName"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                        <!-- 上海 -->
+                        <div>
+                            <div class="text-[11px] font-bold text-txt-ter uppercase tracking-wider mb-1.5 pl-1 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>上海寶工
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                <template x-for="dept in deptsCN" :key="dept.deptID">
+                                    <label class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-[12px]"
+                                           :class="selectedDepts.includes(dept.deptID) ? 'bg-amber-50 border-amber-300 text-amber-700 font-medium' : 'border-bdr text-txt-sec hover:border-amber-200'">
+                                        <input type="checkbox" :value="dept.deptID"
+                                               :checked="selectedDepts.includes(dept.deptID)"
+                                               @@change="toggleDept(dept.deptID)"
+                                               class="accent-amber-500 w-3.5 h-3.5">
+                                        <span x-text="dept.deptName"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -376,9 +428,9 @@
                     </div>
                 </div>
 
-                <!-- 備註 (最下方) -->
+                <!-- 報表描述 (最下方) -->
                 <div class="border-t border-bdr pt-4">
-                    <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">備註</label>
+                    <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">報表描述</label>
                     <textarea x-model="form.remarks" rows="2"
                               class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors resize-none"
                               placeholder="選填"></textarea>
@@ -432,6 +484,7 @@
         <input type="hidden" name="sourceName" x-bind:value="form.sourceName">
         <input type="hidden" name="isActive" x-bind:value="form.isActive">
         <input type="hidden" name="remarks" x-bind:value="form.remarks">
+        <input type="hidden" name="useCompanyParam" x-bind:value="form.useCompanyParam">
         <input type="hidden" name="categoryId" x-bind:value="form.categoryID || ''">
         <input type="hidden" name="deptIds" x-bind:value="deptIdsString()">
         <input type="hidden" name="dependencies" x-bind:value="deps.join(',')">
@@ -459,6 +512,8 @@ function catalogPage() {
         // 資料
         items: [],
         catalogDepts: [],
+        deptsTW: [],
+        deptsCN: [],
         allDepObjects: [],
         allCategories: [],
         allPaths: [],
@@ -509,6 +564,8 @@ function catalogPage() {
         init() {
             this.items = @Html.Raw(itemsJson);
             this.catalogDepts = @Html.Raw(catalogDeptsJson);
+            this.deptsTW = @Html.Raw(deptsTwJson);
+            this.deptsCN = @Html.Raw(deptsCnJson);
             this.allDepObjects = @Html.Raw(depObjectsJson);
             this.allCategories = @Html.Raw(categoriesJson);
             this.allPaths = @Html.Raw(reportPathsJson);
@@ -539,7 +596,7 @@ function catalogPage() {
             this.form = {
                 reportID: 0, reportName: '', reportTool: 'Internal',
                 reportPath: '', reportCode: '', sourceName: '',
-                isActive: true, remarks: '', categoryID: null
+                isActive: true, remarks: '', useCompanyParam: false, categoryID: null
             };
             this.selectedDepts = [];
             this.deps = [];
@@ -562,6 +619,7 @@ function catalogPage() {
                 sourceName: item.sourceName,
                 isActive: item.isActive,
                 remarks: item.remarks || '',
+                useCompanyParam: item.useCompanyParam || false,
                 categoryID: item.categoryID || null
             };
             this.selectedDepts = item.departments.map(d => String(d.deptID)).filter(Boolean);

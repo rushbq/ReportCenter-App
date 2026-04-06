@@ -17,7 +17,7 @@ public class MockReportService : IReportService
     public List<Company> GetCompanies() =>
     [
         new() { Id = "tw", Name = "台灣寶工實業股份有限公司", ShortName = "台灣寶工", Region = "TW" },
-        new() { Id = "sh", Name = "上海寶工工具有限公司", ShortName = "上海寶工", Region = "CN" },
+        new() { Id = "sh", Name = "上海寶工工具有限公司", ShortName = "上海寶工", Region = "SH" },
     ];
 
     // ─── 部門 ───

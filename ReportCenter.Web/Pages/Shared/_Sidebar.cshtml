@@ -171,6 +171,22 @@ function sidebarQuick() {
         favList: @Html.Raw(favReportsJson),
         showFavPanel: false,
         showRecentPanel: false,
+
+        init() {
+            // 監聽收藏變更事件，動態更新 sidebar 收藏清單
+            window.addEventListener('fav-changed', (e) => {
+                const { reportId, isFavorite } = e.detail;
+                if (!isFavorite) {
+                    this.favList = this.favList.filter(f => f.reportId !== reportId);
+                }
+                // 新增收藏時需要完整資訊，透過 reload sidebar 部分取得
+                // 簡化做法：頁面級別已有報表資訊，由觸發端提供
+                if (isFavorite && e.detail.report) {
+                    const r = e.detail.report;
+                    this.favList.push(r);
+                }
+            });
+        }
     };
 }
 </script>
