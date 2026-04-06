@@ -7,7 +7,8 @@
     var reportsJson = System.Text.Json.JsonSerializer.Serialize(
         Model.Reports.Select(r => new {
             reportId = r.ReportID, name = r.Name, desc = r.Desc, cat = r.Cat,
-            updated = r.Updated, reportTool = r.ReportTool, reportCode = r.ReportCode
+            updated = r.Updated, reportTool = r.ReportTool, reportCode = r.ReportCode,
+            useCompanyParam = r.UseCompanyParam
         }), jsonOpts
     );
     var favoriteIdsJson = System.Text.Json.JsonSerializer.Serialize(Model.FavoriteIds, jsonOpts);
@@ -231,12 +232,25 @@ function deptPage() {
         init() {
             this.reports = @Html.Raw(reportsJson);
             this.favoriteIds = @Html.Raw(favoriteIdsJson);
+            // 從 URL 讀取 cat 參數以預設分類 tab
+            const params = new URLSearchParams(window.location.search);
+            const cat = params.get('cat');
+            if (cat && this.reports.some(r => r.cat === cat)) {
+                this.tab = cat;
+            }
         },
 
         getReportHref(r) {
-            if (r.reportTool === 'SmartQuery') return this.baseUrls.smartQuery + r.reportCode;
-            if (r.reportTool === 'SSRS') return this.baseUrls.ssrs + r.reportCode;
-            return '/Report?dept=@Model.DeptId&name=' + encodeURIComponent(r.name);
+            let url;
+            if (r.reportTool === 'SmartQuery') url = this.baseUrls.smartQuery + r.reportCode;
+            else if (r.reportTool === 'SSRS') url = this.baseUrls.ssrs + r.reportCode;
+            else url = '/Report?dept=@Model.DeptId&name=' + encodeURIComponent(r.name);
+            if (r.useCompanyParam) {
+                const companyId = document.cookie.split('; ').find(c => c.startsWith('companyId='))?.split('=')[1] || '';
+                const sep = url.includes('?') ? '&' : '?';
+                url += sep + 'dbs=' + encodeURIComponent(companyId);
+            }
+            return url;
         },
 
         toolBadgeClass(tool) {
@@ -263,9 +277,7 @@ function deptPage() {
                         this.favoriteIds.push(reportId);
                         Alpine.store('toast').show('已加入收藏');
                         // 通知 sidebar 更新收藏
-                        const href = r.reportTool === 'SmartQuery' ? this.baseUrls.smartQuery + r.reportCode
-                                   : r.reportTool === 'SSRS' ? this.baseUrls.ssrs + r.reportCode
-                                   : '/Report?dept=@Model.DeptId&name=' + encodeURIComponent(r.name);
+                        const href = this.getReportHref(r);
                         const target = r.reportTool === 'Internal' ? '_self' : '_blank';
                         window.dispatchEvent(new CustomEvent('fav-changed', { detail: { reportId, isFavorite: true, report: { reportId, name: r.name, href, target } } }));
                     } else {

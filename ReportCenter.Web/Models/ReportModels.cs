@@ -38,6 +38,7 @@ public class Report
     public bool Fav { get; set; }
     public string ReportTool { get; set; } = "Internal";  // Internal / SmartQuery / SSRS
     public string ReportCode { get; set; } = "";           // URL path 或內部路由
+    public bool UseCompanyParam { get; set; }              // 是否帶公司別參數 (dbs)
 }
 
 public class QuickAccess

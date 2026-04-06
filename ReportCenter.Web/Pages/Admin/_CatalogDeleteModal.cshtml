@@ -1,0 +1,23 @@
+@* 刪除確認 Modal — 由 Catalog.cshtml 引入，共用 Alpine catalogPage() scope *@
+
+<!-- 刪除確認 Modal -->
+<div x-show="deleteOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center"
+     x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100">
+    <div class="absolute inset-0 bg-black/40" @@click="deleteOpen = false"></div>
+    <div class="relative bg-white rounded-xl shadow-2xl p-6 max-w-[380px] mx-4" @@click.stop>
+        <div class="text-center">
+            <div class="w-12 h-12 rounded-full bg-bad/10 flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="trash-2" class="w-6 h-6 text-bad"></i>
+            </div>
+            <h3 class="text-[15px] font-bold text-txt mb-1">確認刪除</h3>
+            <p class="text-[13px] text-txt-sec">確定要刪除「<span class="font-medium text-txt" x-text="deleteItem?.reportName"></span>」嗎？此操作無法復原。</p>
+        </div>
+        <div class="flex gap-2 mt-5">
+            <button @@click="deleteOpen = false"
+                    class="flex-1 px-4 py-2 rounded-lg border border-bdr text-[13px] text-txt-sec hover:bg-surface cursor-pointer bg-white transition-colors">取消</button>
+            <button @@click="doDelete()"
+                    class="flex-1 px-4 py-2 rounded-lg bg-bad text-white text-[13px] font-medium border-0 cursor-pointer hover:bg-red-600 transition-colors">刪除</button>
+        </div>
+    </div>
+</div>

@@ -199,5 +199,6 @@ public class SqlReportService : IReportService
         Updated = (item.ModifyDate ?? item.CreateDate).ToString("MM/dd"),
         ReportTool = item.ReportTool,
         ReportCode = item.ReportCode,
+        UseCompanyParam = item.UseCompanyParam,
     };
 }
