@@ -26,10 +26,21 @@ public class PermissionModel : PageModel
     /// <summary>部門→使用者樹 (Mode A 人員選擇)</summary>
     public List<DeptWithUsers> UserTree { get; set; } = [];
 
-    public void OnGet()
+    /// <summary>是否無管理員權限</summary>
+    public bool AccessDenied { get; set; }
+
+    public IActionResult OnGet()
     {
+        var userId = _reportSvc.GetCurrentUser().Id;
+        if (!_permSvc.IsAdmin(userId))
+        {
+            AccessDenied = true;
+            return Page();
+        }
+
         ReportTree = _permSvc.GetReportTree();
         UserTree = _permSvc.GetDeptUserTree();
+        return Page();
     }
 
     /// <summary>批次授權 (Mode A)</summary>

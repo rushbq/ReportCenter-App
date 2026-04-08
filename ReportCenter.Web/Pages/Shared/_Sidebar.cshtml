@@ -3,6 +3,7 @@
 @using ReportCenter.Web.Models.Settings
 @using ReportCenter.Web.Services
 @inject IReportService ReportService
+@inject IPermissionService PermissionService
 @inject IOptions<ReportBaseUrlSettings> BaseUrlOptions
 @{
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
@@ -88,13 +89,17 @@
     <!-- Divider -->
     <div class="h-px bg-bdr mx-3.5 my-2.5"></div>
 
-    <!-- 系統管理 -->
+    <!-- 系統管理 (僅管理員可見) -->
+    @{
+        var currentUserId = ReportService.GetCurrentUser().Id;
+        var isAdmin = PermissionService.IsAdmin(currentUserId);
+    }
+    @if (isAdmin)
+    {
     <div class="px-3.5">
         <div class="text-[10px] font-bold text-txt-ter uppercase tracking-wider pl-2.5 mb-1">系統管理</div>
         @{
             var isAdminPage = currentPage?.Contains("Admin") == true;
-        }
-        @{
             var isPermissionPage = currentPage?.Contains("Permission") == true;
         }
         <a href="/Admin"
@@ -110,6 +115,7 @@
             <span>權限管理</span>
         </a>
     </div>
+    }
 
     <!-- Divider -->
     <div class="h-px bg-bdr mx-3.5 my-2.5"></div>

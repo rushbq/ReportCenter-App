@@ -3,6 +3,12 @@
 @using System.Text.Encodings.Web
 @model ReportCenter.Web.Pages.Admin.PermissionModel
 
+@if (Model.AccessDenied)
+{
+    <partial name="_AccessDenied" />
+    return;
+}
+
 @{
     var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     var reportTreeJson = JsonSerializer.Serialize(Model.ReportTree.Select(c => new {
@@ -219,7 +225,6 @@
                     <div class="relative">
                         <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-txt-ter"></i>
                         <input type="text" x-model.debounce.300ms="singleUserSearch" placeholder="搜尋員工編號或姓名..."
-                               @@input="searchUsersForView()"
                                class="w-full pl-9 pr-3 py-1.5 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-surface">
                     </div>
                 </div>
@@ -408,8 +413,14 @@ function permissionPage() {
         expandedAddCats: {},
         addGranting: false,
 
+        _searchController: null,
+
         init() {
             this.$nextTick(() => lucide.createIcons());
+            // 監聽搜尋欄位變化，debounce 已由 x-model 處理
+            this.$watch('singleUserSearch', (val) => {
+                this.searchUsersForView();
+            });
         },
 
         // ─── 報表樹 ───
@@ -537,14 +548,25 @@ function permissionPage() {
 
         async searchUsersForView() {
             const q = this.singleUserSearch.trim();
-            if (q.length < 1) { this.matchedUsers = []; return; }
+            if (q.length < 1) { this.matchedUsers = []; this.singleSearching = false; return; }
+
+            // 取消前一次搜尋請求，避免競態問題
+            if (this._searchController) this._searchController.abort();
+            this._searchController = new AbortController();
+
             this.singleSearching = true;
             try {
-                const res = await fetch(`/Admin/Permission?handler=SearchUsers&keyword=${encodeURIComponent(q)}`);
+                const res = await fetch(
+                    `/Admin/Permission?handler=SearchUsers&keyword=${encodeURIComponent(q)}`,
+                    { signal: this._searchController.signal }
+                );
                 const data = await res.json();
                 this.matchedUsers = data.success ? data.users : [];
-            } catch { this.matchedUsers = []; }
-            finally { this.singleSearching = false; }
+            } catch (e) {
+                if (e.name !== 'AbortError') this.matchedUsers = [];
+            } finally {
+                this.singleSearching = false;
+            }
         },
 
         async selectUserForView(user) {

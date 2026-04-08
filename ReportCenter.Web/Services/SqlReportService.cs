@@ -81,6 +81,12 @@ public class SqlReportService : IReportService
             return [];
 
         var allDepts = _pksysRepo.GetCatalogDepartments(region);
+
+        // 取得使用者已授權的 ReportID，用於計算權限過濾後的數量
+        var userId = GetCurrentUser().Id;
+        var authorizedIds = _permRepo.GetAuthorizedReportIds(userId);
+        var authorizedSet = new HashSet<int>(authorizedIds);
+
         var result = new List<Department>();
 
         foreach (var entry in config.Depts)
@@ -89,15 +95,23 @@ public class SqlReportService : IReportService
             if (dept == null) continue;
 
             var deptIdInt = int.TryParse(entry.DeptID, out var id) ? id : 0;
-            var categories = _repo.GetCategoriesByDepartment(deptIdInt);
-            var count = _repo.GetActiveReportCountByDepartment(deptIdInt);
+
+            // 依權限過濾：僅計算使用者有權限的報表
+            var deptReports = _repo.GetActiveReportsByDepartment(deptIdInt);
+            var permittedReports = deptReports.Where(r => authorizedSet.Contains(r.ReportID)).ToList();
+            var categories = permittedReports
+                .Where(r => !string.IsNullOrEmpty(r.CategoryName))
+                .Select(r => r.CategoryName)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
 
             result.Add(new Department
             {
                 Id = entry.DeptID,
                 Label = dept.DeptName,
                 Icon = entry.Icon,
-                Count = count,
+                Count = permittedReports.Count,
                 Subs = categories,
             });
         }
@@ -159,7 +173,12 @@ public class SqlReportService : IReportService
     public List<int> GetUserFavorites()
     {
         var userId = GetCurrentUser().Id;
-        return _repo.GetUserFavorites(userId);
+        var favorites = _repo.GetUserFavorites(userId);
+
+        // 依權限過濾：僅回傳使用者有權限的收藏
+        var authorizedIds = _permRepo.GetAuthorizedReportIds(userId);
+        var authorizedSet = new HashSet<int>(authorizedIds);
+        return favorites.Where(id => authorizedSet.Contains(id)).ToList();
     }
 
     public void ToggleFavorite(int reportId)
@@ -178,6 +197,12 @@ public class SqlReportService : IReportService
     {
         var userId = GetCurrentUser().Id;
         var items = _repo.GetUserPins(userId);
+
+        // 依權限過濾釘選列表
+        var authorizedIds = _permRepo.GetAuthorizedReportIds(userId);
+        var authorizedSet = new HashSet<int>(authorizedIds);
+        items = items.Where(i => authorizedSet.Contains(i.ReportID)).ToList();
+
         return items.Select(ToReport).ToList();
     }
 

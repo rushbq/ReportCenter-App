@@ -3,6 +3,12 @@
 @using System.Text.Encodings.Web
 @model ReportCenter.Web.Pages.Admin.IndexModel
 
+@if (Model.AccessDenied)
+{
+    <partial name="_AccessDenied" />
+    return;
+}
+
 @{
     // 序列化選項：避免中文轉義為 \uXXXX
     var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };

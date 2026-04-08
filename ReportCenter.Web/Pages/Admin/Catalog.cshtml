@@ -3,6 +3,12 @@
 @using System.Text.Encodings.Web
 @model ReportCenter.Web.Pages.Admin.CatalogModel
 
+@if (Model.AccessDenied)
+{
+    <partial name="_AccessDenied" />
+    return;
+}
+
 @{
     var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     var itemsJson = JsonSerializer.Serialize(Model.CatalogItems.Select(i => new {

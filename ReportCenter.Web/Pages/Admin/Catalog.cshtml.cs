@@ -15,10 +15,14 @@ namespace ReportCenter.Web.Pages.Admin;
 public class CatalogModel : PageModel
 {
     private readonly ICatalogService _catalogSvc;
+    private readonly IPermissionService _permSvc;
+    private readonly IReportService _reportSvc;
 
-    public CatalogModel(ICatalogService catalogSvc)
+    public CatalogModel(ICatalogService catalogSvc, IPermissionService permSvc, IReportService reportSvc)
     {
         _catalogSvc = catalogSvc;
+        _permSvc = permSvc;
+        _reportSvc = reportSvc;
     }
 
     // ─── 頁面資料屬性 ───
@@ -47,10 +51,20 @@ public class CatalogModel : PageModel
     /// <summary>上海部門清單 (依 User_Dept Area=SH)</summary>
     public List<CatalogDept> AllDeptsCN { get; set; } = [];
 
+    /// <summary>是否無管理員權限</summary>
+    public bool AccessDenied { get; set; }
+
     // ─── GET Handler ───
 
-    public void OnGet(string? tool, string? active, string? search)
+    public IActionResult OnGet(string? tool, string? active, string? search)
     {
+        var userId = _reportSvc.GetCurrentUser().Id;
+        if (!_permSvc.IsAdmin(userId))
+        {
+            AccessDenied = true;
+            return Page();
+        }
+
         bool? isActive = active switch
         {
             "true" => true,
@@ -69,6 +83,7 @@ public class CatalogModel : PageModel
 
         ReportFolders = _catalogSvc.GetReportFolders();
         BaseUrls = _catalogSvc.GetBaseUrls();
+        return Page();
     }
 
     // ─── POST Handlers ───

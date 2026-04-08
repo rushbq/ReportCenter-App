@@ -13,15 +13,23 @@ public class PermissionService : IPermissionService
     private readonly IPermissionRepository _permRepo;
     private readonly IPksysRepository _pksysRepo;
     private readonly ICatalogRepository _catalogRepo;
+    private readonly HashSet<string> _adminUsers;
 
     public PermissionService(
         IPermissionRepository permRepo,
         IPksysRepository pksysRepo,
-        ICatalogRepository catalogRepo)
+        ICatalogRepository catalogRepo,
+        IConfiguration config)
     {
         _permRepo = permRepo;
         _pksysRepo = pksysRepo;
         _catalogRepo = catalogRepo;
+
+        // 從 appsettings.json 的 AdminUsers 區段讀取管理員白名單
+        _adminUsers = config.GetSection("AdminUsers")
+            .Get<string[]>()?
+            .ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? [];
     }
 
     // ─── 權限操作 ───
@@ -133,4 +141,10 @@ public class PermissionService : IPermissionService
     /// <inheritdoc />
     public List<UserProfileItem> SearchUsers(string? keyword)
         => _pksysRepo.SearchUsers(keyword);
+
+    // ─── 管理員權限 ───
+
+    /// <inheritdoc />
+    public bool IsAdmin(string employeeId)
+        => _adminUsers.Contains(employeeId);
 }

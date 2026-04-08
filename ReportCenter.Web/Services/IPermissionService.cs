@@ -31,4 +31,7 @@ public interface IPermissionService
 
     /// <summary>搜尋使用者 (模糊比對)</summary>
     List<UserProfileItem> SearchUsers(string? keyword);
+
+    /// <summary>檢查指定使用者是否為系統管理員 (依 appsettings AdminUsers 白名單)</summary>
+    bool IsAdmin(string employeeId);
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using ReportCenter.Web.Models;
 using ReportCenter.Web.Services;
@@ -7,14 +8,19 @@ namespace ReportCenter.Web.Pages.Admin;
 /// <summary>
 /// 管理總覽頁 — 顯示報表清冊 KPI、部門使用矩陣、孤立報表、相依性分析。
 /// 所有統計邏輯委派給 ICatalogService，此 PageModel 僅負責組裝 View 所需的資料。
+/// 僅限 AdminUsers 白名單中的使用者存取。
 /// </summary>
 public class IndexModel : PageModel
 {
     private readonly ICatalogService _catalogSvc;
+    private readonly IPermissionService _permSvc;
+    private readonly IReportService _reportSvc;
 
-    public IndexModel(ICatalogService catalogSvc)
+    public IndexModel(ICatalogService catalogSvc, IPermissionService permSvc, IReportService reportSvc)
     {
         _catalogSvc = catalogSvc;
+        _permSvc = permSvc;
+        _reportSvc = reportSvc;
     }
 
     /// <summary>報表清冊統計 (KPI、部門矩陣、孤立報表、最近異動)</summary>
@@ -23,10 +29,21 @@ public class IndexModel : PageModel
     /// <summary>相依性分析資料 (依物件分組，列出引用的報表名稱)</summary>
     public List<DependencyGroup> DepAnalysis { get; set; } = [];
 
-    public void OnGet()
+    /// <summary>是否無管理員權限</summary>
+    public bool AccessDenied { get; set; }
+
+    public IActionResult OnGet()
     {
+        var userId = _reportSvc.GetCurrentUser().Id;
+        if (!_permSvc.IsAdmin(userId))
+        {
+            AccessDenied = true;
+            return Page();
+        }
+
         Stats = _catalogSvc.GetAdminStats();
         DepAnalysis = BuildDependencyAnalysis();
+        return Page();
     }
 
     /// <summary>
