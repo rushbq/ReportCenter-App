@@ -1,0 +1,242 @@
+@page "/_diag/windows-auth"
+@model ReportCenter.Web.Pages.Debug.WindowsAuthModel
+@{
+    Layout = null;
+
+    static string Show(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "（空值）" : value;
+}
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Windows 驗證診斷</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pri: '#005758',
+                        surface: '#f5f7f8',
+                        txt: '#1a2e2f',
+                        txtsec: '#5c7576',
+                        ok: '#0d9668',
+                        bad: '#dc4a4a',
+                        bdr: '#e2e8ea'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-txt">
+    <main class="max-w-[1280px] mx-auto px-4 md:px-6 py-6 md:py-8">
+        <header class="mb-6">
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <div class="text-[12px] text-txtsec">IIS / Windows Authentication Diagnostic</div>
+                    <h1 class="text-[26px] font-bold mt-1">Windows 驗證診斷頁</h1>
+                    <p class="text-[13px] text-txtsec mt-2">
+                        此頁直接顯示目前 `HttpContext.User`，以及 `SqlReportService.GetCurrentUser()` 經過
+                        Claims、PKSYS 補值、fallback 後的最終結果，用來確認正式區 IIS 的 Windows 驗證是否正確。
+                    </p>
+                </div>
+                <div class="rounded-xl border border-bdr bg-white px-4 py-3 text-[12px] min-w-[280px]">
+                    <div class="font-semibold text-pri">存取路徑</div>
+                    <div class="mt-1 font-mono break-all">/_diag/windows-auth</div>
+                    <div class="mt-3 text-txtsec">
+                        設定檔需啟用 `WindowsAuthDebug:Enabled = true`，未啟用時會回 `404`。
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="mb-6 rounded-2xl border border-bdr bg-white p-4 md:p-5">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <div class="text-[18px] font-bold">驗證狀態</div>
+                    <div class="text-[12px] text-txtsec mt-1">先看這一區，能最快判斷 IIS 是否真的有把 Windows 身分帶進 ASP.NET Core。</div>
+                </div>
+                <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-semibold @(Model.AuthInfo.IsAuthenticated ? "bg-ok/10 text-ok" : "bg-bad/10 text-bad")">
+                    <span class="w-2 h-2 rounded-full @(Model.AuthInfo.IsAuthenticated ? "bg-ok" : "bg-bad")"></span>
+                    @(Model.AuthInfo.IsAuthenticated ? "已驗證" : "未驗證")
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
+                <div class="rounded-xl border border-bdr bg-surface px-4 py-3">
+                    <div class="text-[11px] text-txtsec">Environment</div>
+                    <div class="text-[14px] font-semibold mt-1">@Show(Model.EnvironmentName)</div>
+                </div>
+                <div class="rounded-xl border border-bdr bg-surface px-4 py-3">
+                    <div class="text-[11px] text-txtsec">MachineName</div>
+                    <div class="text-[14px] font-semibold mt-1">@Show(Model.MachineName)</div>
+                </div>
+                <div class="rounded-xl border border-bdr bg-surface px-4 py-3">
+                    <div class="text-[11px] text-txtsec">TraceId</div>
+                    <div class="text-[14px] font-mono break-all mt-1">@Show(Model.TraceId)</div>
+                </div>
+                <div class="rounded-xl border border-bdr bg-surface px-4 py-3">
+                    <div class="text-[11px] text-txtsec">ServerTime</div>
+                    <div class="text-[14px] font-semibold mt-1">@Model.ServerTime.ToString("yyyy/MM/dd HH:mm:ss")</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-3">
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">AuthenticationType</div>
+                    <div class="text-[14px] font-semibold mt-1">@Show(Model.AuthInfo.AuthenticationType)</div>
+                </div>
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">Identity.Name</div>
+                    <div class="text-[14px] font-mono break-all mt-1">@Show(Model.AuthInfo.IdentityName)</div>
+                </div>
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">NormalizedAccount</div>
+                    <div class="text-[14px] font-mono break-all mt-1">@Show(Model.AuthInfo.NormalizedAccountName)</div>
+                </div>
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">NameClaimType</div>
+                    <div class="text-[14px] font-mono break-all mt-1">@Show(Model.AuthInfo.NameClaimType)</div>
+                </div>
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">RoleClaimType</div>
+                    <div class="text-[14px] font-mono break-all mt-1">@Show(Model.AuthInfo.RoleClaimType)</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-6 rounded-2xl border border-bdr bg-white p-4 md:p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-[18px] font-bold">PKSYS 補值狀態</h2>
+                    <p class="text-[12px] text-txtsec mt-1">正式區若沒有 AD 額外 claims，系統會用去網域後的帳號到 PKSYS.User_Profile 補齊姓名與部門。</p>
+                </div>
+                <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-semibold @(Model.AuthInfo.PksysUserFound ? "bg-ok/10 text-ok" : "bg-surface text-txtsec")">
+                    <span class="w-2 h-2 rounded-full @(Model.AuthInfo.PksysUserFound ? "bg-ok" : "bg-bdr")"></span>
+                    @(Model.AuthInfo.PksysUserFound ? "已找到 PKSYS 使用者" : "未找到 PKSYS 使用者")
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-[13px]">
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">LookupAccount</div>
+                    <div class="mt-1 font-mono break-all">@Show(Model.AuthInfo.PksysLookupAccount)</div>
+                </div>
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">LookupError</div>
+                    <div class="mt-1 font-mono break-all text-[12px]">@Show(Model.AuthInfo.PksysLookupError)</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-6 rounded-2xl border border-bdr bg-white p-4 md:p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-[18px] font-bold">SqlReportService 解析結果</h2>
+                    <p class="text-[12px] text-txtsec mt-1">這一區就是畫面上 `GetCurrentUser()` 實際採用的最終欄位來源與 fallback 規則。</p>
+                </div>
+                <div class="text-[12px] text-txtsec">Claims 數量：@Model.AuthInfo.Claims.Count</div>
+            </div>
+
+            <div class="overflow-x-auto mt-4">
+                <table class="w-full text-[13px]">
+                    <thead>
+                        <tr class="bg-surface text-txtsec text-[11px]">
+                            <th class="px-4 py-2.5 text-left font-semibold">欄位</th>
+                            <th class="px-4 py-2.5 text-left font-semibold">值</th>
+                            <th class="px-4 py-2.5 text-left font-semibold">來源</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var field in Model.AuthInfo.ResolvedFields)
+                        {
+                            <tr class="border-t border-bdr">
+                                <td class="px-4 py-3 font-mono font-semibold">@field.Label</td>
+                                <td class="px-4 py-3 break-all">@Show(field.Value)</td>
+                                <td class="px-4 py-3 text-txtsec">@field.Source</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="mb-6 rounded-2xl border border-bdr bg-white p-4 md:p-5">
+            <h2 class="text-[18px] font-bold">請求資訊</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-[13px]">
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">Scheme / Host</div>
+                    <div class="mt-1 font-mono break-all">@Show(Model.RequestScheme)://@Show(Model.RequestHost)</div>
+                </div>
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">Path</div>
+                    <div class="mt-1 font-mono break-all">@Show(Model.RequestPath)</div>
+                </div>
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">RemoteIp</div>
+                    <div class="mt-1 font-mono break-all">@Show(Model.RemoteIp)</div>
+                </div>
+                <div class="rounded-xl border border-bdr px-4 py-3">
+                    <div class="text-[11px] text-txtsec">X-Forwarded-For</div>
+                    <div class="mt-1 font-mono break-all">@Show(Model.ForwardedFor)</div>
+                </div>
+                <div class="rounded-xl border border-bdr px-4 py-3 md:col-span-2">
+                    <div class="text-[11px] text-txtsec">User-Agent</div>
+                    <div class="mt-1 font-mono break-all text-[12px]">@Show(Model.UserAgent)</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl border border-bdr bg-white p-4 md:p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-[18px] font-bold">Claims 明細</h2>
+                    <p class="text-[12px] text-txtsec mt-1">若 `DisplayName`、`EmployeeId`、`Department`、`DepartmentId` 由 PKSYS 補值。</p>
+                </div>
+                <div class="text-[12px] text-txtsec">@Model.AuthInfo.Claims.Count 筆</div>
+            </div>
+
+            @if (Model.AuthInfo.Claims.Count == 0)
+            {
+                <div class="mt-4 rounded-xl border border-dashed border-bdr bg-surface px-4 py-6 text-center text-[13px] text-txtsec">
+                    目前沒有任何 claims。
+                </div>
+            }
+            else
+            {
+                <div class="overflow-x-auto mt-4">
+                    <table class="w-full text-[12px]">
+                        <thead>
+                            <tr class="bg-surface text-txtsec text-[11px]">
+                                <th class="px-4 py-2.5 text-left font-semibold">Type</th>
+                                <th class="px-4 py-2.5 text-left font-semibold">Value</th>
+                                <th class="px-4 py-2.5 text-left font-semibold">ValueType</th>
+                                <th class="px-4 py-2.5 text-left font-semibold">Issuer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var claim in Model.AuthInfo.Claims)
+                            {
+                                <tr class="border-t border-bdr align-top">
+                                    <td class="px-4 py-3 font-mono break-all">@claim.Type</td>
+                                    <td class="px-4 py-3 font-mono break-all">@Show(claim.Value)</td>
+                                    <td class="px-4 py-3 font-mono break-all">@Show(claim.ValueType)</td>
+                                    <td class="px-4 py-3 font-mono break-all">@Show(claim.Issuer)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </main>
+</body>
+</html>

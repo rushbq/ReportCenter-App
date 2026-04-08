@@ -94,6 +94,8 @@ try
         builder.Configuration.GetSection(ReportBaseUrlSettings.SectionName));
     builder.Services.Configure<DepartmentDisplaySettings>(
         builder.Configuration.GetSection(DepartmentDisplaySettings.SectionName));
+    builder.Services.Configure<WindowsAuthDebugSettings>(
+        builder.Configuration.GetSection(WindowsAuthDebugSettings.SectionName));
 
     // ── Windows 驗證設定 ─────────────────────────────────────
     if (builder.Environment.IsDevelopment())
@@ -115,7 +117,8 @@ try
     builder.Services.AddScoped<IPermissionRepository, SqlPermissionRepository>();
 
     // BLL — 商業邏輯層
-    builder.Services.AddScoped<IReportService, SqlReportService>();
+    builder.Services.AddScoped<SqlReportService>();
+    builder.Services.AddScoped<IReportService>(sp => sp.GetRequiredService<SqlReportService>());
     builder.Services.AddScoped<ICatalogService, CatalogService>();
     builder.Services.AddScoped<IPermissionService, PermissionService>();
 

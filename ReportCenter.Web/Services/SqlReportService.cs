@@ -12,6 +12,9 @@ using ReportCenter.Web.Repositories;
 /// </summary>
 public class SqlReportService : IReportService
 {
+    private const string CurrentUserCacheKey = "__CurrentUser";
+    private const string CurrentUserDebugCacheKey = "__CurrentUserDebug";
+
     private readonly MockReportService _mock = new();
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ICatalogRepository _repo;
@@ -19,6 +22,7 @@ public class SqlReportService : IReportService
     private readonly IPermissionRepository _permRepo;
     private readonly DepartmentDisplaySettings _deptDisplay;
     private readonly ReportBaseUrlSettings _baseUrls;
+    private readonly ILogger<SqlReportService> _logger;
 
     public SqlReportService(
         IHttpContextAccessor httpContextAccessor,
@@ -26,7 +30,8 @@ public class SqlReportService : IReportService
         IPksysRepository pksysRepo,
         IPermissionRepository permRepo,
         IOptions<DepartmentDisplaySettings> deptDisplay,
-        IOptions<ReportBaseUrlSettings> baseUrls)
+        IOptions<ReportBaseUrlSettings> baseUrls,
+        ILogger<SqlReportService> logger)
     {
         _httpContextAccessor = httpContextAccessor;
         _repo = repo;
@@ -34,33 +39,125 @@ public class SqlReportService : IReportService
         _permRepo = permRepo;
         _deptDisplay = deptDisplay.Value;
         _baseUrls = baseUrls.Value;
+        _logger = logger;
     }
 
     // ─── 使用者與公司 ───
 
     public UserInfo GetCurrentUser()
     {
-        var principal = _httpContextAccessor.HttpContext?.User;
-        if (principal?.Identity?.IsAuthenticated != true)
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext?.Items.TryGetValue(CurrentUserCacheKey, out var cachedUser) == true &&
+            cachedUser is UserInfo userInfo)
+        {
+            return userInfo;
+        }
+
+        var debugInfo = GetCurrentUserDebugInfo();
+        if (!debugInfo.IsAuthenticated)
             return _mock.GetCurrentUser();
 
-        var accountName = principal.Identity.Name ?? "";
-        var displayName = principal.FindFirst("DisplayName")?.Value ?? "";
-        var empId = principal.FindFirst("EmployeeId")?.Value ?? "";
-        var deptName = principal.FindFirst("Department")?.Value ?? "";
-        var deptId = principal.FindFirst("DepartmentId")?.Value ?? "";
+        if (httpContext != null)
+            httpContext.Items[CurrentUserCacheKey] = debugInfo.ResolvedUser;
 
-        if (string.IsNullOrEmpty(displayName))
-            displayName = ExtractUserName(accountName);
-        if (string.IsNullOrEmpty(empId))
-            empId = accountName;
+        return debugInfo.ResolvedUser;
+    }
 
-        return new UserInfo
+    /// <summary>
+    /// 取得目前登入者的 Windows 驗證診斷資訊。
+    /// 此方法與 GetCurrentUser() 共用相同解析規則，供 IIS 正式環境除錯頁使用。
+    /// </summary>
+    public WindowsAuthDebugInfo GetCurrentUserDebugInfo()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext?.Items.TryGetValue(CurrentUserDebugCacheKey, out var cachedDebugInfo) == true &&
+            cachedDebugInfo is WindowsAuthDebugInfo debugInfo)
         {
-            Id = empId,
-            Name = displayName,
-            DeptId = deptId,
-            DeptName = deptName,
+            return debugInfo;
+        }
+
+        var resolved = BuildCurrentUserDebugInfo(httpContext?.User);
+        if (httpContext != null)
+            httpContext.Items[CurrentUserDebugCacheKey] = resolved;
+
+        return resolved;
+    }
+
+    private WindowsAuthDebugInfo BuildCurrentUserDebugInfo(ClaimsPrincipal? principal)
+    {
+        var traceId = _httpContextAccessor.HttpContext?.TraceIdentifier ?? "";
+        var identity = principal?.Identity as ClaimsIdentity;
+        var accountName = principal?.Identity?.Name ?? "";
+        var normalizedAccountName = NormalizeAccountName(accountName);
+        var displayNameClaim = principal?.FindFirst("DisplayName")?.Value ?? "";
+        var employeeIdClaim = NormalizeAccountName(principal?.FindFirst("EmployeeId")?.Value ?? "");
+        var departmentClaim = principal?.FindFirst("Department")?.Value ?? "";
+        var departmentIdClaim = principal?.FindFirst("DepartmentId")?.Value ?? "";
+        var isAuthenticated = principal?.Identity?.IsAuthenticated == true;
+        var lookupAccount = !string.IsNullOrWhiteSpace(employeeIdClaim)
+            ? employeeIdClaim
+            : normalizedAccountName;
+
+        UserProfileItem? pksysUser = null;
+        var pksysLookupError = "";
+
+        if (isAuthenticated && !string.IsNullOrWhiteSpace(lookupAccount))
+        {
+            try
+            {
+                pksysUser = _pksysRepo.GetUser(lookupAccount);
+            }
+            catch (Exception ex)
+            {
+                pksysLookupError = ex.Message;
+                _logger.LogError(ex,
+                    "取得目前登入者 PKSYS 資料失敗。LookupAccount={LookupAccount} TraceId={TraceId}",
+                    lookupAccount,
+                    traceId);
+            }
+        }
+
+        return new WindowsAuthDebugInfo
+        {
+            IsAuthenticated = isAuthenticated,
+            AuthenticationType = principal?.Identity?.AuthenticationType ?? "",
+            IdentityName = accountName,
+            NormalizedAccountName = normalizedAccountName,
+            NameClaimType = identity?.NameClaimType ?? "",
+            RoleClaimType = identity?.RoleClaimType ?? "",
+            PksysLookupAccount = lookupAccount,
+            PksysUserFound = pksysUser != null,
+            PksysLookupError = pksysLookupError,
+            ResolvedUser = isAuthenticated
+                ? new UserInfo
+                {
+                    Id = ResolveEmployeeId(employeeIdClaim, normalizedAccountName, pksysUser),
+                    Name = ResolveDisplayName(displayNameClaim, normalizedAccountName, pksysUser),
+                    DeptId = ResolveDepartmentId(departmentIdClaim, pksysUser),
+                    DeptName = ResolveDepartmentName(departmentClaim, pksysUser),
+                }
+                : new UserInfo(),
+            ResolvedFields = BuildResolvedFields(
+                isAuthenticated,
+                normalizedAccountName,
+                displayNameClaim,
+                employeeIdClaim,
+                departmentClaim,
+                departmentIdClaim,
+                pksysUser,
+                pksysLookupError),
+            Claims = principal?.Claims
+                .Select(c => new AuthClaimInfo
+                {
+                    Type = c.Type,
+                    Value = c.Value,
+                    ValueType = c.ValueType,
+                    Issuer = c.Issuer,
+                    OriginalIssuer = c.OriginalIssuer,
+                })
+                .OrderBy(c => c.Type, StringComparer.Ordinal)
+                .ThenBy(c => c.Value, StringComparer.Ordinal)
+                .ToList() ?? [],
         };
     }
 
@@ -68,6 +165,115 @@ public class SqlReportService : IReportService
     {
         var idx = accountName.IndexOf('\\');
         return idx >= 0 ? accountName[(idx + 1)..] : accountName;
+    }
+
+    private static string NormalizeAccountName(string accountName)
+        => string.IsNullOrWhiteSpace(accountName)
+            ? ""
+            : ExtractUserName(accountName.Trim());
+
+    private static string ResolveDisplayName(string displayNameClaim, string normalizedAccountName, UserProfileItem? pksysUser)
+        => !string.IsNullOrWhiteSpace(displayNameClaim)
+            ? displayNameClaim
+            : !string.IsNullOrWhiteSpace(pksysUser?.DisplayName)
+                ? pksysUser.DisplayName
+                : normalizedAccountName;
+
+    private static string ResolveEmployeeId(string employeeIdClaim, string normalizedAccountName, UserProfileItem? pksysUser)
+        => !string.IsNullOrWhiteSpace(employeeIdClaim)
+            ? employeeIdClaim
+            : !string.IsNullOrWhiteSpace(pksysUser?.AccountName)
+                ? pksysUser.AccountName
+                : normalizedAccountName;
+
+    private static string ResolveDepartmentId(string departmentIdClaim, UserProfileItem? pksysUser)
+        => !string.IsNullOrWhiteSpace(departmentIdClaim)
+            ? departmentIdClaim
+            : pksysUser?.DeptID ?? "";
+
+    private static string ResolveDepartmentName(string departmentClaim, UserProfileItem? pksysUser)
+        => !string.IsNullOrWhiteSpace(departmentClaim)
+            ? departmentClaim
+            : pksysUser?.DeptName ?? "";
+
+    private static List<ResolvedUserField> BuildResolvedFields(
+        bool isAuthenticated,
+        string normalizedAccountName,
+        string displayNameClaim,
+        string employeeIdClaim,
+        string departmentClaim,
+        string departmentIdClaim,
+        UserProfileItem? pksysUser,
+        string pksysLookupError)
+    {
+        if (!isAuthenticated)
+        {
+            return
+            [
+                new() { Label = "UserInfo.Id", Value = "", Source = "未通過 Windows 驗證" },
+                new() { Label = "UserInfo.Name", Value = "", Source = "未通過 Windows 驗證" },
+                new() { Label = "UserInfo.DeptId", Value = "", Source = "未通過 Windows 驗證" },
+                new() { Label = "UserInfo.DeptName", Value = "", Source = "未通過 Windows 驗證" },
+            ];
+        }
+
+        var pksysSourceSuffix = !string.IsNullOrWhiteSpace(pksysLookupError)
+            ? "（PKSYS 查詢失敗）"
+            : pksysUser != null
+                ? ""
+                : "（PKSYS 無對應資料）";
+
+        return
+        [
+            new()
+            {
+                Label = "PKSYS.LookupAccount",
+                Value = !string.IsNullOrWhiteSpace(employeeIdClaim) ? employeeIdClaim : normalizedAccountName,
+                Source = !string.IsNullOrWhiteSpace(employeeIdClaim)
+                    ? "優先使用 Claim: EmployeeId"
+                    : "Fallback: Identity.Name 去除網域"
+            },
+            new()
+            {
+                Label = "UserInfo.Id",
+                Value = ResolveEmployeeId(employeeIdClaim, normalizedAccountName, pksysUser),
+                Source = !string.IsNullOrWhiteSpace(employeeIdClaim)
+                    ? "Claim: EmployeeId"
+                    : !string.IsNullOrWhiteSpace(pksysUser?.AccountName)
+                        ? $"PKSYS: User_Profile.Account_Name{pksysSourceSuffix}"
+                        : "Fallback: Identity.Name 去除網域"
+            },
+            new()
+            {
+                Label = "UserInfo.Name",
+                Value = ResolveDisplayName(displayNameClaim, normalizedAccountName, pksysUser),
+                Source = !string.IsNullOrWhiteSpace(displayNameClaim)
+                    ? "Claim: DisplayName"
+                    : !string.IsNullOrWhiteSpace(pksysUser?.DisplayName)
+                        ? $"PKSYS: User_Profile.Display_Name{pksysSourceSuffix}"
+                        : "Fallback: Identity.Name 去除網域"
+            },
+            new()
+            {
+                Label = "UserInfo.DeptId",
+                Value = ResolveDepartmentId(departmentIdClaim, pksysUser),
+                Source = !string.IsNullOrWhiteSpace(departmentIdClaim)
+                    ? "Claim: DepartmentId"
+                    : !string.IsNullOrWhiteSpace(pksysUser?.DeptID)
+                        ? $"PKSYS: User_Profile.DeptID{pksysSourceSuffix}"
+                        : "未取得"
+            },
+            new()
+            {
+                Label = "UserInfo.DeptName",
+                Value = ResolveDepartmentName(departmentClaim, pksysUser),
+                Source = !string.IsNullOrWhiteSpace(departmentClaim)
+                    ? "Claim: Department"
+                    : !string.IsNullOrWhiteSpace(pksysUser?.DeptName)
+                        ? $"PKSYS: User_Dept.DeptName{pksysSourceSuffix}"
+                        : "未取得"
+            },
+        ];
     }
 
     public List<Company> GetCompanies() => _mock.GetCompanies();

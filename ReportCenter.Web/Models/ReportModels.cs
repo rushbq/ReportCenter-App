@@ -19,6 +19,38 @@ public class UserInfo
     public string CompanyId { get; set; } = "tw";
 }
 
+public class ResolvedUserField
+{
+    public string Label { get; set; } = "";
+    public string Value { get; set; } = "";
+    public string Source { get; set; } = "";
+}
+
+public class AuthClaimInfo
+{
+    public string Type { get; set; } = "";
+    public string Value { get; set; } = "";
+    public string ValueType { get; set; } = "";
+    public string Issuer { get; set; } = "";
+    public string OriginalIssuer { get; set; } = "";
+}
+
+public class WindowsAuthDebugInfo
+{
+    public bool IsAuthenticated { get; set; }
+    public string AuthenticationType { get; set; } = "";
+    public string IdentityName { get; set; } = "";
+    public string NormalizedAccountName { get; set; } = "";
+    public string NameClaimType { get; set; } = "";
+    public string RoleClaimType { get; set; } = "";
+    public string PksysLookupAccount { get; set; } = "";
+    public bool PksysUserFound { get; set; }
+    public string PksysLookupError { get; set; } = "";
+    public UserInfo ResolvedUser { get; set; } = new();
+    public List<ResolvedUserField> ResolvedFields { get; set; } = [];
+    public List<AuthClaimInfo> Claims { get; set; } = [];
+}
+
 public class Department
 {
     public string Id { get; set; } = "";
