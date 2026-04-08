@@ -149,7 +149,7 @@ IPermissionRepository (介面)        # 權限資料存取層 (ReportCenter DB)
 
 ### 結構化屬性 (Enricher)
 
-每筆 Log 自動附帶：`Application`、`Environment`、`MachineName`、`SourceContext` (由 Serilog 自動注入)
+每筆 Log 自動附帶：`Application`、`Environment`、`MachineName` (由 `WithProperty` 注入)；`SourceContext` (由 Serilog 框架自動注入)
 
 Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserName`、`ClientIp`
 
@@ -175,9 +175,9 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 | 檔案 | 用途 | 包含內容 |
 |------|------|---------|
 | `appsettings.json` | 共用 base 設定 | Serilog 基底等級、ReportBaseUrls、AdminUsers、DepartmentDisplay |
-| `appsettings.Development.json` | 開發環境 | Serilog Debug 等級、MockWindowsAuth 模擬使用者 |
-| `appsettings.Staging.json` | 測試環境 | 連線字串(空)、Seq 設定(空)、Serilog Information 等級 |
-| `appsettings.Production.json` | 正式環境範本 | 連線字串(空)、Seq 設定(空)、Serilog Information 等級 |
+| `appsettings.Development.json` | 開發環境 | MockWindowsAuth 模擬使用者、DetailedErrors |
+| `appsettings.Staging.json` | 測試環境 | Seq 設定(空，由外部機密檔填入) |
+| `appsettings.Production.json` | 正式環境範本 | Seq 設定(空，由外部機密檔填入) |
 
 **注意事項：**
 - Development 連線字串放在 `secrets.json` (User Secrets)

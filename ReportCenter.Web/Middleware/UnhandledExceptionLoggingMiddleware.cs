@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Serilog.Context;
 

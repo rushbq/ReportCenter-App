@@ -23,13 +23,8 @@ try
     // 載入順序：共用基礎設定 → 站台專用設定 (後者覆蓋前者)
     if (!builder.Environment.IsDevelopment())
     {
-        var sharedInfraPath = Environment.GetEnvironmentVariable("SHARED_INFRA_PATH");
-        if (!string.IsNullOrEmpty(sharedInfraPath))
-            builder.Configuration.AddJsonFile(sharedInfraPath, optional: false, reloadOnChange: false);
-
-        var siteConfigPath = Environment.GetEnvironmentVariable("RC_CONFIG_PATH");
-        if (!string.IsNullOrEmpty(siteConfigPath))
-            builder.Configuration.AddJsonFile(siteConfigPath, optional: false, reloadOnChange: false);
+        LoadExternalConfig(builder.Configuration, "SHARED_INFRA_PATH", "共用機密設定檔");
+        LoadExternalConfig(builder.Configuration, "RC_CONFIG_PATH", "站台機密設定檔");
     }
 
     // ── Serilog 主設定 ───────────────────────────────────────
@@ -73,7 +68,6 @@ try
                 retainedFileCountLimit: 30,
                 fileSizeLimitBytes: 50 * 1024 * 1024,   // 單檔 50 MB
                 rollOnFileSizeLimit: true,
-                shared: true,
                 outputTemplate:
                     "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] " +
                     "TraceId={TraceId} User={UserName} " +
@@ -183,6 +177,16 @@ try
     app.MapRazorPages()
        .WithStaticAssets();
 
+    // ── 非開發環境：驗證必要設定 ─────────────────────────────
+    if (!app.Environment.IsDevelopment())
+    {
+        var cs = app.Configuration.GetSection("ConnectionStrings");
+        if (string.IsNullOrWhiteSpace(cs["ReportCenter"]))
+            throw new InvalidOperationException("缺少 ConnectionStrings:ReportCenter 設定，請檢查外部機密設定檔。");
+        if (string.IsNullOrWhiteSpace(cs["PKSYS"]))
+            throw new InvalidOperationException("缺少 ConnectionStrings:PKSYS 設定，請檢查外部機密設定檔。");
+    }
+
     Log.Information("ReportCenter.Web 啟動完成 [{Environment}]", app.Environment.EnvironmentName);
     app.Run();
 }
@@ -193,4 +197,18 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+// ── Helper ───────────────────────────────────────────────────
+
+/// <summary>載入外部 JSON 設定檔，檔案不存在時拋出明確例外。</summary>
+static void LoadExternalConfig(ConfigurationManager config, string envVarName, string label)
+{
+    var path = Environment.GetEnvironmentVariable(envVarName);
+    if (string.IsNullOrEmpty(path)) return;
+
+    if (!File.Exists(path))
+        throw new FileNotFoundException($"{label}不存在: {path} (環境變數 {envVarName})");
+
+    config.AddJsonFile(path, optional: false, reloadOnChange: false);
 }
