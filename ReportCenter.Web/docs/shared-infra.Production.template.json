@@ -1,0 +1,14 @@
+{
+  "_comment": "伺服器共用機密設定範本 — 同一台伺服器上各站台共用",
+  "_deployPath": "D:\\CompanySecrets\\shared-infra.Production.json",
+  "_envVar": "SHARED_INFRA_PATH",
+
+  "ConnectionStrings": {
+    "PKSYS": "Server=YOUR_DB_SERVER;Database=PKSYS;Integrated Security=True;TrustServerCertificate=True;Encrypt=True;"
+  },
+
+  "Seq": {
+    "ServerUrl": "",
+    "ApiKey": ""
+  }
+}

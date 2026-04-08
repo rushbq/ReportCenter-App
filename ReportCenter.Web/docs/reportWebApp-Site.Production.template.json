@@ -1,0 +1,11 @@
+{
+  "_comment": "ReportCenter 站台專用機密設定範本 — 可覆蓋 shared-infra 的同名 key",
+  "_deployPath": "D:\\CompanySecrets\\reportWebApp-Site.Production.json",
+  "_envVar": "RC_CONFIG_PATH",
+
+  "ConnectionStrings": {
+    "ReportCenter": "Server=YOUR_DB_SERVER;Database=ReportCenter;Integrated Security=True;TrustServerCertificate=True;Encrypt=True;"
+  },
+
+  "AdminUsers": [ "10308", "10255" ]
+}

@@ -62,7 +62,9 @@ ReportCenter.Web/
 └── docs/
     ├── frontend-spec.md            # 前端技術規格文件
     ├── db-ddl.sql                  # ReportCenter DB 完整 DDL
-    └── migration-001-permission.sql # 權限表 Migration
+    ├── migration-001-permission.sql # 權限表 Migration
+    ├── shared-infra.Production.template.json        # 伺服器共用機密範本
+    └── reportWebApp-Site.Production.template.json   # 站台專用機密範本
 ```
 
 ## 路由
@@ -113,7 +115,12 @@ IPermissionRepository (介面)        # 權限資料存取層 (ReportCenter DB)
 | `PKSYS` | PKSYS | User_Dept (部門)、User_Profile (使用者) |
 
 - **開發環境**: `secrets.json` (ASP.NET Core User Secrets)
-- **正式環境**: IIS `web.config` 環境變數 `RC_CONFIG_PATH` 指向外部 JSON 檔
+- **正式環境**: IIS `web.config` 環境變數指向外部 JSON 檔（載入順序：共用 → 站台，後者覆蓋前者）
+
+| 環境變數 | 用途 | 範例路徑 |
+|----------|------|---------|
+| `SHARED_INFRA_PATH` | 伺服器各站台共用的機密設定 (如共用連線字串、Seq) | `D:\CompanySecrets\shared-infra.Production.json` |
+| `RC_CONFIG_PATH` | 本站台專用的機密設定 (如站台連線字串、AdminUsers) | `D:\CompanySecrets\reportWebApp-Site.Production.json` |
 
 **切換真實 API 只需：**
 1. 建立 `ApiReportService : IReportService`
@@ -174,8 +181,10 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 **注意事項：**
 - Development 連線字串放在 `secrets.json` (User Secrets)
-- Production 實際設定由 IIS `web.config` 的 `RC_CONFIG_PATH` 環境變數指向外部 JSON 檔 (`D:\Config\ReportCenter\appsettings.Production.json`)
-- Staging / Production 的 `Seq:ServerUrl` 與 `ConnectionStrings` 需依環境填入
+- Staging / Production 實際機密設定由 IIS `web.config` 環境變數指向外部 JSON 檔：
+  - `SHARED_INFRA_PATH` → 伺服器共用設定 (如 Seq、共用連線字串)
+  - `RC_CONFIG_PATH` → 站台專用設定 (如本站連線字串、AdminUsers)
+  - 載入順序：`appsettings.json` → `appsettings.{env}.json` → `SHARED_INFRA_PATH` → `RC_CONFIG_PATH` (後者覆蓋前者)
 
 ## Alpine.js Store (site.js)
 

@@ -20,11 +20,16 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // ── 外部設定檔 (正式環境透過 IIS web.config 環境變數指定路徑) ──
+    // 載入順序：共用基礎設定 → 站台專用設定 (後者覆蓋前者)
     if (!builder.Environment.IsDevelopment())
     {
-        var externalConfig = Environment.GetEnvironmentVariable("RC_CONFIG_PATH");
-        if (!string.IsNullOrEmpty(externalConfig))
-            builder.Configuration.AddJsonFile(externalConfig, optional: false, reloadOnChange: false);
+        var sharedInfraPath = Environment.GetEnvironmentVariable("SHARED_INFRA_PATH");
+        if (!string.IsNullOrEmpty(sharedInfraPath))
+            builder.Configuration.AddJsonFile(sharedInfraPath, optional: false, reloadOnChange: false);
+
+        var siteConfigPath = Environment.GetEnvironmentVariable("RC_CONFIG_PATH");
+        if (!string.IsNullOrEmpty(siteConfigPath))
+            builder.Configuration.AddJsonFile(siteConfigPath, optional: false, reloadOnChange: false);
     }
 
     // ── Serilog 主設定 ───────────────────────────────────────
