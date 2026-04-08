@@ -8,6 +8,7 @@
 - **前端:** Tailwind CSS (CDN) + Alpine.js 3.x + Chart.js 4 + HTMX 2.0.4
 - **圖示:** Lucide Icons (unpkg CDN)
 - **字體:** Noto Sans TC (Google Fonts)
+- **日誌:** Serilog (Console + File + Seq)
 - **資料:** MockReportService（DI 注入），可快速切換為 API 實作
 
 ## 專案結構
@@ -16,7 +17,8 @@
 ReportCenter.Web/
 ├── Models/ReportModels.cs          # 資料模型 (Company, UserInfo, Department, Report, KPI, ChartData, ReportCatalogItem 等)
 ├── Middleware/
-│   └── DevWindowsAuthMiddleware.cs # 開發環境模擬 Windows AD 驗證中介層
+│   ├── DevWindowsAuthMiddleware.cs # 開發環境模擬 Windows AD 驗證中介層
+│   └── UnhandledExceptionLoggingMiddleware.cs # 未處理例外結構化記錄
 ├── Models/Settings/
 │   ├── ReportBaseUrlSettings.cs    # 報表外部連結 BaseUrl 設定
 │   └── MockWindowsAuthSettings.cs  # 開發環境模擬 AD 使用者設定
@@ -51,8 +53,16 @@ ReportCenter.Web/
 │   ├── favicon.svg                 # 品牌 Favicon
 │   ├── css/site.css                # 自訂樣式 (極少，主要用 Tailwind)
 │   └── js/site.js                  # Alpine Store (搜尋、收藏、最近瀏覽)
-├── web.config                         # IIS 部署設定 (Windows 驗證)
-└── docs/frontend-spec.md           # 前端技術規格文件
+├── appsettings.json                # 共用設定 (base)
+├── appsettings.Development.json    # 開發環境設定
+├── appsettings.Staging.json        # 測試環境設定
+├── appsettings.Production.json     # 正式環境設定 (範本；實際部署走外部路徑)
+├── web.config                      # IIS 部署設定 (Windows 驗證)
+├── logs/                           # Serilog File Sink 輸出 (gitignore)
+└── docs/
+    ├── frontend-spec.md            # 前端技術規格文件
+    ├── db-ddl.sql                  # ReportCenter DB 完整 DDL
+    └── migration-001-permission.sql # 權限表 Migration
 ```
 
 ## 路由
@@ -109,6 +119,63 @@ IPermissionRepository (介面)        # 權限資料存取層 (ReportCenter DB)
 1. 建立 `ApiReportService : IReportService`
 2. 在 `Program.cs` 將 `MockReportService` 換成 `ApiReportService`
 3. 頁面與前端完全不需修改
+
+## Logging 架構
+
+使用 **Serilog** 作為結構化日誌框架，所有環境統一輸出至 File Sink，非開發環境額外輸出至 Seq。
+
+### Sink 配置
+
+| Sink | 環境 | 說明 |
+|------|------|------|
+| **Console** | Development | 精簡格式，含 SourceContext，方便本機除錯 |
+| **File** | Staging / Production | `logs/rc-YYYYMMDD.log`，每日滾動，保留 30 天，單檔 50 MB |
+| **Seq** | Staging / Production | 結構化查詢，選配 (有設定 `Seq:ServerUrl` 才啟用) |
+
+### Log 等級策略
+
+| 環境 | Default | Microsoft | Microsoft.AspNetCore |
+|------|---------|-----------|---------------------|
+| Development | Debug | Information | Warning |
+| Staging | Information | Warning | Warning |
+| Production | Information | Warning | Warning |
+
+### 結構化屬性 (Enricher)
+
+每筆 Log 自動附帶：`Application`、`Environment`、`MachineName`、`SourceContext` (由 Serilog 自動注入)
+
+Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserName`、`ClientIp`
+
+### 智慧過濾
+
+- 靜態資源 (`/css`, `/js`, `/images`, `/favicon`) 降為 Verbose 等級，不寫入檔案
+- 慢請求 (> 3s) 自動升級為 Warning
+- 4xx 回應為 Warning，5xx / Exception 為 Error
+
+### 例外記錄 (`UnhandledExceptionLoggingMiddleware`)
+
+- 結構化屬性推入 LogContext：`TraceId`、`RequestPath`、`HttpMethod`、`UserName`、`QueryString`、`ClientIp`
+- `SqlException` 額外記錄：`SqlNumber`、`Procedure`、`SqlLine`、`SqlState`
+
+### File Sink 輸出格式
+
+```
+2026-04-08 14:30:15.123 +08:00 [INF] [ReportCenter.Web.Pages.IndexModel] TraceId=abc123 User=PROSKIT\10255 首頁載入完成
+```
+
+## appsettings 環境設定
+
+| 檔案 | 用途 | 包含內容 |
+|------|------|---------|
+| `appsettings.json` | 共用 base 設定 | Serilog 基底等級、ReportBaseUrls、AdminUsers、DepartmentDisplay |
+| `appsettings.Development.json` | 開發環境 | Serilog Debug 等級、MockWindowsAuth 模擬使用者 |
+| `appsettings.Staging.json` | 測試環境 | 連線字串(空)、Seq 設定(空)、Serilog Information 等級 |
+| `appsettings.Production.json` | 正式環境範本 | 連線字串(空)、Seq 設定(空)、Serilog Information 等級 |
+
+**注意事項：**
+- Development 連線字串放在 `secrets.json` (User Secrets)
+- Production 實際設定由 IIS `web.config` 的 `RC_CONFIG_PATH` 環境變數指向外部 JSON 檔 (`D:\Config\ReportCenter\appsettings.Production.json`)
+- Staging / Production 的 `Seq:ServerUrl` 與 `ConnectionStrings` 需依環境填入
 
 ## Alpine.js Store (site.js)
 
@@ -187,6 +254,29 @@ IPermissionRepository (介面)        # 權限資料存取層 (ReportCenter DB)
 1. `SqlReportService.GetReports()` — 依 `GetAuthorizedReportIds()` 過濾報表列表
 2. `Report.cshtml.cs OnGet()` — 檢查 `HasPermission()`，無權限顯示「權限不足」頁面
 3. Admin 頁面目前不限制存取
+
+## 資料庫結構 (DDL)
+
+完整 DDL 定義於 `docs/db-ddl.sql`，Migration 腳本依序編號於 `docs/migration-*.sql`。
+
+### ReportCenter 資料庫
+
+| 資料表 | 用途 | PK |
+|--------|------|-----|
+| `ReportCategory` | 報表分類 | `CategoryID` (IDENTITY) |
+| `ReportCatalog` | 報表目錄主表 | `ReportID` (IDENTITY) |
+| `ReportDepartment` | 報表×部門指派 (多對多) | `(ReportID, DeptID)` |
+| `ReportDependency` | 報表相依物件 | `(ReportID, DependsOn)` |
+| `UserReportPermission` | 使用者報表權限 | `PermissionID` (IDENTITY) + UQ `(EmployeeId, ReportID)` |
+| `UserFavorite` | 使用者收藏 | `(UserID, ReportID)` |
+| `UserPin` | 使用者釘選 (快速存取) | `(UserID, ReportID)` |
+
+### PKSYS 資料庫 (外部系統，唯讀)
+
+| 資料表 | 用途 |
+|--------|------|
+| `User_Dept` | 部門主檔 (Area, DeptID, DeptName) |
+| `User_Profile` | 人員主檔 (Account_Name, Display_Name, DeptID) |
 
 ## 篩選功能
 

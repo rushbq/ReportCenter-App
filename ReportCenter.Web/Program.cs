@@ -6,12 +6,13 @@ using ReportCenter.Web.Services;
 using Serilog;
 using Serilog.Events;
 
+// ── Bootstrap Logger ─────────────────────────────────────────
+// 應用程式啟動階段尚無 Host，用精簡 Bootstrap Logger 擷取啟動失敗
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
     .CreateBootstrapLogger();
 
 try
@@ -26,38 +27,66 @@ try
             builder.Configuration.AddJsonFile(externalConfig, optional: false, reloadOnChange: false);
     }
 
-    builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+    // ── Serilog 主設定 ───────────────────────────────────────
+    builder.Host.UseSerilog((context, services, cfg) =>
     {
-        var isDevelopment = context.HostingEnvironment.IsDevelopment();
-        var seqServerUrl = context.Configuration["Seq:ServerUrl"];
-        var seqApiKey = context.Configuration["Seq:ApiKey"];
+        var env = context.HostingEnvironment;
 
-        loggerConfiguration
-            .ReadFrom.Configuration(context.Configuration)
-            .ReadFrom.Services(services)
-            .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-            .Enrich.FromLogContext()
-            .Enrich.WithProperty("Application", "ReportCenter.Web")
-            .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
+        // 共用基底：最低等級、Enricher、屬性
+        cfg.ReadFrom.Configuration(context.Configuration)
+           .ReadFrom.Services(services)
+           .Enrich.FromLogContext()
+           .Enrich.WithProperty("Application", "ReportCenter.Web")
+           .Enrich.WithProperty("Environment", env.EnvironmentName)
+           .Enrich.WithProperty("MachineName", System.Environment.MachineName);
 
-        if (isDevelopment)
+        // ── 環境專屬 Sink ────────────────────────────────────
+        if (env.IsDevelopment())
         {
-            loggerConfiguration.WriteTo.Console(
-                outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
-            return;
+            // 開發：僅 Console，精簡格式方便本機除錯
+            cfg.MinimumLevel.Debug()
+               .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+               .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+               .MinimumLevel.Override("Microsoft.AspNetCore.Routing", LogEventLevel.Warning)
+               .WriteTo.Console(outputTemplate:
+                   "{Timestamp:HH:mm:ss} [{Level:u3}] {SourceContext}{NewLine}" +
+                   "  → {Message:lj}{NewLine}{Exception}");
         }
-
-        if (string.IsNullOrWhiteSpace(seqServerUrl))
+        else
         {
-            throw new InvalidOperationException("Production 環境缺少 Seq:ServerUrl 設定，無法輸出例外與 request log。");
-        }
+            // Staging / Production：File + Seq
+            cfg.MinimumLevel.Information()
+               .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+               .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+               .MinimumLevel.Override("Dapper", LogEventLevel.Warning);
 
-        loggerConfiguration.WriteTo.Seq(seqServerUrl, apiKey: string.IsNullOrWhiteSpace(seqApiKey) ? null : seqApiKey);
+            // File Sink — logs/rc-YYYYMMDD.log，每日滾動，保留 30 天
+            var logPath = Path.Combine(env.ContentRootPath, "logs", "rc-.log");
+            cfg.WriteTo.File(
+                path: logPath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30,
+                fileSizeLimitBytes: 50 * 1024 * 1024,   // 單檔 50 MB
+                rollOnFileSizeLimit: true,
+                shared: true,
+                outputTemplate:
+                    "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] " +
+                    "TraceId={TraceId} User={UserName} " +
+                    "{Message:lj}{NewLine}{Exception}");
+
+            // Seq Sink (選配：有設定才啟用)
+            var seqUrl = context.Configuration["Seq:ServerUrl"];
+            var seqKey = context.Configuration["Seq:ApiKey"];
+            if (!string.IsNullOrWhiteSpace(seqUrl))
+            {
+                cfg.WriteTo.Seq(seqUrl,
+                    apiKey: string.IsNullOrWhiteSpace(seqKey) ? null : seqKey,
+                    restrictedToMinimumLevel: LogEventLevel.Information);
+            }
+        }
     });
 
-    // Add services to the container.
+    // ── 服務註冊 ─────────────────────────────────────────────
     builder.Services.AddRazorPages();
     builder.Services.AddHttpContextAccessor();
 
@@ -67,16 +96,14 @@ try
     builder.Services.Configure<DepartmentDisplaySettings>(
         builder.Configuration.GetSection(DepartmentDisplaySettings.SectionName));
 
-    // ── Windows 驗證設定 ──────────────────────────────
+    // ── Windows 驗證設定 ─────────────────────────────────────
     if (builder.Environment.IsDevelopment())
     {
-        // 開發環境：模擬 Windows AD 身份（macOS 無法使用 Windows 驗證）
         builder.Services.Configure<MockWindowsAuthSettings>(
             builder.Configuration.GetSection(MockWindowsAuthSettings.SectionName));
     }
     else
     {
-        // 正式環境 (IIS)：啟用 Negotiate (Windows) 驗證
         builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
             .AddNegotiate();
         builder.Services.AddAuthorization();
@@ -95,7 +122,7 @@ try
 
     var app = builder.Build();
 
-    // Configure the HTTP request pipeline.
+    // ── HTTP Pipeline ────────────────────────────────────────
     if (app.Environment.IsDevelopment())
     {
         app.UseDeveloperExceptionPage();
@@ -105,28 +132,42 @@ try
         app.UseExceptionHandler("/Error");
     }
 
+    // Serilog Request Logging — 自動記錄每筆 HTTP 請求
     app.UseSerilogRequestLogging(options =>
     {
+        // 靜態資源不記錄 (css/js/images/favicon)
+        options.GetLevel = (httpContext, elapsed, ex) =>
+        {
+            var path = httpContext.Request.Path.Value ?? "";
+            if (path.StartsWith("/css") || path.StartsWith("/js") ||
+                path.StartsWith("/images") || path.StartsWith("/favicon"))
+                return LogEventLevel.Verbose;
+
+            if (ex != null) return LogEventLevel.Error;
+            if (httpContext.Response.StatusCode >= 500) return LogEventLevel.Error;
+            if (httpContext.Response.StatusCode >= 400) return LogEventLevel.Warning;
+            if (elapsed > 3000) return LogEventLevel.Warning;   // 慢請求 > 3s
+
+            return LogEventLevel.Information;
+        };
+
         options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
         {
             diagnosticContext.Set("TraceId", httpContext.TraceIdentifier);
-            diagnosticContext.Set("RequestPath", httpContext.Request.Path.Value ?? string.Empty);
-            diagnosticContext.Set("Method", httpContext.Request.Method);
             diagnosticContext.Set("UserName", httpContext.User.Identity?.Name ?? "Anonymous");
+            diagnosticContext.Set("ClientIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "-");
         };
     });
 
     app.UseRouting();
 
-    // ── 驗證中介層 ──────────────────────────────────
+    // ── 驗證中介層 ───────────────────────────────────────────
     if (app.Environment.IsDevelopment())
     {
-        // 開發環境：注入模擬 Windows AD 身份
         app.UseMiddleware<DevWindowsAuthMiddleware>();
     }
     else
     {
-        // 正式環境：由 IIS 處理 Windows 驗證
         app.UseAuthentication();
     }
 
@@ -137,6 +178,7 @@ try
     app.MapRazorPages()
        .WithStaticAssets();
 
+    Log.Information("ReportCenter.Web 啟動完成 [{Environment}]", app.Environment.EnvironmentName);
     app.Run();
 }
 catch (Exception ex)
