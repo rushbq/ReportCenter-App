@@ -5,27 +5,35 @@ namespace ReportCenter.Web.Models.Enums;
 /// </summary>
 public enum ReportFolder
 {
+    [System.ComponentModel.Description("00-經營層報表")]
+    Management = 1,
+
     [System.ComponentModel.Description("01-總經理室")]
-    GeneralManager = 1,
+    GeneralManager = 2,
 
-    [System.ComponentModel.Description("02-業績報表")]
-    SalesReport = 2,
+    [System.ComponentModel.Description("20-外業報表")]
+    ExternalSales = 20,
+    
+    [System.ComponentModel.Description("30-內業報表")]
+    InternalSales = 30,
 
-    [System.ComponentModel.Description("03-經營層")]
-    Management = 3,
+    [System.ComponentModel.Description("50-上海業務")]
+    ShSales = 50,
 
-    [System.ComponentModel.Description("20-外業部")]
-    ExternalSales = 20
+    [System.ComponentModel.Description("80-會計報表")]
+    Finances = 80
 }
 
 public static class ReportFolderExtensions
 {
     private static readonly Dictionary<ReportFolder, string> _labels = new()
     {
+        [ReportFolder.Management]     = "00-經營層報表",
         [ReportFolder.GeneralManager] = "01-總經理室",
-        [ReportFolder.SalesReport] = "02-業績報表",
-        [ReportFolder.Management] = "03-經營層",
-        [ReportFolder.ExternalSales] = "20-外業部",
+        [ReportFolder.ExternalSales]  = "20-外業報表",
+        [ReportFolder.InternalSales]  = "30-內業報表",
+        [ReportFolder.ShSales]        = "50-上海業務",
+        [ReportFolder.Finances]       = "80-會計報表",
     };
 
     public static string ToLabel(this ReportFolder folder)

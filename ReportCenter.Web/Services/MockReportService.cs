@@ -8,9 +8,9 @@ public class MockReportService : IReportService
 
     public UserInfo GetCurrentUser() => new()
     {
-        Id = "U001",
-        Name = "陳彥廷",
-        DeptId = "it",
+        Id = "10308",
+        Name = "Clyde",
+        DeptId = "109",
         DeptName = "資訊部",
     };
 
