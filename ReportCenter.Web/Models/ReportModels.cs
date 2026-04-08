@@ -160,3 +160,54 @@ public class DeptUsage
     public string DeptName { get; set; } = "";
     public List<ReportCatalogItem> Reports { get; set; } = [];
 }
+
+// ─── 權限管理 ───
+
+/// <summary>User_Profile 對應 (PKSYS)</summary>
+public class UserProfileItem
+{
+    public string AccountName { get; set; } = "";   // Account_Name (員工編號)
+    public string DisplayName { get; set; } = "";   // Display_Name (姓名)
+    public string DeptID { get; set; } = "";
+    public string DeptName { get; set; } = "";       // 從 User_Dept JOIN
+}
+
+/// <summary>使用者報表權限</summary>
+public class UserReportPermission
+{
+    public int PermissionID { get; set; }
+    public string EmployeeId { get; set; } = "";
+    public int ReportID { get; set; }
+    public string GrantedBy { get; set; } = "";
+    public DateTime GrantedDate { get; set; }
+    // JOIN 欄位 (顯示用)
+    public string ReportName { get; set; } = "";
+    public string CategoryName { get; set; } = "";
+    public string ReportTool { get; set; } = "";
+}
+
+/// <summary>部門含使用者清單 (人員樹節點)</summary>
+public class DeptWithUsers
+{
+    public string Area { get; set; } = "";
+    public string DeptID { get; set; } = "";
+    public string DeptName { get; set; } = "";
+    public List<UserProfileItem> Users { get; set; } = [];
+}
+
+/// <summary>分類含報表清單 (報表樹節點)</summary>
+public class CategoryWithReports
+{
+    public int CategoryID { get; set; }
+    public string CategoryName { get; set; } = "";
+    public List<ReportTreeItem> Reports { get; set; } = [];
+}
+
+/// <summary>報表樹葉節點</summary>
+public class ReportTreeItem
+{
+    public int ReportID { get; set; }
+    public string ReportName { get; set; } = "";
+    public string ReportTool { get; set; } = "";
+    public bool IsActive { get; set; }
+}

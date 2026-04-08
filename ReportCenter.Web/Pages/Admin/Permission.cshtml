@@ -1,0 +1,651 @@
+@page
+@using System.Text.Json
+@using System.Text.Encodings.Web
+@model ReportCenter.Web.Pages.Admin.PermissionModel
+
+@{
+    var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    var reportTreeJson = JsonSerializer.Serialize(Model.ReportTree.Select(c => new {
+        categoryID = c.CategoryID,
+        categoryName = c.CategoryName,
+        reports = c.Reports.Select(r => new {
+            reportID = r.ReportID,
+            reportName = r.ReportName,
+            reportTool = r.ReportTool,
+            isActive = r.IsActive
+        })
+    }), jsonOpts);
+
+    var userTreeJson = JsonSerializer.Serialize(Model.UserTree.Select(d => new {
+        area = d.Area,
+        deptID = d.DeptID,
+        deptName = d.DeptName,
+        users = d.Users.Select(u => new {
+            accountName = u.AccountName,
+            displayName = u.DisplayName,
+            deptID = u.DeptID,
+            deptName = u.DeptName
+        })
+    }), jsonOpts);
+}
+
+<div class="p-4 md:p-6 pb-10 max-w-[1400px]"
+     x-data="permissionPage()" x-init="init()">
+
+    <!-- 麵包屑 -->
+    <div class="flex items-center gap-1.5 text-[12px] text-txt-ter mb-4">
+        <a href="/" class="hover:text-pri no-underline text-txt-ter">首頁</a>
+        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        <a href="/Admin" class="hover:text-pri no-underline text-txt-ter">系統管理</a>
+        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        <span class="text-txt font-medium">權限管理</span>
+    </div>
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start mb-5 gap-3">
+        <div>
+            <h1 class="text-[20px] md:text-[22px] font-bold text-txt">權限管理</h1>
+            <div class="text-[12px] text-txt-ter mt-1">設定使用者的報表存取權限</div>
+        </div>
+    </div>
+
+    <!-- 模式切換 Tab -->
+    <div class="flex gap-1.5 mb-5">
+        <button @@click="mode = 'batch'"
+                :class="mode === 'batch' ? 'bg-pri text-white border-pri' : 'bg-white text-txt-sec border-bdr hover:border-pri/40'"
+                class="px-4 py-2 rounded-lg text-[13px] font-medium border cursor-pointer transition-colors flex items-center gap-2">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            功能 → 多人
+        </button>
+        <button @@click="mode = 'single'"
+                :class="mode === 'single' ? 'bg-pri text-white border-pri' : 'bg-white text-txt-sec border-bdr hover:border-pri/40'"
+                class="px-4 py-2 rounded-lg text-[13px] font-medium border cursor-pointer transition-colors flex items-center gap-2">
+            <i data-lucide="user-check" class="w-4 h-4"></i>
+            單一人 → 功能
+        </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--  Mode A: 功能→多人 (批次指派)               -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div x-show="mode === 'batch'" x-cloak>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <!-- 報表樹 -->
+            <div class="bg-white rounded-xl border border-bdr shadow-sm flex flex-col" style="height: 520px">
+                <div class="px-4 py-3 border-b border-bdr flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-[14px] font-semibold text-txt">
+                        <i data-lucide="file-text" class="w-4 h-4 text-pri"></i>
+                        報表清單
+                    </div>
+                    <span class="text-[11px] text-pri font-medium bg-pri-light px-2 py-0.5 rounded-full"
+                          x-text="'已選 ' + selectedReports.length + ' 筆'"></span>
+                </div>
+                <div class="px-4 py-2 border-b border-bdr-light">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-txt-ter"></i>
+                        <input type="text" x-model.debounce.200ms="reportSearch" placeholder="搜尋報表名稱..."
+                               class="w-full pl-9 pr-3 py-1.5 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-surface">
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto px-2 py-2">
+                    <template x-for="cat in filteredReportTree" :key="cat.categoryID">
+                        <div class="mb-1">
+                            <!-- 分類標題 -->
+                            <div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-surface cursor-pointer select-none"
+                                 @@click="toggleCatExpand(cat.categoryID)">
+                                <input type="checkbox" class="w-3.5 h-3.5 accent-pri rounded cursor-pointer"
+                                       :checked="isCatAllSelected(cat)" :indeterminate.prop="isCatPartial(cat)"
+                                       @@click.stop="toggleAllInCategory(cat)" />
+                                <i :data-lucide="expandedCats[cat.categoryID] ? 'chevron-down' : 'chevron-right'"
+                                   class="w-3.5 h-3.5 text-txt-ter"></i>
+                                <i data-lucide="folder" class="w-3.5 h-3.5 text-amber-500"></i>
+                                <span class="text-[13px] font-medium text-txt" x-text="cat.categoryName"></span>
+                                <span class="text-[10px] text-txt-ter ml-auto" x-text="cat.reports.length + ' 筆'"></span>
+                            </div>
+                            <!-- 報表列表 -->
+                            <div x-show="expandedCats[cat.categoryID]" x-cloak class="ml-6">
+                                <template x-for="rpt in cat.reports" :key="rpt.reportID">
+                                    <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface cursor-pointer">
+                                        <input type="checkbox" class="w-3.5 h-3.5 accent-pri rounded cursor-pointer"
+                                               :checked="selectedReports.includes(rpt.reportID)"
+                                               @@change="toggleReport(rpt.reportID)" />
+                                        <span class="text-[12px]" x-text="rpt.reportName"></span>
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium ml-auto"
+                                              :class="toolClasses(rpt.reportTool)" x-text="rpt.reportTool"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <template x-if="filteredReportTree.length === 0">
+                        <div class="text-[12px] text-txt-ter text-center py-8">無符合的報表</div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- 人員樹 -->
+            <div class="bg-white rounded-xl border border-bdr shadow-sm flex flex-col" style="height: 520px">
+                <div class="px-4 py-3 border-b border-bdr flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-[14px] font-semibold text-txt">
+                        <i data-lucide="users" class="w-4 h-4 text-pri"></i>
+                        人員清單
+                    </div>
+                    <span class="text-[11px] text-pri font-medium bg-pri-light px-2 py-0.5 rounded-full"
+                          x-text="'已選 ' + selectedUsers.length + ' 人'"></span>
+                </div>
+                <div class="px-4 py-2 border-b border-bdr-light">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-txt-ter"></i>
+                        <input type="text" x-model.debounce.200ms="userSearch" placeholder="搜尋員工編號或姓名..."
+                               class="w-full pl-9 pr-3 py-1.5 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-surface">
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto px-2 py-2">
+                    <template x-for="area in filteredUserAreas" :key="area.name">
+                        <div class="mb-1">
+                            <!-- Area 標題 -->
+                            <div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-surface cursor-pointer select-none"
+                                 @@click="toggleAreaExpand(area.name)">
+                                <i :data-lucide="expandedAreas[area.name] ? 'chevron-down' : 'chevron-right'"
+                                   class="w-3.5 h-3.5 text-txt-ter"></i>
+                                <i data-lucide="building-2" class="w-3.5 h-3.5 text-pri"></i>
+                                <span class="text-[13px] font-semibold text-txt" x-text="area.name === 'TW' ? '台灣' : '上海'"></span>
+                            </div>
+                            <!-- 部門列表 -->
+                            <div x-show="expandedAreas[area.name]" x-cloak class="ml-4">
+                                <template x-for="dept in area.depts" :key="dept.deptID">
+                                    <div class="mb-0.5">
+                                        <div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-surface cursor-pointer select-none"
+                                             @@click="toggleDeptExpand(dept.deptID)">
+                                            <input type="checkbox" class="w-3.5 h-3.5 accent-pri rounded cursor-pointer"
+                                                   :checked="isDeptAllSelected(dept)" :indeterminate.prop="isDeptPartial(dept)"
+                                                   @@click.stop="toggleAllInDept(dept)" />
+                                            <i :data-lucide="expandedDepts[dept.deptID] ? 'chevron-down' : 'chevron-right'"
+                                               class="w-3 h-3 text-txt-ter"></i>
+                                            <span class="text-[12px] font-medium text-txt" x-text="dept.deptName"></span>
+                                            <span class="text-[10px] text-txt-ter ml-auto" x-text="dept.users.length + ' 人'"></span>
+                                        </div>
+                                        <div x-show="expandedDepts[dept.deptID]" x-cloak class="ml-6">
+                                            <template x-for="user in dept.users" :key="user.accountName">
+                                                <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface cursor-pointer">
+                                                    <input type="checkbox" class="w-3.5 h-3.5 accent-pri rounded cursor-pointer"
+                                                           :checked="selectedUsers.includes(user.accountName)"
+                                                           @@change="toggleUser(user.accountName)" />
+                                                    <span class="text-[12px] text-txt-sec" x-text="user.accountName"></span>
+                                                    <span class="text-[12px] text-txt" x-text="user.displayName"></span>
+                                                </label>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <template x-if="filteredUserAreas.length === 0">
+                        <div class="text-[12px] text-txt-ter text-center py-8">無符合的人員</div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作列 -->
+        <div class="bg-white rounded-xl border border-bdr shadow-sm px-4 py-3 flex items-center justify-between">
+            <div class="text-[13px] text-txt-sec">
+                指派 <span class="font-semibold text-pri" x-text="selectedReports.length"></span> 報表 x
+                <span class="font-semibold text-pri" x-text="selectedUsers.length"></span> 使用者
+                = <span class="font-semibold text-txt" x-text="selectedReports.length * selectedUsers.length"></span> 筆權限
+            </div>
+            <button @@click="grantPermissions()"
+                    :disabled="selectedReports.length === 0 || selectedUsers.length === 0 || granting"
+                    class="inline-flex items-center gap-2 px-5 py-2 bg-pri text-white rounded-lg text-[13px] font-medium border-0 cursor-pointer hover:bg-pri-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                <span x-text="granting ? '指派中...' : '確認指派'"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--  Mode B: 單一人→功能 (個人權限)              -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div x-show="mode === 'single'" x-cloak>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <!-- 人員選擇 (左欄) -->
+            <div class="lg:col-span-4 bg-white rounded-xl border border-bdr shadow-sm flex flex-col" style="height: 580px">
+                <div class="px-4 py-3 border-b border-bdr flex items-center gap-2">
+                    <i data-lucide="user" class="w-4 h-4 text-pri"></i>
+                    <span class="text-[14px] font-semibold text-txt">選擇人員</span>
+                </div>
+                <div class="px-4 py-2 border-b border-bdr-light">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-txt-ter"></i>
+                        <input type="text" x-model.debounce.300ms="singleUserSearch" placeholder="搜尋員工編號或姓名..."
+                               @@input="searchUsersForView()"
+                               class="w-full pl-9 pr-3 py-1.5 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-surface">
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto">
+                    <template x-if="singleSearching">
+                        <div class="text-[12px] text-txt-ter text-center py-8">搜尋中...</div>
+                    </template>
+                    <template x-if="!singleSearching && matchedUsers.length === 0 && singleUserSearch.length >= 1">
+                        <div class="text-[12px] text-txt-ter text-center py-8">無符合的人員</div>
+                    </template>
+                    <template x-if="!singleSearching && matchedUsers.length === 0 && singleUserSearch.length < 1">
+                        <div class="text-[12px] text-txt-ter text-center py-8">請輸入關鍵字搜尋人員</div>
+                    </template>
+                    <template x-for="user in matchedUsers" :key="user.accountName">
+                        <button @@click="selectUserForView(user)"
+                                :class="selectedUser?.accountName === user.accountName ? 'bg-pri-light border-l-2 border-l-pri' : 'hover:bg-surface'"
+                                class="w-full text-left px-4 py-2.5 border-b border-bdr-light cursor-pointer bg-transparent border-0 transition-colors">
+                            <div class="text-[13px] font-medium text-txt" x-text="user.displayName"></div>
+                            <div class="text-[11px] text-txt-ter" x-text="user.accountName + ' · ' + user.deptName"></div>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- 權限表格 (右欄) -->
+            <div class="lg:col-span-8 bg-white rounded-xl border border-bdr shadow-sm flex flex-col" style="height: 580px">
+                <div class="px-4 py-3 border-b border-bdr flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="shield" class="w-4 h-4 text-pri"></i>
+                        <span class="text-[14px] font-semibold text-txt"
+                              x-text="selectedUser ? selectedUser.displayName + ' 的權限' : '請選擇人員'"></span>
+                        <span x-show="selectedUser" class="text-[11px] text-txt-ter"
+                              x-text="'(' + userPermissions.length + ' 筆)'"></span>
+                    </div>
+                    <button x-show="selectedUser" @@click="showAddModal = true"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-pri text-white rounded-lg text-[12px] font-medium border-0 cursor-pointer hover:bg-pri-hover transition-colors">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        新增權限
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto">
+                    <template x-if="!selectedUser">
+                        <div class="flex flex-col items-center justify-center h-full text-txt-ter">
+                            <i data-lucide="mouse-pointer-click" class="w-10 h-10 mb-3 opacity-30"></i>
+                            <div class="text-[13px]">從左側選擇人員以查看權限</div>
+                        </div>
+                    </template>
+                    <template x-if="selectedUser && loadingPerms">
+                        <div class="text-[12px] text-txt-ter text-center py-8">載入中...</div>
+                    </template>
+                    <template x-if="selectedUser && !loadingPerms && userPermissions.length === 0">
+                        <div class="flex flex-col items-center justify-center h-full text-txt-ter">
+                            <i data-lucide="shield-off" class="w-10 h-10 mb-3 opacity-30"></i>
+                            <div class="text-[13px]">此使用者尚未被指派任何報表權限</div>
+                        </div>
+                    </template>
+                    <template x-if="selectedUser && !loadingPerms && userPermissions.length > 0">
+                        <table class="w-full text-[13px]">
+                            <thead class="sticky top-0 bg-surface">
+                                <tr class="text-[11px] text-txt-ter uppercase">
+                                    <th class="text-left px-4 py-2 font-medium">報表名稱</th>
+                                    <th class="text-left px-4 py-2 font-medium">分類</th>
+                                    <th class="text-left px-4 py-2 font-medium">工具</th>
+                                    <th class="text-left px-4 py-2 font-medium">授權日期</th>
+                                    <th class="text-center px-4 py-2 font-medium w-[60px]">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="perm in userPermissions" :key="perm.permissionID">
+                                    <tr class="border-t border-bdr-light hover:bg-surface/60 transition-colors">
+                                        <td class="px-4 py-2.5 font-medium text-txt" x-text="perm.reportName"></td>
+                                        <td class="px-4 py-2.5 text-txt-sec" x-text="perm.categoryName || '-'"></td>
+                                        <td class="px-4 py-2.5">
+                                            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                                                  :class="toolClasses(perm.reportTool)" x-text="perm.reportTool"></span>
+                                        </td>
+                                        <td class="px-4 py-2.5 text-txt-sec" x-text="formatDate(perm.grantedDate)"></td>
+                                        <td class="px-4 py-2.5 text-center">
+                                            <button @@click="revokePermission(perm)"
+                                                    class="p-1 rounded hover:bg-bad/10 text-txt-ter hover:text-bad cursor-pointer border-0 bg-transparent transition-colors"
+                                                    title="移除權限">
+                                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--  新增權限 Modal (Mode B)                    -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div x-show="showAddModal" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div class="bg-white rounded-xl shadow-xl w-[560px] max-h-[70vh] flex flex-col" @@click.outside="showAddModal = false">
+            <div class="px-5 py-3.5 border-b border-bdr flex items-center justify-between">
+                <div class="text-[15px] font-semibold text-txt">新增報表權限</div>
+                <button @@click="showAddModal = false" class="p-1 rounded-lg hover:bg-surface cursor-pointer border-0 bg-transparent">
+                    <i data-lucide="x" class="w-4 h-4 text-txt-ter"></i>
+                </button>
+            </div>
+            <div class="px-5 py-2 border-b border-bdr-light">
+                <div class="relative">
+                    <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-txt-ter"></i>
+                    <input type="text" x-model.debounce.200ms="addReportSearch" placeholder="搜尋報表..."
+                           class="w-full pl-9 pr-3 py-1.5 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-surface">
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto px-3 py-2" style="max-height: 400px">
+                <template x-for="cat in filteredAddReportTree" :key="cat.categoryID">
+                    <div class="mb-1">
+                        <div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-surface cursor-pointer select-none"
+                             @@click="expandedAddCats[cat.categoryID] = !expandedAddCats[cat.categoryID]; $nextTick(() => lucide.createIcons())">
+                            <i :data-lucide="expandedAddCats[cat.categoryID] ? 'chevron-down' : 'chevron-right'" class="w-3.5 h-3.5 text-txt-ter"></i>
+                            <i data-lucide="folder" class="w-3.5 h-3.5 text-amber-500"></i>
+                            <span class="text-[13px] font-medium text-txt" x-text="cat.categoryName"></span>
+                        </div>
+                        <div x-show="expandedAddCats[cat.categoryID]" x-cloak class="ml-6">
+                            <template x-for="rpt in cat.reports" :key="rpt.reportID">
+                                <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface cursor-pointer">
+                                    <input type="checkbox" class="w-3.5 h-3.5 accent-pri rounded cursor-pointer"
+                                           :checked="addSelectedReports.includes(rpt.reportID)"
+                                           @@change="toggleAddReport(rpt.reportID)"
+                                           :disabled="existingReportIds.includes(rpt.reportID)" />
+                                    <span class="text-[12px]" :class="existingReportIds.includes(rpt.reportID) ? 'text-txt-ter line-through' : 'text-txt'"
+                                          x-text="rpt.reportName"></span>
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium ml-auto"
+                                          :class="toolClasses(rpt.reportTool)" x-text="rpt.reportTool"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <div class="px-5 py-3 border-t border-bdr flex items-center justify-between">
+                <span class="text-[12px] text-txt-sec" x-text="'已選 ' + addSelectedReports.length + ' 筆'"></span>
+                <div class="flex gap-2">
+                    <button @@click="showAddModal = false"
+                            class="px-4 py-1.5 rounded-lg border border-bdr text-[13px] text-txt-sec cursor-pointer bg-white hover:bg-surface transition-colors">取消</button>
+                    <button @@click="grantSingleUser()"
+                            :disabled="addSelectedReports.length === 0 || addGranting"
+                            class="px-4 py-1.5 rounded-lg bg-pri text-white text-[13px] font-medium border-0 cursor-pointer hover:bg-pri-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span x-text="addGranting ? '新增中...' : '確認新增'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function permissionPage() {
+    return {
+        mode: 'batch',
+
+        // ─── Mode A: 批次指派 ───
+        reportTree: @Html.Raw(reportTreeJson),
+        userTree: @Html.Raw(userTreeJson),
+        selectedReports: [],
+        selectedUsers: [],
+        reportSearch: '',
+        userSearch: '',
+        expandedCats: {},
+        expandedAreas: {},
+        expandedDepts: {},
+        granting: false,
+
+        // ─── Mode B: 個人權限 ───
+        selectedUser: null,
+        userPermissions: [],
+        singleUserSearch: '',
+        matchedUsers: [],
+        singleSearching: false,
+        loadingPerms: false,
+        showAddModal: false,
+        addReportSearch: '',
+        addSelectedReports: [],
+        expandedAddCats: {},
+        addGranting: false,
+
+        init() {
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        // ─── 報表樹 ───
+
+        get filteredReportTree() {
+            const q = this.reportSearch.toLowerCase().trim();
+            if (!q) return this.reportTree;
+            return this.reportTree.map(cat => ({
+                ...cat,
+                reports: cat.reports.filter(r => r.reportName.toLowerCase().includes(q))
+            })).filter(cat => cat.reports.length > 0);
+        },
+
+        toggleCatExpand(catId) {
+            this.expandedCats[catId] = !this.expandedCats[catId];
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        isCatAllSelected(cat) {
+            return cat.reports.length > 0 && cat.reports.every(r => this.selectedReports.includes(r.reportID));
+        },
+        isCatPartial(cat) {
+            const count = cat.reports.filter(r => this.selectedReports.includes(r.reportID)).length;
+            return count > 0 && count < cat.reports.length;
+        },
+        toggleAllInCategory(cat) {
+            if (this.isCatAllSelected(cat)) {
+                const ids = cat.reports.map(r => r.reportID);
+                this.selectedReports = this.selectedReports.filter(id => !ids.includes(id));
+            } else {
+                cat.reports.forEach(r => {
+                    if (!this.selectedReports.includes(r.reportID)) this.selectedReports.push(r.reportID);
+                });
+            }
+        },
+        toggleReport(id) {
+            const idx = this.selectedReports.indexOf(id);
+            if (idx >= 0) this.selectedReports.splice(idx, 1);
+            else this.selectedReports.push(id);
+        },
+
+        // ─── 人員樹 ───
+
+        get filteredUserAreas() {
+            const q = this.userSearch.toLowerCase().trim();
+            const areas = {};
+            this.userTree.forEach(dept => {
+                const areaName = dept.area;
+                if (!areas[areaName]) areas[areaName] = { name: areaName, depts: [] };
+                const filteredUsers = q
+                    ? dept.users.filter(u => u.accountName.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q))
+                    : dept.users;
+                if (filteredUsers.length > 0) {
+                    areas[areaName].depts.push({ ...dept, users: filteredUsers });
+                }
+            });
+            return Object.values(areas).filter(a => a.depts.length > 0);
+        },
+
+        toggleAreaExpand(name) {
+            this.expandedAreas[name] = !this.expandedAreas[name];
+            this.$nextTick(() => lucide.createIcons());
+        },
+        toggleDeptExpand(deptId) {
+            this.expandedDepts[deptId] = !this.expandedDepts[deptId];
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        isDeptAllSelected(dept) {
+            return dept.users.length > 0 && dept.users.every(u => this.selectedUsers.includes(u.accountName));
+        },
+        isDeptPartial(dept) {
+            const count = dept.users.filter(u => this.selectedUsers.includes(u.accountName)).length;
+            return count > 0 && count < dept.users.length;
+        },
+        toggleAllInDept(dept) {
+            if (this.isDeptAllSelected(dept)) {
+                const names = dept.users.map(u => u.accountName);
+                this.selectedUsers = this.selectedUsers.filter(n => !names.includes(n));
+            } else {
+                dept.users.forEach(u => {
+                    if (!this.selectedUsers.includes(u.accountName)) this.selectedUsers.push(u.accountName);
+                });
+            }
+        },
+        toggleUser(name) {
+            const idx = this.selectedUsers.indexOf(name);
+            if (idx >= 0) this.selectedUsers.splice(idx, 1);
+            else this.selectedUsers.push(name);
+        },
+
+        // ─── 批次指派 ───
+
+        async grantPermissions() {
+            if (this.selectedReports.length === 0 || this.selectedUsers.length === 0) return;
+            this.granting = true;
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                const form = new URLSearchParams();
+                form.append('employeeIds', this.selectedReports.length > 0 ? this.selectedUsers.join(',') : '');
+                form.append('reportIds', this.selectedReports.join(','));
+                if (token) form.append('__RequestVerificationToken', token);
+
+                const res = await fetch('/Admin/Permission?handler=Grant', {
+                    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: form.toString()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const msg = `成功新增 ${data.inserted} 筆權限` + (data.skipped > 0 ? `（略過 ${data.skipped} 筆已存在）` : '');
+                    Alpine.store('toast').show(msg);
+                    this.selectedReports = [];
+                    this.selectedUsers = [];
+                } else {
+                    Alpine.store('toast').show(data.message || '指派失敗');
+                }
+            } catch (e) {
+                Alpine.store('toast').show('指派發生錯誤');
+            } finally {
+                this.granting = false;
+            }
+        },
+
+        // ─── Mode B: 人員搜尋 ───
+
+        async searchUsersForView() {
+            const q = this.singleUserSearch.trim();
+            if (q.length < 1) { this.matchedUsers = []; return; }
+            this.singleSearching = true;
+            try {
+                const res = await fetch(`/Admin/Permission?handler=SearchUsers&keyword=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                this.matchedUsers = data.success ? data.users : [];
+            } catch { this.matchedUsers = []; }
+            finally { this.singleSearching = false; }
+        },
+
+        async selectUserForView(user) {
+            this.selectedUser = user;
+            this.loadingPerms = true;
+            try {
+                const res = await fetch(`/Admin/Permission?handler=UserPermissions&empId=${encodeURIComponent(user.accountName)}`);
+                const data = await res.json();
+                this.userPermissions = data.success ? data.permissions : [];
+            } catch { this.userPermissions = []; }
+            finally {
+                this.loadingPerms = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        async revokePermission(perm) {
+            if (!confirm(`確定要移除「${perm.reportName}」的權限嗎？`)) return;
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                const form = new URLSearchParams();
+                form.append('empId', this.selectedUser.accountName);
+                form.append('reportId', perm.reportID);
+                if (token) form.append('__RequestVerificationToken', token);
+
+                const res = await fetch('/Admin/Permission?handler=Revoke', {
+                    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: form.toString()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.userPermissions = this.userPermissions.filter(p => p.permissionID !== perm.permissionID);
+                    Alpine.store('toast').show('已移除權限');
+                }
+            } catch { Alpine.store('toast').show('移除發生錯誤'); }
+        },
+
+        // ─── Mode B: 新增權限 Modal ───
+
+        get existingReportIds() {
+            return this.userPermissions.map(p => p.reportID);
+        },
+
+        get filteredAddReportTree() {
+            const q = this.addReportSearch.toLowerCase().trim();
+            if (!q) return this.reportTree;
+            return this.reportTree.map(cat => ({
+                ...cat,
+                reports: cat.reports.filter(r => r.reportName.toLowerCase().includes(q))
+            })).filter(cat => cat.reports.length > 0);
+        },
+
+        toggleAddReport(id) {
+            const idx = this.addSelectedReports.indexOf(id);
+            if (idx >= 0) this.addSelectedReports.splice(idx, 1);
+            else this.addSelectedReports.push(id);
+        },
+
+        async grantSingleUser() {
+            if (!this.selectedUser || this.addSelectedReports.length === 0) return;
+            this.addGranting = true;
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                const form = new URLSearchParams();
+                form.append('empId', this.selectedUser.accountName);
+                form.append('reportIds', this.addSelectedReports.join(','));
+                if (token) form.append('__RequestVerificationToken', token);
+
+                const res = await fetch('/Admin/Permission?handler=GrantSingle', {
+                    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: form.toString()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    Alpine.store('toast').show(`成功新增 ${data.inserted} 筆權限`);
+                    this.showAddModal = false;
+                    this.addSelectedReports = [];
+                    this.addReportSearch = '';
+                    // 重新載入權限列表
+                    await this.selectUserForView(this.selectedUser);
+                }
+            } catch { Alpine.store('toast').show('新增發生錯誤'); }
+            finally { this.addGranting = false; }
+        },
+
+        // ─── 共用 ───
+
+        toolClasses(tool) {
+            return {
+                'Internal': 'bg-emerald-50 text-emerald-700',
+                'SmartQuery': 'bg-amber-50 text-amber-700',
+                'SSRS': 'bg-indigo-50 text-indigo-700',
+            }[tool] || 'bg-gray-50 text-gray-600';
+        },
+
+        formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
+        }
+    };
+}
+</script>
+}

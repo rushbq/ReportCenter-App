@@ -18,6 +18,14 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    // ── 外部設定檔 (正式環境透過 IIS web.config 環境變數指定路徑) ──
+    if (!builder.Environment.IsDevelopment())
+    {
+        var externalConfig = Environment.GetEnvironmentVariable("RC_CONFIG_PATH");
+        if (!string.IsNullOrEmpty(externalConfig))
+            builder.Configuration.AddJsonFile(externalConfig, optional: false, reloadOnChange: false);
+    }
+
     builder.Host.UseSerilog((context, services, loggerConfiguration) =>
     {
         var isDevelopment = context.HostingEnvironment.IsDevelopment();
@@ -77,10 +85,13 @@ try
     // 三層式架構 DI 註冊
     // DAL — 資料存取層
     builder.Services.AddScoped<ICatalogRepository, SqlCatalogRepository>();
+    builder.Services.AddScoped<IPksysRepository, SqlPksysRepository>();
+    builder.Services.AddScoped<IPermissionRepository, SqlPermissionRepository>();
 
     // BLL — 商業邏輯層
     builder.Services.AddScoped<IReportService, SqlReportService>();
     builder.Services.AddScoped<ICatalogService, CatalogService>();
+    builder.Services.AddScoped<IPermissionService, PermissionService>();
 
     var app = builder.Build();
 

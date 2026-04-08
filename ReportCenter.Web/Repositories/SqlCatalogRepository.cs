@@ -266,26 +266,6 @@ public class SqlCatalogRepository : ICatalogRepository
     }
 
     // ═══════════════════════════════════════════
-    //  部門 (User_Dept)
-    // ═══════════════════════════════════════════
-
-    public List<CatalogDept> GetCatalogDepartments(string? area = null)
-    {
-        using var conn = OpenConn();
-        var sql = "SELECT Area, DeptID, DeptName FROM User_Dept WHERE Display = 'Y'";
-        var parameters = new DynamicParameters();
-
-        if (!string.IsNullOrEmpty(area))
-        {
-            sql += " AND Area = @Area";
-            parameters.Add("Area", area);
-        }
-
-        sql += " ORDER BY Area_Sort, Sort";
-        return conn.Query<CatalogDept>(sql, parameters).ToList();
-    }
-
-    // ═══════════════════════════════════════════
     //  前端查詢 (依部門取啟用中報表)
     // ═══════════════════════════════════════════
 

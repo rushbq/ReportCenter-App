@@ -20,16 +20,27 @@ ReportCenter.Web/
 ├── Models/Settings/
 │   ├── ReportBaseUrlSettings.cs    # 報表外部連結 BaseUrl 設定
 │   └── MockWindowsAuthSettings.cs  # 開發環境模擬 AD 使用者設定
+├── Repositories/
+│   ├── ICatalogRepository.cs       # 報表目錄 DAL 介面 (ReportCenter DB)
+│   ├── SqlCatalogRepository.cs     # 報表目錄 Dapper 實作
+│   ├── IPksysRepository.cs         # PKSYS DAL 介面 (User_Dept + User_Profile)
+│   ├── SqlPksysRepository.cs       # PKSYS Dapper 實作
+│   ├── IPermissionRepository.cs    # 權限 DAL 介面 (ReportCenter DB)
+│   └── SqlPermissionRepository.cs  # 權限 Dapper 實作
 ├── Services/
-│   ├── IReportService.cs           # 資料服務介面 (切換 API 時實作此介面)
-│   └── MockReportService.cs        # Mock 實作 (模擬資料，含 14 筆報表目錄 seed data)
+│   ├── IReportService.cs           # 資料服務介面
+│   ├── SqlReportService.cs         # SQL 實作 (含權限過濾)
+│   ├── MockReportService.cs        # Mock 實作 (儀表板 KPI/圖表)
+│   ├── IPermissionService.cs       # 權限管理 BLL 介面
+│   └── PermissionService.cs        # 權限管理 BLL 實作
 ├── Pages/
 │   ├── Index.cshtml(.cs)           # 首頁儀表板 (KPI、圖表、篩選、快速存取)
 │   ├── Department.cshtml(.cs)      # 部門報表列表 (搜尋、篩選、排序、卡片/表格切換)
 │   ├── Report.cshtml(.cs)          # 報表明細 (圖表切換、篩選、收藏、匯出、分頁)
 │   ├── Admin/
 │   │   ├── Index.cshtml(.cs)       # 管理總覽 (KPI、部門矩陣、孤立報表、相依性分析)
-│   │   └── Catalog.cshtml(.cs)     # 報表目錄管理 (CRUD、篩選、編輯 Modal)
+│   │   ├── Catalog.cshtml(.cs)     # 報表目錄管理 (CRUD、篩選、編輯 Modal)
+│   │   └── Permission.cshtml(.cs)  # 權限管理 (批次指派、個人權限)
 │   └── Shared/
 │       ├── _Layout.cshtml          # 主版面配置 (TopNav + Sidebar + Content + 搜尋 Modal)
 │       ├── _TopNav.cshtml          # 頂部導航列 (Logo、公司選單、搜尋、使用者資訊)
@@ -53,23 +64,46 @@ ReportCenter.Web/
 | `/Report?dept={id}&name={name}&page={n}` | Report | 報表明細頁 |
 | `/Admin` | Admin/Index | 報表管理總覽 (KPI、部門矩陣、孤立報表) |
 | `/Admin/Catalog` | Admin/Catalog | 報表目錄管理 (CRUD) |
+| `/Admin/Permission` | Admin/Permission | 權限管理 (批次指派、個人權限) |
 
 ## 資料架構 (Service Layer)
 
 ```
 IReportService (介面)               # 首頁/部門頁資料
-  └── MockReportService (目前使用)
-  └── ApiReportService (未來)
+  └── SqlReportService              # Dapper + 權限過濾
+  └── MockReportService             # Mock 資料 (儀表板 KPI/圖表仍沿用)
 
 ICatalogService (介面)              # 報表目錄管理 BLL
-  └── CatalogService                # 依賴 ICatalogRepository + DepartmentDisplaySettings
+  └── CatalogService                # 依賴 ICatalogRepository + IPksysRepository + DepartmentDisplaySettings
       ├── GetAdminStats()           → 統計 KPI + 部門矩陣 (分 TW/SH，依 appsettings 過濾)
       ├── BuildDeptUsagesForRegion() → 私有方法：建置單一區域部門矩陣
       └── CRUD / 分類 / 部門 / 資料夾 / BaseUrl
 
-ICatalogRepository (介面)           # 資料存取層
+IPermissionService (介面)           # 權限管理 BLL
+  └── PermissionService             # 依賴 IPermissionRepository + IPksysRepository + ICatalogRepository
+      ├── GrantBatch()              → 批次授權 (冪等)
+      ├── GetDeptUserTree()         → 部門→使用者樹 (UI 用)
+      └── GetReportTree()           → 分類→報表樹 (UI 用)
+
+ICatalogRepository (介面)           # 資料存取層 (ReportCenter DB)
   └── SqlCatalogRepository          # Dapper + SQL Server
+
+IPksysRepository (介面)             # PKSYS 資料存取層 (User_Dept + User_Profile)
+  └── SqlPksysRepository            # Dapper + SQL Server (PKSYS 連線)
+
+IPermissionRepository (介面)        # 權限資料存取層 (ReportCenter DB)
+  └── SqlPermissionRepository       # Dapper + SQL Server
 ```
+
+## 雙連線字串
+
+| 連線名稱 | 資料庫 | 用途 |
+|----------|--------|------|
+| `ReportCenter` | ReportCenter | 報表目錄、權限、收藏、釘選 |
+| `PKSYS` | PKSYS | User_Dept (部門)、User_Profile (使用者) |
+
+- **開發環境**: `secrets.json` (ASP.NET Core User Secrets)
+- **正式環境**: IIS `web.config` 環境變數 `RC_CONFIG_PATH` 指向外部 JSON 檔
 
 **切換真實 API 只需：**
 1. 建立 `ApiReportService : IReportService`
@@ -124,6 +158,35 @@ ICatalogRepository (介面)           # 資料存取層
 1. **Development**: `DevWindowsAuthMiddleware` → Claims → `SqlReportService.GetCurrentUser()`
 2. **Production**: IIS Negotiate → Claims (僅 `ClaimTypes.Name`) → `SqlReportService.GetCurrentUser()`
 3. Production 環境僅提供 Windows 帳號名稱 (`DOMAIN\username`)，未來可透過 AD/DB 查詢補充 DisplayName、Department 等詳細資料
+
+## 權限管理
+
+### 權限架構
+
+- **以人為主**：針對人給予報表存取權限，不設計部門權限
+- **預設無權限**：未指派權限的使用者看不到任何報表
+- **權限 DB**：`UserReportPermission` 表在 ReportCenter 資料庫
+- **使用者來源**：PKSYS 資料庫的 `User_Profile` 表
+
+### 資料模型
+
+- `UserReportPermission` — 使用者報表權限 (EmployeeId + ReportID，UNIQUE)
+- `UserProfileItem` — User_Profile 對應 (AccountName, DisplayName, DeptID, DeptName)
+- `DeptWithUsers` — 部門含使用者清單 (人員樹節點)
+- `CategoryWithReports` — 分類含報表清單 (報表樹節點)
+- `ReportTreeItem` — 報表樹葉節點
+
+### 權限管理 UI (`/Admin/Permission`)
+
+兩種模式：
+1. **功能→多人 (批次)**：左右雙欄樹狀選擇，勾選報表+人員後批次指派
+2. **單一人→功能 (個人)**：搜尋人員，查看/新增/移除其權限
+
+### 權限檢查流程
+
+1. `SqlReportService.GetReports()` — 依 `GetAuthorizedReportIds()` 過濾報表列表
+2. `Report.cshtml.cs OnGet()` — 檢查 `HasPermission()`，無權限顯示「權限不足」頁面
+3. Admin 頁面目前不限制存取
 
 ## 篩選功能
 

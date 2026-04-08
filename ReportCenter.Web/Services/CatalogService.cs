@@ -14,14 +14,16 @@ using ReportCenter.Web.Repositories;
 public class CatalogService : ICatalogService
 {
     private readonly ICatalogRepository _repo;
+    private readonly IPksysRepository _pksysRepo;
     private readonly IReportService _reportSvc;
     private readonly ReportBaseUrlSettings _baseUrls;
     private readonly DepartmentDisplaySettings _deptDisplay;
 
-    public CatalogService(ICatalogRepository repo, IReportService reportSvc,
+    public CatalogService(ICatalogRepository repo, IPksysRepository pksysRepo, IReportService reportSvc,
         IOptions<ReportBaseUrlSettings> baseUrls, IOptions<DepartmentDisplaySettings> deptDisplay)
     {
         _repo = repo;
+        _pksysRepo = pksysRepo;
         _reportSvc = reportSvc;
         _baseUrls = baseUrls.Value;
         _deptDisplay = deptDisplay.Value;
@@ -149,7 +151,7 @@ public class CatalogService : ICatalogService
         var companies = _reportSvc.GetCompanies();
         var company = companies.Find(c => c.Id == companyId);
         var area = company?.Region?.ToUpper() ?? "TW";
-        var allDepts = _repo.GetCatalogDepartments(area);
+        var allDepts = _pksysRepo.GetCatalogDepartments(area);
 
         // 僅回傳 appsettings DepartmentDisplay 中設定的部門
         if (!_deptDisplay.Regions.TryGetValue(area, out var regionCfg))

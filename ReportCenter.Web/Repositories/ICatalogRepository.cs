@@ -22,9 +22,6 @@ public interface ICatalogRepository
     ReportCategory SaveCategory(ReportCategory category);
     bool DeleteCategory(int categoryId);
 
-    // ─── 部門 (User_Dept) ───
-    List<CatalogDept> GetCatalogDepartments(string? area = null);
-
     // ─── 前端查詢 (依部門取啟用中報表) ───
     List<ReportCatalogItem> GetActiveReportsByDepartment(int deptId);
     List<string> GetCategoriesByDepartment(int deptId);

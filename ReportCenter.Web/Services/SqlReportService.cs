@@ -15,17 +15,23 @@ public class SqlReportService : IReportService
     private readonly MockReportService _mock = new();
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ICatalogRepository _repo;
+    private readonly IPksysRepository _pksysRepo;
+    private readonly IPermissionRepository _permRepo;
     private readonly DepartmentDisplaySettings _deptDisplay;
     private readonly ReportBaseUrlSettings _baseUrls;
 
     public SqlReportService(
         IHttpContextAccessor httpContextAccessor,
         ICatalogRepository repo,
+        IPksysRepository pksysRepo,
+        IPermissionRepository permRepo,
         IOptions<DepartmentDisplaySettings> deptDisplay,
         IOptions<ReportBaseUrlSettings> baseUrls)
     {
         _httpContextAccessor = httpContextAccessor;
         _repo = repo;
+        _pksysRepo = pksysRepo;
+        _permRepo = permRepo;
         _deptDisplay = deptDisplay.Value;
         _baseUrls = baseUrls.Value;
     }
@@ -74,7 +80,7 @@ public class SqlReportService : IReportService
         if (!_deptDisplay.Regions.TryGetValue(region, out var config))
             return [];
 
-        var allDepts = _repo.GetCatalogDepartments(region);
+        var allDepts = _pksysRepo.GetCatalogDepartments(region);
         var result = new List<Department>();
 
         foreach (var entry in config.Depts)
@@ -108,6 +114,11 @@ public class SqlReportService : IReportService
     {
         var deptIdInt = int.TryParse(deptId, out var id) ? id : 0;
         var items = _repo.GetActiveReportsByDepartment(deptIdInt);
+
+        // 依使用者權限過濾 (預設無權限策略)
+        var userId = GetCurrentUser().Id;
+        var authorizedIds = _permRepo.GetAuthorizedReportIds(userId);
+        items = items.Where(i => authorizedIds.Contains(i.ReportID)).ToList();
 
         return items.Select(ToReport).ToList();
     }
