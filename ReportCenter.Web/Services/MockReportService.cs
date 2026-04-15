@@ -12,6 +12,7 @@ public class MockReportService : IReportService
         Name = "Clyde",
         DeptId = "109",
         DeptName = "資訊部",
+        NickName = "Clyde",
     };
 
     public List<Company> GetCompanies() =>

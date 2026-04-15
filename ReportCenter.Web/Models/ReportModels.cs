@@ -16,6 +16,7 @@ public class UserInfo
     public string Name { get; set; } = "";
     public string DeptId { get; set; } = "";
     public string DeptName { get; set; } = "";
+    public string NickName { get; set; } = "";
     public string CompanyId { get; set; } = "tw";
 }
 
@@ -202,6 +203,7 @@ public class UserProfileItem
     public string DisplayName { get; set; } = "";   // Display_Name (姓名)
     public string DeptID { get; set; } = "";
     public string DeptName { get; set; } = "";       // 從 User_Dept JOIN
+    public string NickName { get; set; } = "";       // User_Profile.NickName
 }
 
 /// <summary>使用者報表權限</summary>

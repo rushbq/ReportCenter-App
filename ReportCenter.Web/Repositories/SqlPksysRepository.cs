@@ -82,7 +82,8 @@ public class SqlPksysRepository : IPksysRepository
         return conn.QueryFirstOrDefault<UserProfileItem>(
             """
             SELECT p.Account_Name AS AccountName, p.Display_Name AS DisplayName,
-                   p.DeptID, ISNULL(d.DeptName, '') AS DeptName
+                   p.DeptID, ISNULL(d.DeptName, '') AS DeptName,
+                   p.NickName AS NickName
             FROM User_Profile p
             LEFT JOIN User_Dept d ON p.DeptID = d.DeptID
             WHERE p.Display = 'Y' AND p.Account_Name = @AccountName

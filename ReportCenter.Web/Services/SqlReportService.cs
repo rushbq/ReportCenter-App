@@ -135,6 +135,7 @@ public class SqlReportService : IReportService
                     Name = ResolveDisplayName(displayNameClaim, normalizedAccountName, pksysUser),
                     DeptId = ResolveDepartmentId(departmentIdClaim, pksysUser),
                     DeptName = ResolveDepartmentName(departmentClaim, pksysUser),
+                    NickName = pksysUser?.NickName ?? "",
                 }
                 : new UserInfo(),
             ResolvedFields = BuildResolvedFields(
