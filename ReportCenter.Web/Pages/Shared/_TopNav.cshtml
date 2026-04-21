@@ -40,7 +40,7 @@
             {
                 <button @@click="document.cookie = 'companyId=@company.Id;path=/;max-age=31536000'; selectedCompany = '@company.ShortName'; companyOpen = false; window.location.reload()"
                         :class="selectedCompany === '@company.ShortName' ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                        class="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2 cursor-pointer border-0 bg-transparent">
+                        class="menu-item flex items-center gap-2">
                     <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
                     @company.ShortName
                 </button>

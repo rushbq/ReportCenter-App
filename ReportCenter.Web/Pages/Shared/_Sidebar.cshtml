@@ -68,7 +68,7 @@
                           @(isActive ? "font-semibold text-pri bg-pri-light" : "text-txt hover:bg-[#f8fafa]")">
                     <i data-lucide="@d.Icon" class="w-4 h-4" style="stroke-width: @(isActive ? "2.2" : "1.8")"></i>
                     <span class="flex-1">@d.Label</span>
-                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full
+                    <span class="badge
                                  @(isActive ? "bg-pri/10 text-pri" : "bg-bdr-light text-txt-ter")">@d.Count</span>
                     <i x-show="expanded === '@d.Id'" data-lucide="chevron-down" class="w-3 h-3 text-txt-ter"></i>
                     <i x-show="expanded !== '@d.Id'" data-lucide="chevron-right" class="w-3 h-3 text-txt-ter"></i>

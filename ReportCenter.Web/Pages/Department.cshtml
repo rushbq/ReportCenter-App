@@ -14,7 +14,7 @@
     var favoriteIdsJson = System.Text.Json.JsonSerializer.Serialize(Model.FavoriteIds, jsonOpts);
 }
 
-<div class="p-4 md:p-6 pb-10 max-w-[1200px]" x-data="deptPage()" x-init="init()">
+<div class="page-container" x-data="deptPage()" x-init="init()">
     <!-- Breadcrumb -->
     <div class="text-[12px] text-txt-ter mb-3.5">
         <a href="/" class="hover:text-pri no-underline text-txt-ter">首頁</a> /
@@ -60,7 +60,7 @@
                 class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent whitespace-nowrap">
             全部
             <span :class="tab==='all' ? 'bg-pri-light text-pri' : 'bg-bdr-light text-txt-ter'"
-                  class="text-[10px] font-semibold px-2 py-0.5 rounded-full" x-text="tabCount('all')"></span>
+                  class="badge" x-text="tabCount('all')"></span>
         </button>
         @foreach (var sub in Model.Dept.Subs)
         {
@@ -69,7 +69,7 @@
                     class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent whitespace-nowrap">
                 @sub
                 <span :class="tab==='@sub' ? 'bg-pri-light text-pri' : 'bg-bdr-light text-txt-ter'"
-                      class="text-[10px] font-semibold px-2 py-0.5 rounded-full" x-text="tabCount('@sub')"></span>
+                      class="badge" x-text="tabCount('@sub')"></span>
             </button>
         }
     </div>
@@ -104,7 +104,7 @@
             <div x-show="dateOpen" x-cloak class="absolute left-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[120px] z-40">
                 <template x-for="d in ['全部','本週','本月','本季']">
                     <button :class="dateFilter === d ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                            class="w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent"
+                            class="menu-item"
                             @@click="dateFilter = d; dateOpen = false" x-text="d"></button>
                 </template>
             </div>
@@ -117,7 +117,7 @@
             <div x-show="sortOpen" x-cloak class="absolute left-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[130px] z-40">
                 <template x-for="s in ['最近更新','最早更新','名稱 A-Z']">
                     <button :class="sortBy === s ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                            class="w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent"
+                            class="menu-item"
                             @@click="sortBy = s; sortOpen = false" x-text="s"></button>
                 </template>
             </div>
@@ -140,8 +140,8 @@
                       hover:shadow-md hover:border-pri transition-all">
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pri-light text-pri" x-text="r.cat"></span>
-                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                        <span class="badge bg-pri-light text-pri" x-text="r.cat"></span>
+                        <span class="badge"
                               :class="toolBadgeClass(r.reportTool)" x-text="r.reportTool"
                               x-show="r.reportTool !== 'Internal'"></span>
                     </div>
@@ -183,8 +183,8 @@
                     <span x-text="r.name"></span>
                 </span>
                 <span class="text-txt-sec text-[12px]" x-text="r.desc"></span>
-                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pri-light text-pri inline-block w-fit" x-text="r.cat"></span>
-                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block w-fit"
+                <span class="badge bg-pri-light text-pri inline-block w-fit" x-text="r.cat"></span>
+                <span class="badge inline-block w-fit"
                       :class="toolBadgeClass(r.reportTool)" x-text="r.reportTool"></span>
                 <span class="text-[12px] text-txt-ter" x-text="r.updated"></span>
                 <span class="text-[12px] text-pri font-semibold flex items-center gap-1">

@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "ReportCenter.Web",
-      "runtimeExecutable": "/opt/homebrew/bin/dotnet",
+      "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "ReportCenter.Web"],
       "port": 5276
     }

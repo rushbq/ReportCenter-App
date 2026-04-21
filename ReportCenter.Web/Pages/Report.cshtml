@@ -15,7 +15,7 @@
 
 @if (Model.AccessDenied)
 {
-    <div class="p-4 md:p-6 pb-10 max-w-[1200px]">
+    <div class="page-container">
         <div class="flex flex-col items-center justify-center py-20">
             <i data-lucide="shield-off" class="w-16 h-16 text-bad/40 mb-4"></i>
             <h2 class="text-[18px] font-semibold text-txt mb-2">權限不足</h2>
@@ -29,7 +29,7 @@
     return;
 }
 
-<div class="p-4 md:p-6 pb-10 max-w-[1200px]" x-data="reportPage()" x-init="init()">
+<div class="page-container" x-data="reportPage()" x-init="init()">
     <!-- Breadcrumb -->
     <div class="text-[12px] text-txt-ter mb-3.5 flex items-center gap-1">
         <a href="/" class="hover:text-pri no-underline text-txt-ter cursor-pointer">首頁</a><span>/</span>
@@ -69,7 +69,7 @@
             <div x-show="dateOpen" x-cloak class="absolute left-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[120px] z-50">
                 <template x-for="d in ['2026/03','2026/02','2026/01','2025/12','2025/11','2025/10']">
                     <button :class="dateFilter === d ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                            class="w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent"
+                            class="menu-item"
                             @@click="dateFilter = d; dateOpen = false" x-text="d"></button>
                 </template>
             </div>
@@ -83,7 +83,7 @@
             <div x-show="materialOpen" x-cloak class="absolute left-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[130px] z-50">
                 <template x-for="m in ['全部','原料','包材','設備','耗材']">
                     <button :class="materialCat === m ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                            class="w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent"
+                            class="menu-item"
                             @@click="materialCat = m; materialOpen = false" x-text="m"></button>
                 </template>
             </div>
@@ -96,11 +96,11 @@
             </span>
             <div x-show="supplierOpen" x-cloak class="absolute left-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[140px] z-50 max-h-[200px] overflow-y-auto">
                 <button :class="supplierFilter === '全部' ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                        class="w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent"
+                        class="menu-item"
                         @@click="supplierFilter = '全部'; supplierOpen = false">全部</button>
                 <template x-for="s in suppliers" :key="s">
                     <button :class="supplierFilter === s ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                            class="w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent"
+                            class="menu-item"
                             @@click="supplierFilter = s; supplierOpen = false" x-text="s"></button>
                 </template>
             </div>
@@ -111,7 +111,7 @@
 
     <!-- Charts Row -->
     <div class="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 mb-5">
-        <div class="bg-white border border-bdr rounded-xl p-5 shadow-sm">
+        <div class="card">
             <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
                 <span class="font-semibold text-sm text-txt">各類物料採購金額趨勢</span>
                 <div class="flex gap-1">
@@ -125,7 +125,7 @@
                 <canvas id="costChart"></canvas>
             </div>
         </div>
-        <div class="bg-white border border-bdr rounded-xl p-5 shadow-sm">
+        <div class="card">
             <span class="font-semibold text-sm text-txt">採購佔比</span>
             <div class="relative h-[200px] mt-2">
                 <canvas id="pieChart"></canvas>

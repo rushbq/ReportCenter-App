@@ -33,7 +33,7 @@
     var deptLabelsJson = System.Text.Json.JsonSerializer.Serialize(deptLabels, jsonOpts);
 }
 
-<div class="p-4 md:p-6 pb-10 max-w-[1200px]"
+<div class="page-container"
      x-data="indexPage()" x-init="init()">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row justify-between items-start mb-5 gap-3">
@@ -51,7 +51,7 @@
                 <div x-show="periodOpen" x-cloak class="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[120px] z-40">
                     <template x-for="p in ['本月','上月','本季','本年']">
                         <button :class="period === p ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                                class="w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent"
+                                class="menu-item"
                                 @@click="period = p; periodOpen = false" x-text="p"></button>
                     </template>
                 </div>
@@ -65,7 +65,7 @@
                 <div x-show="regionOpen" x-cloak class="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[120px] z-40">
                     <template x-for="r in ['全部','北區','中區','南區','東區']">
                         <button :class="region === r ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                                class="w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent"
+                                class="menu-item"
                                 @@click="region = r; regionOpen = false" x-text="r"></button>
                     </template>
                 </div>
@@ -79,7 +79,7 @@
                 <div x-show="deptOpen" x-cloak class="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[120px] z-40">
                     <template x-for="d in deptLabels">
                         <button :class="dept === d ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                                class="w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent"
+                                class="menu-item"
                                 @@click="dept = d; deptOpen = false" x-text="d"></button>
                     </template>
                 </div>
@@ -112,9 +112,9 @@
     </div>
 
     <!-- Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 mb-6">
+    <div class="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-4 mb-6">
         <!-- Revenue Trend -->
-        <div class="bg-white border border-bdr rounded-xl p-5 shadow-sm">
+        <div class="card">
             <div class="flex justify-between items-center mb-1">
                 <span class="font-semibold text-sm text-txt">營收趨勢</span>
                 <div class="flex gap-1">
@@ -129,7 +129,7 @@
             </div>
         </div>
         <!-- Department Comparison -->
-        <div class="bg-white border border-bdr rounded-xl p-5 shadow-sm">
+        <div class="card">
             <span class="font-semibold text-sm text-txt">部門比較（百萬）</span>
             <div class="relative h-[220px] mt-2">
                 <canvas id="deptChart"></canvas>
@@ -149,8 +149,8 @@
                class="bg-white border border-bdr rounded-[10px] p-4 flex flex-col gap-1.5 shadow-sm no-underline
                       hover:shadow-md hover:border-pri transition-all">
                 <div class="flex justify-between items-center">
-                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pri-light text-pri" x-text="p.dept"></span>
-                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    <span class="badge bg-pri-light text-pri" x-text="p.dept"></span>
+                    <span class="badge"
                           :class="toolBadgeClass(p.ReportTool)" x-text="p.ReportTool"
                           x-show="p.ReportTool !== 'Internal'"></span>
                 </div>

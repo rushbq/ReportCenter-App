@@ -185,6 +185,54 @@ font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 ```
 
+### 4.8 共用 Component Classes
+
+為避免重複的 Tailwind utility 組合散落各頁面，專案將常用組合抽取為 `@apply` component class，統一定義於 `Pages/Shared/_Layout.cshtml` 的 `<style type="text/tailwindcss">` 區塊（Tailwind Play CDN 支援 `@apply` 指令於 component layer）。
+
+```html
+<style type="text/tailwindcss">
+  @layer components {
+    /* 頁面外層容器：≥1536px (2xl) 自動延展 */
+    .page-container      { @apply p-4 md:p-6 pb-10 max-w-[1200px] 2xl:max-w-[1600px]; }
+    .page-container-wide { @apply p-4 md:p-6 pb-10 max-w-[1400px] 2xl:max-w-[1800px]; }
+    /* 下拉選單／彈出清單項目 (顏色與 hover 由 :class 或額外 class 指定) */
+    .menu-item           { @apply w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent; }
+    /* 白色區塊卡片 */
+    .card                { @apply bg-white border border-bdr rounded-xl p-5 shadow-sm; }
+    /* 徽章基本形狀（10px chip，顏色自行補） */
+    .badge               { @apply text-[10px] font-semibold px-2 py-0.5 rounded-full; }
+  }
+</style>
+```
+
+| Class | 用途 | 備註 |
+|-------|------|------|
+| `.page-container` | 頁面外層容器（預設寬度） | `≥2xl (1536px)` 延展至 1600px |
+| `.page-container-wide` | 寬版外層容器 | 權限管理等寬表頁使用；`≥2xl` 延展至 1800px |
+| `.menu-item` | 下拉選單／彈出清單項目 | 顏色由 `:class` 或額外 class 指定 |
+| `.card` | 白色區塊卡片 | 圖表、列表等區塊容器 |
+| `.badge` | 徽章形狀（10px chip） | 顏色自行補（例：`badge bg-pri-light text-pri`） |
+
+**使用範例：**
+
+```html
+<!-- 頁面外層 -->
+<div class="page-container" x-data="xxxPage()">...</div>
+
+<!-- 白色卡片 + 內含徽章 -->
+<div class="card">
+  <span class="badge bg-pri-light text-pri">採購部</span>
+  <span class="badge bg-bdr-light text-txt-ter">已停用</span>
+  ...
+</div>
+
+<!-- 下拉選單項（配合 Alpine :class 動態配色） -->
+<button :class="active ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
+        class="menu-item">本月</button>
+```
+
+**其他站台複製提示：** 所有 component class 都透過 `@apply` 展開為 Tailwind utility，無純手寫 CSS 魔法數字。要調整（例如改變容器最大寬、卡片圓角），只需修改 `_Layout.cshtml` 中 `@apply` 後的 utility 即可，不需動到頁面。
+
 ---
 
 ## 5. 版面結構
@@ -217,6 +265,7 @@ font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
 - 桌面版 Sidebar: `lg:relative lg:top-0 lg:translate-x-0`
 - Transition: `duration-200 ease-out`
 - Section 插槽: `@RenderSectionAsync("Styles")` 和 `@RenderSectionAsync("Scripts")`
+- **共用 component class 定義區塊**: `<style type="text/tailwindcss">` 含 `.page-container`、`.menu-item`、`.card`、`.badge` 等（見 4.8）
 
 ### 5.3 Lucide Icons 初始化
 
@@ -624,6 +673,7 @@ _TopNav.cshtml: x-data="{ mobileSearch: false }"
 | sm | `sm:` | ≥ 640px | 平板直立 |
 | md | `md:` | ≥ 768px | 平板橫向 |
 | lg | `lg:` | ≥ 1024px | 桌面 |
+| 2xl | `2xl:` | ≥ 1536px | 大螢幕（頁面容器延展至 1600/1800px） |
 
 ### 10.2 響應式行為對照表
 
@@ -641,7 +691,7 @@ _TopNav.cshtml: x-data="{ mobileSearch: false }"
 | 部門 Tab | Pill 膠囊 (`flex md:hidden`) | 底線式 (`hidden md:flex`) | 底線式 |
 | 數據表格 | 水平捲動 (`overflow-x-auto`) | 同左 | 完整顯示 |
 | 內容 padding | `p-4` | `md:p-6` | `md:p-6` |
-| 容器最大寬 | 100% | 100% | `max-w-[1200px]` |
+| 容器最大寬 | 100% | 100% | `max-w-[1200px]`（`≥2xl` 延展至 `1600px`；寬版頁 1400/1800px） |
 
 ---
 

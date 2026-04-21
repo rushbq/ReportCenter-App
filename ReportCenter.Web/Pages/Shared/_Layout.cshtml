@@ -49,6 +49,19 @@
         body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         [x-cloak] { display: none !important; }
     </style>
+    <style type="text/tailwindcss">
+        @@layer components {
+            /* 頁面外層容器：大於 2xl (≥1536px) 自動延展 */
+            .page-container { @@apply p-4 md:p-6 pb-10 max-w-[1200px] 2xl:max-w-[1600px]; }
+            .page-container-wide { @@apply p-4 md:p-6 pb-10 max-w-[1400px] 2xl:max-w-[1800px]; }
+            /* 下拉選單／彈出清單項目 (顏色與 hover 由 :class 或額外 class 指定) */
+            .menu-item { @@apply w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent; }
+            /* 白色卡片（區塊容器） */
+            .card { @@apply bg-white border border-bdr rounded-xl p-5 shadow-sm; }
+            /* 徽章基本形狀（顏色自行補：bg-pri-light text-pri / bg-bdr-light text-txt-ter 等） */
+            .badge { @@apply text-[10px] font-semibold px-2 py-0.5 rounded-full; }
+        }
+    </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="bg-surface min-h-screen flex flex-col" x-data="{ sidebarOpen: false }">
