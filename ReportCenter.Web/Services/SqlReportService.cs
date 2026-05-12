@@ -23,6 +23,7 @@ public class SqlReportService : IReportService
     private readonly DepartmentDisplaySettings _deptDisplay;
     private readonly ReportBaseUrlSettings _baseUrls;
     private readonly ILogger<SqlReportService> _logger;
+    private readonly HashSet<string> _adminUsers;
 
     public SqlReportService(
         IHttpContextAccessor httpContextAccessor,
@@ -31,7 +32,8 @@ public class SqlReportService : IReportService
         IPermissionRepository permRepo,
         IOptions<DepartmentDisplaySettings> deptDisplay,
         IOptions<ReportBaseUrlSettings> baseUrls,
-        ILogger<SqlReportService> logger)
+        ILogger<SqlReportService> logger,
+        IConfiguration config)
     {
         _httpContextAccessor = httpContextAccessor;
         _repo = repo;
@@ -40,6 +42,10 @@ public class SqlReportService : IReportService
         _deptDisplay = deptDisplay.Value;
         _baseUrls = baseUrls.Value;
         _logger = logger;
+        _adminUsers = config.GetSection("AdminUsers")
+            .Get<string[]>()?
+            .ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? [];
     }
 
     // ─── 使用者與公司 ───
@@ -290,9 +296,12 @@ public class SqlReportService : IReportService
         var allDepts = _pksysRepo.GetCatalogDepartments(region);
 
         // 取得使用者已授權的 ReportID，用於計算權限過濾後的數量
+        // 管理員繞過權限過濾，可看見所有已啟用的報表
         var userId = GetCurrentUser().Id;
-        var authorizedIds = _permRepo.GetAuthorizedReportIds(userId);
-        var authorizedSet = new HashSet<int>(authorizedIds);
+        var isAdmin = _adminUsers.Contains(userId);
+        var authorizedSet = isAdmin
+            ? (HashSet<int>?)null
+            : new HashSet<int>(_permRepo.GetAuthorizedReportIds(userId));
 
         var result = new List<Department>();
 
@@ -303,9 +312,10 @@ public class SqlReportService : IReportService
 
             var deptIdInt = int.TryParse(entry.DeptID, out var id) ? id : 0;
 
-            // 依權限過濾：僅計算使用者有權限的報表
             var deptReports = _repo.GetActiveReportsByDepartment(deptIdInt);
-            var permittedReports = deptReports.Where(r => authorizedSet.Contains(r.ReportID)).ToList();
+            var permittedReports = (authorizedSet == null
+                ? deptReports
+                : deptReports.Where(r => authorizedSet.Contains(r.ReportID)).ToList());
             var categories = permittedReports
                 .Where(r => !string.IsNullOrEmpty(r.CategoryName))
                 .Select(r => r.CategoryName)
@@ -336,10 +346,13 @@ public class SqlReportService : IReportService
         var deptIdInt = int.TryParse(deptId, out var id) ? id : 0;
         var items = _repo.GetActiveReportsByDepartment(deptIdInt);
 
-        // 依使用者權限過濾 (預設無權限策略)
+        // 依使用者權限過濾 (預設無權限策略)；管理員繞過此過濾
         var userId = GetCurrentUser().Id;
-        var authorizedIds = _permRepo.GetAuthorizedReportIds(userId);
-        items = items.Where(i => authorizedIds.Contains(i.ReportID)).ToList();
+        if (!_adminUsers.Contains(userId))
+        {
+            var authorizedIds = new HashSet<int>(_permRepo.GetAuthorizedReportIds(userId));
+            items = items.Where(i => authorizedIds.Contains(i.ReportID)).ToList();
+        }
 
         return items.Select(ToReport).ToList();
     }

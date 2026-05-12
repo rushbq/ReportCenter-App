@@ -30,14 +30,15 @@
                 <button @@click="modalTab = 'dept'" type="button"
                         :class="modalTab === 'dept' ? 'border-pri text-pri font-semibold' : 'border-transparent text-txt-sec hover:text-txt'"
                         class="px-4 py-2 text-[12px] border-b-2 bg-transparent cursor-pointer transition-colors flex items-center gap-1.5">
-                    <i data-lucide="building-2" class="w-3.5 h-3.5"></i> 部門指派
+                    <i data-lucide="building-2" class="w-3.5 h-3.5"></i> 部門選單設定
                     <span x-show="selectedDepts.length > 0"
                           class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-pri/10 text-pri text-[10px] font-bold"
                           x-text="selectedDepts.length"></span>
                 </button>
+                @* 進階設定 (相依性) 暫時隱藏 *@
                 <button @@click="modalTab = 'advanced'" type="button"
                         :class="modalTab === 'advanced' ? 'border-pri text-pri font-semibold' : 'border-transparent text-txt-sec hover:text-txt'"
-                        class="px-4 py-2 text-[12px] border-b-2 bg-transparent cursor-pointer transition-colors flex items-center gap-1.5">
+                        class="hidden px-4 py-2 text-[12px] border-b-2 bg-transparent cursor-pointer transition-colors flex items-center gap-1.5">
                     <i data-lucide="settings-2" class="w-3.5 h-3.5"></i> 進階設定
                     <span x-show="deps.length > 0"
                           class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-pri/10 text-pri text-[10px] font-bold"
@@ -82,7 +83,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">報表資料夾</label>
+                        <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">報表目錄</label>
                         <select x-model="form.reportPath"
                                 class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-white">
                             <option value="">請選擇</option>
@@ -154,8 +155,13 @@
                 </div>
             </div>
 
-            <!-- Tab: 部門指派 -->
+            <!-- Tab: 部門選單 -->
             <div x-show="modalTab === 'dept'">
+                <!-- 提示說明 -->
+                <div class="flex items-start gap-2 mb-3 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                    <i data-lucide="info" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
+                    <span class="text-[11px] text-amber-700">此為「左側部門選單」歸屬設定，使用者的報表存取權限需另外到「權限管理」設定。</span>
+                </div>
                 <!-- 已選摘要 -->
                 <div class="flex items-center gap-2 mb-4 p-3 rounded-lg bg-surface border border-bdr-light">
                     <i data-lucide="check-square" class="w-4 h-4 text-pri"></i>
