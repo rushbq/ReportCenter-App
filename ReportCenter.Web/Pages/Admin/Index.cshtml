@@ -46,36 +46,50 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
         <!-- 報表總數 -->
         <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm">
-            <div class="text-[12px] text-txt-sec mb-1">報表總數</div>
-            <div class="text-[26px] font-bold text-pri">@Model.Stats.TotalReports</div>
-            <div class="text-[11px] text-txt-ter mt-1">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[12px] text-txt-sec">報表總數</span>
+                <span class="w-7 h-7 rounded-lg bg-pri-light flex items-center justify-center shrink-0">
+                    <i data-lucide="library" class="w-4 h-4 text-pri"></i>
+                </span>
+            </div>
+            <div class="text-[26px] font-bold text-pri leading-none">@Model.Stats.TotalReports</div>
+            <div class="text-[11px] text-txt-ter mt-1.5">
                 啟用 <span class="text-ok font-semibold">@Model.Stats.ActiveReports</span>
                 ・停用 <span class="text-bad font-semibold">@Model.Stats.InactiveReports</span>
             </div>
         </div>
         <!-- Internal -->
-        <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm border-t-2 border-t-emerald-500">
-            <div class="flex items-center gap-1.5 text-[12px] text-txt-sec mb-1">
-                <i data-lucide="monitor" class="w-3.5 h-3.5 text-emerald-600"></i> 內部報表
+        <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[12px] text-txt-sec">內部報表</span>
+                <span class="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                    <i data-lucide="monitor" class="w-4 h-4 text-emerald-600"></i>
+                </span>
             </div>
-            <div class="text-[26px] font-bold text-emerald-700">@Model.Stats.InternalCount</div>
-            <div class="text-[11px] text-txt-ter mt-1">開發於本系統</div>
+            <div class="text-[26px] font-bold text-emerald-700 leading-none">@Model.Stats.InternalCount</div>
+            <div class="text-[11px] text-txt-ter mt-1.5">開發於本系統</div>
         </div>
         <!-- SmartQuery -->
-        <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm border-t-2 border-t-amber-500">
-            <div class="flex items-center gap-1.5 text-[12px] text-txt-sec mb-1">
-                <i data-lucide="external-link" class="w-3.5 h-3.5 text-amber-600"></i> SmartQuery
+        <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[12px] text-txt-sec">SmartQuery</span>
+                <span class="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                    <i data-lucide="external-link" class="w-4 h-4 text-amber-600"></i>
+                </span>
             </div>
-            <div class="text-[26px] font-bold text-amber-700">@Model.Stats.SmartQueryCount</div>
-            <div class="text-[11px] text-txt-ter mt-1">外部查詢報表</div>
+            <div class="text-[26px] font-bold text-amber-700 leading-none">@Model.Stats.SmartQueryCount</div>
+            <div class="text-[11px] text-txt-ter mt-1.5">外部查詢報表</div>
         </div>
         <!-- SSRS -->
-        <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm border-t-2 border-t-indigo-500">
-            <div class="flex items-center gap-1.5 text-[12px] text-txt-sec mb-1">
-                <i data-lucide="file-bar-chart" class="w-3.5 h-3.5 text-indigo-600"></i> SSRS 報表
+        <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[12px] text-txt-sec">SSRS 報表</span>
+                <span class="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                    <i data-lucide="file-bar-chart" class="w-4 h-4 text-indigo-600"></i>
+                </span>
             </div>
-            <div class="text-[26px] font-bold text-indigo-700">@Model.Stats.SsrsCount</div>
-            <div class="text-[11px] text-txt-ter mt-1">SQL Server Reporting</div>
+            <div class="text-[26px] font-bold text-indigo-700 leading-none">@Model.Stats.SsrsCount</div>
+            <div class="text-[11px] text-txt-ter mt-1.5">SQL Server Reporting</div>
         </div>
     </div>
 
