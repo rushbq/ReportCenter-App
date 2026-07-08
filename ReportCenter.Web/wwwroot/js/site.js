@@ -1,3 +1,19 @@
+// ─── 報表分類配色 (須與後端 Helpers/CategoryPalette.cs 保持一致) ───
+// 依分類名稱決定性地對應 5 種色票，讓同一分類全站同色。
+window.catBadge = function (cat) {
+    const palette = [
+        'bg-sky-50 text-sky-700',
+        'bg-amber-50 text-amber-700',
+        'bg-rose-50 text-rose-700',
+        'bg-violet-50 text-violet-700',
+        'bg-slate-100 text-slate-600',
+    ];
+    if (!cat) return palette[0];
+    let sum = 0;
+    for (let i = 0; i < cat.length; i++) sum += cat.charCodeAt(i);
+    return palette[sum % palette.length];
+};
+
 // ─── ReportCenter 全站共用 Alpine Store ───
 document.addEventListener('alpine:init', () => {
 

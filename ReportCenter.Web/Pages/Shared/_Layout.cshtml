@@ -127,14 +127,9 @@
                         <div class="flex-1 min-w-0">
                             <div class="text-[13px] font-semibold text-txt truncate" x-text="r.name"></div>
                             <div class="text-[11px] text-txt-sec truncate" x-text="r.desc"></div>
-                            <div class="flex items-center gap-2 mt-0.5">
-                                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-pri-light text-pri font-semibold" x-text="r.dept"></span>
-                                <span class="text-[10px] text-txt-ter" x-text="r.cat"></span>
-                                <template x-if="r.reportTool !== 'Internal'">
-                                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                          :class="r.reportTool === 'SmartQuery' ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700'"
-                                          x-text="r.reportTool"></span>
-                                </template>
+                            <div class="flex items-center gap-2 mt-0.5 text-[10px]">
+                                <span class="font-medium text-txt-sec" x-text="r.dept"></span>
+                                <span class="badge" :class="catBadge(r.cat)" x-text="r.cat" x-show="r.cat"></span>
                             </div>
                         </div>
                     </button>
