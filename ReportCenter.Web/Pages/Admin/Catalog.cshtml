@@ -155,59 +155,60 @@
         <div class="overflow-x-auto">
             <table class="w-full text-[13px]">
                 <thead>
-                    <tr class="bg-surface text-txt-sec text-[11px]">
-                        <th class="px-4 py-2.5 text-left font-semibold w-[40px]">#</th>
-                        <th class="px-4 py-2.5 text-left font-semibold">報表名稱</th>
-                        <th class="px-3 py-2.5 text-center font-semibold w-[100px]">工具類型</th>
-                        <th class="px-3 py-2.5 text-left font-semibold hidden lg:table-cell">資料來源</th>
-                        <th class="px-3 py-2.5 text-center font-semibold w-[60px]">狀態</th>
-                        <th class="px-3 py-2.5 text-left font-semibold hidden md:table-cell">部門</th>
-                        <th class="px-3 py-2.5 text-left font-semibold hidden lg:table-cell w-[90px]">分類</th>
-                        <th class="px-3 py-2.5 text-center font-semibold w-[90px] hidden sm:table-cell">更新日期</th>
-                        <th class="px-4 py-2.5 text-center font-semibold w-[100px]">操作</th>
+                    <tr class="bg-surface text-txt-sec text-[11px] border-b border-bdr">
+                        <th class="px-4 py-3 text-left font-semibold w-[46px]">#</th>
+                        <th class="px-3 py-3 text-left font-semibold">報表名稱</th>
+                        <th class="px-3 py-3 text-left font-semibold w-[112px]">工具類型</th>
+                        <th class="px-3 py-3 text-left font-semibold hidden lg:table-cell">資料來源</th>
+                        <th class="px-3 py-3 text-left font-semibold w-[74px]">狀態</th>
+                        <th class="px-3 py-3 text-left font-semibold hidden md:table-cell">部門</th>
+                        <th class="px-3 py-3 text-left font-semibold hidden lg:table-cell w-[100px]">分類</th>
+                        <th class="px-3 py-3 text-right font-semibold w-[104px] hidden sm:table-cell">更新日期</th>
+                        <th class="px-4 py-3 text-right font-semibold w-[112px]">操作</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <template x-for="item in filtered" :key="item.reportID">
-                        <tr class="border-t border-bdr-light hover:bg-surface/50 transition-colors">
-                            <td class="px-4 py-3 text-[11px] text-txt-ter" x-text="item.reportID"></td>
-                            <td class="px-4 py-3">
-                                <button @@click="openEdit(item)" class="font-medium text-txt hover:text-pri cursor-pointer border-0 bg-transparent p-0 text-left text-[13px] transition-colors" x-text="item.reportName"></button>
-                                <div class="text-[11px] text-txt-ter mt-0.5 truncate max-w-[250px]" x-text="item.reportPath" x-show="item.reportPath"></div>
+                    <template x-for="(item, idx) in filtered" :key="item.reportID">
+                        <tr class="[&>td]:align-middle transition-colors hover:bg-pri/5"
+                            :class="idx % 2 === 1 ? 'bg-surface/40' : 'bg-white'">
+                            <td class="px-4 py-3.5 text-[11px] text-txt-ter tabular-nums" x-text="item.reportID"></td>
+                            <td class="px-3 py-3.5">
+                                <button @@click="openEdit(item)" class="font-semibold text-txt hover:text-pri cursor-pointer border-0 bg-transparent p-0 text-left text-[13px] transition-colors" x-text="item.reportName"></button>
+                                <div class="text-[11px] text-txt-ter mt-0.5 truncate max-w-[260px]" x-text="item.reportPath" x-show="item.reportPath"></div>
                             </td>
-                            <td class="px-3 py-3 text-center">
+                            <td class="px-3 py-3.5">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border"
                                       :class="toolClasses(item.reportTool)" x-text="item.reportTool"></span>
                             </td>
-                            <td class="px-3 py-3 hidden lg:table-cell">
+                            <td class="px-3 py-3.5 hidden lg:table-cell">
                                 <span class="text-[11px] font-mono text-txt-sec" x-text="item.sourceName || '-'"></span>
                             </td>
-                            <td class="px-3 py-3 text-center">
+                            <td class="px-3 py-3.5">
                                 <template x-if="item.isActive">
-                                    <span class="inline-flex items-center gap-1 text-[11px] text-ok"><span class="w-1.5 h-1.5 rounded-full bg-ok"></span>啟用</span>
+                                    <span class="inline-flex items-center gap-1 text-[11px] text-ok whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-ok"></span>啟用</span>
                                 </template>
                                 <template x-if="!item.isActive">
-                                    <span class="inline-flex items-center gap-1 text-[11px] text-bad"><span class="w-1.5 h-1.5 rounded-full bg-bad"></span>停用</span>
+                                    <span class="inline-flex items-center gap-1 text-[11px] text-bad whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-bad"></span>停用</span>
                                 </template>
                             </td>
-                            <td class="px-3 py-3 hidden md:table-cell">
+                            <td class="px-3 py-3.5 hidden md:table-cell">
                                 <div class="flex flex-wrap gap-1">
                                     <template x-for="(d, di) in item.departments.slice(0, 3)" :key="di">
-                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-surface text-txt-sec border border-bdr-light" x-text="d.deptName"></span>
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-white text-txt-sec border border-bdr" x-text="d.deptName"></span>
                                     </template>
                                     <span x-show="item.departments.length > 3"
                                           class="text-[10px] px-1.5 py-0.5 rounded bg-pri/5 text-pri font-medium"
                                           x-text="'+' + (item.departments.length - 3)"></span>
-                                    <span x-show="item.departments.length === 0" class="text-[10px] text-bad">未指派</span>
+                                    <span x-show="item.departments.length === 0" class="inline-flex items-center gap-1 text-[10px] text-bad whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-bad"></span>未指派</span>
                                 </div>
                             </td>
-                            <td class="px-3 py-3 hidden lg:table-cell">
+                            <td class="px-3 py-3.5 hidden lg:table-cell">
                                 <span x-show="item.categoryName" class="text-[10px] px-1.5 py-0.5 rounded-full font-medium" :class="catBadge(item.categoryName)" x-text="item.categoryName"></span>
                                 <span x-show="!item.categoryName" class="text-[10px] text-txt-ter">-</span>
                             </td>
-                            <td class="px-3 py-3 text-center text-[11px] text-txt-sec hidden sm:table-cell" x-text="item.displayDate"></td>
-                            <td class="px-4 py-3 text-center">
-                                <div class="flex items-center justify-center gap-1">
+                            <td class="px-3 py-3.5 text-right text-[11px] text-txt-sec tabular-nums whitespace-nowrap hidden sm:table-cell" x-text="item.displayDate"></td>
+                            <td class="px-4 py-3.5">
+                                <div class="flex items-center justify-end gap-1">
                                     <button @@click="openEdit(item)" title="編輯"
                                             class="p-1.5 rounded-lg hover:bg-pri-light text-txt-sec hover:text-pri cursor-pointer border-0 bg-transparent transition-colors">
                                         <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
