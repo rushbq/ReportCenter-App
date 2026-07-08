@@ -14,6 +14,7 @@ public class SqlReportService : IReportService
 {
     private const string CurrentUserCacheKey = "__CurrentUser";
     private const string CurrentUserDebugCacheKey = "__CurrentUserDebug";
+    private const string AuthorizedIdsCacheKey = "__AuthorizedReportIds";
 
     private readonly MockReportService _mock = new();
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -296,12 +297,8 @@ public class SqlReportService : IReportService
         var allDepts = _pksysRepo.GetCatalogDepartments(region);
 
         // 取得使用者已授權的 ReportID，用於計算權限過濾後的數量
-        // 管理員繞過權限過濾，可看見所有已啟用的報表
-        var userId = GetCurrentUser().Id;
-        var isAdmin = _adminUsers.Contains(userId);
-        var authorizedSet = isAdmin
-            ? (HashSet<int>?)null
-            : new HashSet<int>(_permRepo.GetAuthorizedReportIds(userId));
+        // 管理員 (authorizedSet == null) 繞過權限過濾，可看見所有已啟用的報表
+        var authorizedSet = GetAuthorizedReportIdSet();
 
         var result = new List<Department>();
 
@@ -346,13 +343,10 @@ public class SqlReportService : IReportService
         var deptIdInt = int.TryParse(deptId, out var id) ? id : 0;
         var items = _repo.GetActiveReportsByDepartment(deptIdInt);
 
-        // 依使用者權限過濾 (預設無權限策略)；管理員繞過此過濾
-        var userId = GetCurrentUser().Id;
-        if (!_adminUsers.Contains(userId))
-        {
-            var authorizedIds = new HashSet<int>(_permRepo.GetAuthorizedReportIds(userId));
-            items = items.Where(i => authorizedIds.Contains(i.ReportID)).ToList();
-        }
+        // 依使用者權限過濾 (預設無權限策略)；管理員 (null) 繞過此過濾
+        var authorizedSet = GetAuthorizedReportIdSet();
+        if (authorizedSet != null)
+            items = items.Where(i => authorizedSet.Contains(i.ReportID)).ToList();
 
         return items.Select(ToReport).ToList();
     }
@@ -395,10 +389,11 @@ public class SqlReportService : IReportService
         var userId = GetCurrentUser().Id;
         var favorites = _repo.GetUserFavorites(userId);
 
-        // 依權限過濾：僅回傳使用者有權限的收藏
-        var authorizedIds = _permRepo.GetAuthorizedReportIds(userId);
-        var authorizedSet = new HashSet<int>(authorizedIds);
-        return favorites.Where(id => authorizedSet.Contains(id)).ToList();
+        // 依權限過濾：僅回傳使用者有權限的收藏；管理員 (null) 不過濾
+        var authorizedSet = GetAuthorizedReportIdSet();
+        return authorizedSet == null
+            ? favorites
+            : favorites.Where(id => authorizedSet.Contains(id)).ToList();
     }
 
     public void ToggleFavorite(int reportId)
@@ -418,10 +413,10 @@ public class SqlReportService : IReportService
         var userId = GetCurrentUser().Id;
         var items = _repo.GetUserPins(userId);
 
-        // 依權限過濾釘選列表
-        var authorizedIds = _permRepo.GetAuthorizedReportIds(userId);
-        var authorizedSet = new HashSet<int>(authorizedIds);
-        items = items.Where(i => authorizedSet.Contains(i.ReportID)).ToList();
+        // 依權限過濾釘選列表；管理員 (null) 不過濾
+        var authorizedSet = GetAuthorizedReportIdSet();
+        if (authorizedSet != null)
+            items = items.Where(i => authorizedSet.Contains(i.ReportID)).ToList();
 
         return items.Select(ToReport).ToList();
     }
@@ -437,6 +432,27 @@ public class SqlReportService : IReportService
     }
 
     // ─── 輔助方法 ───
+
+    /// <summary>
+    /// 取得目前使用者已授權的 ReportID 集合，每請求快取一次以避免重複 DB 查詢。
+    /// 回傳 <c>null</c> 代表管理員 (不過濾，可看見所有啟用中的報表)。
+    /// </summary>
+    private HashSet<int>? GetAuthorizedReportIdSet()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext?.Items.TryGetValue(AuthorizedIdsCacheKey, out var cached) == true)
+            return (HashSet<int>?)cached;
+
+        var userId = GetCurrentUser().Id;
+        HashSet<int>? set = _adminUsers.Contains(userId)
+            ? null
+            : new HashSet<int>(_permRepo.GetAuthorizedReportIds(userId));
+
+        if (httpContext != null)
+            httpContext.Items[AuthorizedIdsCacheKey] = set;
+
+        return set;
+    }
 
     private string GetCurrentRegion()
     {

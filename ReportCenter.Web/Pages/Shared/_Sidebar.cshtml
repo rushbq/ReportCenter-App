@@ -13,12 +13,23 @@
     var baseUrls = BaseUrlOptions.Value;
     var totalCount = departments.Sum(d => d.Count);
 
+    // 手機版側欄用：使用者與公司切換（桌面由頂欄呈現）
+    var sidebarUser = ReportService.GetCurrentUser();
+    var sidebarCompanies = ReportService.GetCompanies();
+    var sidebarCookieCompanyId = Context.Request.Cookies["companyId"];
+    var sidebarActiveCompanyId = !string.IsNullOrEmpty(sidebarCookieCompanyId) && sidebarCompanies.Any(c => c.Id == sidebarCookieCompanyId)
+        ? sidebarCookieCompanyId
+        : sidebarUser.CompanyId;
+    var sidebarActiveCompanyName = sidebarCompanies.FirstOrDefault(c => c.Id == sidebarActiveCompanyId)?.ShortName ?? "台灣寶工";
+
     // 取收藏報表的詳細資訊供顯示（含完整連結）
+    // 同一份報表可指派給多個部門，需依 reportId 去重，避免收藏清單重複顯示與計數膨脹
     var favReports = new List<object>();
+    var seenFavIds = new HashSet<int>();
     foreach (var dept in departments)
     {
         var reports = ReportService.GetReports(dept.Id);
-        foreach (var r in reports.Where(r => favorites.Contains(r.ReportID)))
+        foreach (var r in reports.Where(r => favorites.Contains(r.ReportID) && seenFavIds.Add(r.ReportID)))
         {
             var href = r.ReportTool switch
             {
@@ -40,7 +51,42 @@
 
 <aside class="w-[248px] min-w-[248px] bg-white border-r border-bdr flex flex-col sticky top-14 overflow-y-auto"
        style="height: calc(100vh - 56px)"
-       x-data="{ expanded: '@currentDept', showFavPanel: false, showRecentPanel: false }">
+       x-data="{ showFavPanel: false, showRecentPanel: false }">
+    <!-- 手機版：使用者 + 公司切換 (桌面版由頂欄呈現) -->
+    <div class="md:hidden px-3.5 pt-3.5" x-data="{ companyOpen: false }" @@click.outside="companyOpen = false">
+        <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-surface">
+            <div class="w-8 h-8 rounded-full bg-pri-light flex items-center justify-center shrink-0">
+                <i data-lucide="user" class="w-4 h-4 text-pri"></i>
+            </div>
+            <div class="flex-1 min-w-0 leading-tight">
+                <div class="text-[13px] font-semibold text-txt truncate">@sidebarUser.Name</div>
+                <div class="text-[11px] text-txt-ter truncate">@sidebarUser.NickName</div>
+            </div>
+        </div>
+        @if (sidebarCompanies.Count > 1)
+        {
+            <div class="relative mt-2">
+                <button @@click="companyOpen = !companyOpen"
+                        class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border border-bdr bg-white text-[13px] text-txt cursor-pointer">
+                    <i data-lucide="building-2" class="w-4 h-4 text-pri shrink-0"></i>
+                    <span class="flex-1 text-left font-medium truncate">@sidebarActiveCompanyName</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-txt-ter shrink-0" :class="companyOpen && 'rotate-180'"></i>
+                </button>
+                <div x-show="companyOpen" x-cloak x-transition
+                     class="absolute left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 z-50">
+                    @foreach (var company in sidebarCompanies)
+                    {
+                        <button @@click="document.cookie = 'companyId=@company.Id;path=/;max-age=31536000'; window.location.reload()"
+                                class="menu-item flex items-center gap-2 @(company.Id == sidebarActiveCompanyId ? "bg-pri-light text-pri font-semibold" : "text-txt hover:bg-surface")">
+                            <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                            @company.ShortName
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+        <div class="h-px bg-bdr mt-3"></div>
+    </div>
     <!-- Home -->
     <div class="p-3.5 pb-1.5">
         <a href="/"
@@ -56,33 +102,18 @@
         <div class="text-[10px] font-bold text-txt-ter uppercase tracking-wider pl-2.5">部門選單</div>
     </div>
 
-    <!-- Departments -->
+    <!-- Departments (單純導覽；報表分類進入部門頁後以分頁呈現) -->
     <div class="px-3.5">
         @foreach (var d in departments)
         {
             var isActive = currentDept == d.Id && currentPage != "/Index";
-            <div>
-                <a href="/Department?dept=@d.Id"
-                   @@click="expanded = (expanded === '@d.Id') ? '' : '@d.Id'"
-                   class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] no-underline transition-all cursor-pointer mb-px
-                          @(isActive ? "font-semibold text-pri bg-pri-light" : "text-txt hover:bg-[#f8fafa]")">
-                    <i data-lucide="@d.Icon" class="w-4 h-4" style="stroke-width: @(isActive ? "2.2" : "1.8")"></i>
-                    <span class="flex-1">@d.Label</span>
-                    <span class="badge
-                                 @(isActive ? "bg-pri/10 text-pri" : "bg-bdr-light text-txt-ter")">@d.Count</span>
-                    <i x-show="expanded === '@d.Id'" data-lucide="chevron-down" class="w-3 h-3 text-txt-ter"></i>
-                    <i x-show="expanded !== '@d.Id'" data-lucide="chevron-right" class="w-3 h-3 text-txt-ter"></i>
-                </a>
-                <div x-show="expanded === '@d.Id'" x-cloak class="pl-9 pb-1">
-                    @foreach (var sub in d.Subs)
-                    {
-                        <a href="/Department?dept=@d.Id&cat=@sub"
-                           class="block text-[12px] text-txt-sec px-2.5 py-[5px] rounded-[5px] no-underline transition-all hover:bg-pri-light hover:text-pri">
-                            @sub
-                        </a>
-                    }
-                </div>
-            </div>
+            <a href="/Department?dept=@d.Id"
+               class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] no-underline transition-all mb-px
+                      @(isActive ? "font-semibold text-pri bg-pri-light" : "text-txt hover:bg-[#f8fafa]")">
+                <i data-lucide="@d.Icon" class="w-4 h-4" style="stroke-width: @(isActive ? "2.2" : "1.8")"></i>
+                <span class="flex-1">@d.Label</span>
+                <span class="badge @(isActive ? "bg-pri/10 text-pri" : "bg-bdr-light text-txt-ter")">@d.Count</span>
+            </a>
         }
     </div>
 

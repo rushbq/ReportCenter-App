@@ -48,6 +48,15 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         [x-cloak] { display: none !important; }
+        /* 全站鍵盤焦點環（僅鍵盤操作時顯示，滑鼠點擊不觸發） */
+        :focus-visible { outline: 2px solid #00b4b6; outline-offset: 2px; border-radius: 4px; }
+        /* 尊重使用者「減少動態效果」偏好 */
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+        }
+        /* 水平捲動容器隱藏捲軸（用於手機分類標籤等） */
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
     <style type="text/tailwindcss">
         @@layer components {

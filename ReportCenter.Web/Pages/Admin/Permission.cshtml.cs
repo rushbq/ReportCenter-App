@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using ReportCenter.Web.Models;
 using ReportCenter.Web.Services;
 
@@ -8,16 +7,16 @@ namespace ReportCenter.Web.Pages.Admin;
 /// <summary>
 /// 權限管理頁 — 提供報表權限的批次指派與個人權限管理。
 /// 雙模式：功能→多人 (批次) / 單一人→功能 (個人)。
+/// 存取控制 (含 POST/AJAX 端點) 由 AdminPageModel 統一把關。
 /// </summary>
-public class PermissionModel : PageModel
+public class PermissionModel : AdminPageModel
 {
     private readonly IPermissionService _permSvc;
-    private readonly IReportService _reportSvc;
 
     public PermissionModel(IPermissionService permSvc, IReportService reportSvc)
+        : base(reportSvc, permSvc)
     {
         _permSvc = permSvc;
-        _reportSvc = reportSvc;
     }
 
     /// <summary>分類→報表樹 (Mode A 報表選擇)</summary>
@@ -26,18 +25,8 @@ public class PermissionModel : PageModel
     /// <summary>部門→使用者樹 (Mode A 人員選擇)</summary>
     public List<DeptWithUsers> UserTree { get; set; } = [];
 
-    /// <summary>是否無管理員權限</summary>
-    public bool AccessDenied { get; set; }
-
     public IActionResult OnGet()
     {
-        var userId = _reportSvc.GetCurrentUser().Id;
-        if (!_permSvc.IsAdmin(userId))
-        {
-            AccessDenied = true;
-            return Page();
-        }
-
         ReportTree = _permSvc.GetReportTree();
         UserTree = _permSvc.GetDeptUserTree();
         return Page();
@@ -51,8 +40,7 @@ public class PermissionModel : PageModel
         if (empList.Count == 0 || rptList.Count == 0)
             return new JsonResult(new { success = false, message = "請選擇使用者與報表" });
 
-        var currentUser = _reportSvc.GetCurrentUser();
-        var inserted = _permSvc.GrantBatch(empList, rptList, currentUser.Id);
+        var inserted = _permSvc.GrantBatch(empList, rptList, CurrentUserId);
         var total = empList.Count * rptList.Count;
         var skipped = total - inserted;
 
@@ -96,8 +84,7 @@ public class PermissionModel : PageModel
         if (rptList.Count == 0)
             return new JsonResult(new { success = false, message = "請選擇報表" });
 
-        var currentUser = _reportSvc.GetCurrentUser();
-        var inserted = _permSvc.GrantBatch([empId], rptList, currentUser.Id);
+        var inserted = _permSvc.GrantBatch([empId], rptList, CurrentUserId);
 
         return new JsonResult(new { success = true, inserted });
     }

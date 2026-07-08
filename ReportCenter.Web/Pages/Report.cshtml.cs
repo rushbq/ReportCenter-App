@@ -42,11 +42,12 @@ public class ReportModel : PageModel
         var report = _svc.GetReport(DeptId, ReportName);
         ReportID = report?.ReportID ?? 0;
 
-        // 權限檢查：未授權的使用者不得存取
+        // 權限檢查：未授權的使用者不得存取。
+        // 管理員繞過權限過濾，與 SqlReportService.GetReports/GetDepartments 行為一致。
         if (ReportID > 0)
         {
             var userId = _svc.GetCurrentUser().Id;
-            if (!_permSvc.HasPermission(userId, ReportID))
+            if (!_permSvc.IsAdmin(userId) && !_permSvc.HasPermission(userId, ReportID))
             {
                 AccessDenied = true;
                 return Page();

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using ReportCenter.Web.Models;
 using ReportCenter.Web.Models.Enums;
 using ReportCenter.Web.Models.Settings;
@@ -11,18 +10,16 @@ namespace ReportCenter.Web.Pages.Admin;
 /// 報表目錄管理頁 — 提供報表清冊的 CRUD、篩選、啟停用操作。
 /// 職責：組裝前端所需的參考資料 (部門、分類、資料夾等)，
 /// 並透過 POST handler 委派 ICatalogService 處理寫入邏輯。
+/// 存取控制 (含 POST 寫入端點) 由 AdminPageModel 統一把關。
 /// </summary>
-public class CatalogModel : PageModel
+public class CatalogModel : AdminPageModel
 {
     private readonly ICatalogService _catalogSvc;
-    private readonly IPermissionService _permSvc;
-    private readonly IReportService _reportSvc;
 
     public CatalogModel(ICatalogService catalogSvc, IPermissionService permSvc, IReportService reportSvc)
+        : base(reportSvc, permSvc)
     {
         _catalogSvc = catalogSvc;
-        _permSvc = permSvc;
-        _reportSvc = reportSvc;
     }
 
     // ─── 頁面資料屬性 ───
@@ -51,20 +48,10 @@ public class CatalogModel : PageModel
     /// <summary>上海部門清單 (依 User_Dept Area=SH)</summary>
     public List<CatalogDept> AllDeptsCN { get; set; } = [];
 
-    /// <summary>是否無管理員權限</summary>
-    public bool AccessDenied { get; set; }
-
     // ─── GET Handler ───
 
     public IActionResult OnGet(string? tool, string? active, string? search)
     {
-        var userId = _reportSvc.GetCurrentUser().Id;
-        if (!_permSvc.IsAdmin(userId))
-        {
-            AccessDenied = true;
-            return Page();
-        }
-
         bool? isActive = active switch
         {
             "true" => true,
