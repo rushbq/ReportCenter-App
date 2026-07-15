@@ -105,9 +105,6 @@
             <button @@click="toolFilter = ''"
                     :class="toolFilter === '' ? 'bg-pri text-white border-pri' : 'bg-white text-txt-sec border-bdr hover:border-pri/40'"
                     class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">全部</button>
-            <button @@click="toolFilter = 'Internal'"
-                    :class="toolFilter === 'Internal' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-400'"
-                    class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">Internal</button>
             <button @@click="toolFilter = 'SmartQuery'"
                     :class="toolFilter === 'SmartQuery' ? 'bg-amber-600 text-white border-amber-600' : 'bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-400'"
                     class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">SmartQuery</button>
@@ -445,7 +442,7 @@ function catalogPage() {
 
         resetForm() {
             this.form = {
-                reportID: 0, reportName: '', reportTool: 'Internal',
+                reportID: 0, reportName: '', reportTool: 'SmartQuery',
                 reportPath: '', reportCode: '', sourceName: '',
                 isActive: true, remarks: '', useCompanyParam: false, categoryID: null
             };

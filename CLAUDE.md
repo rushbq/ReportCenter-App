@@ -38,7 +38,6 @@ ReportCenter.Web/
 ├── Pages/
 │   ├── Index.cshtml(.cs)           # 首頁 (快速存取釘選報表；營運總覽儀表板規劃中，暫已移除)
 │   ├── Department.cshtml(.cs)      # 部門報表列表 (搜尋、分類 Tab、卡片檢視)
-│   ├── Report.cshtml(.cs)          # 報表明細 (圖表切換、篩選、收藏、匯出、分頁)
 │   ├── Admin/
 │   │   ├── Index.cshtml(.cs)       # 管理總覽 (KPI、部門矩陣、孤立報表、相依性分析)
 │   │   ├── Catalog.cshtml(.cs)     # 報表目錄管理 (CRUD、篩選、編輯 Modal)
@@ -46,13 +45,13 @@ ReportCenter.Web/
 │   └── Shared/
 │       ├── _Layout.cshtml          # 主版面配置 (TopNav + Sidebar + Content + 搜尋 Modal)
 │       ├── _TopNav.cshtml          # 頂部導航列 (Logo、公司選單、搜尋、使用者資訊)
-│       ├── _Sidebar.cshtml         # 側邊欄 (部門選單、系統管理、收藏、最近瀏覽)
+│       ├── _Sidebar.cshtml         # 側邊欄 (部門選單、系統管理、收藏)
 │       └── _KpiCard.cshtml         # KPI 卡片元件
 ├── wwwroot/
 │   ├── images/logo.png             # 公司 Logo
 │   ├── favicon.svg                 # 品牌 Favicon
 │   ├── css/site.css                # 自訂樣式 (極少，主要用 Tailwind)
-│   └── js/site.js                  # Alpine Store (搜尋、收藏、最近瀏覽)
+│   └── js/site.js                  # Alpine Store (搜尋、收藏、Toast)
 ├── appsettings.json                # 共用設定 (base)
 ├── appsettings.Development.json    # 開發環境設定
 ├── appsettings.Staging.json        # 測試環境設定
@@ -73,7 +72,6 @@ ReportCenter.Web/
 |------|------|------|
 | `/` | Index | 首頁 (快速存取釘選報表) |
 | `/Department?dept={id}` | Department | 部門報表列表 |
-| `/Report?dept={id}&name={name}&page={n}` | Report | 報表明細頁 |
 | `/Admin` | Admin/Index | 報表管理總覽 (KPI、部門矩陣、孤立報表) |
 | `/Admin/Catalog` | Admin/Catalog | 報表目錄管理 (CRUD) |
 | `/Admin/Permission` | Admin/Permission | 權限管理 (批次指派、個人權限) |
@@ -192,8 +190,10 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 |-------|------|--------|
 | `$store.search` | 全站搜尋 Modal、⌘K 快捷鍵 | 否 |
 | `$store.favorites` | 報表收藏管理（toggle 時自動顯示 Toast） | localStorage |
-| `$store.recent` | 最近瀏覽紀錄 (最多 20 筆) | localStorage |
 | `$store.toast` | 全域 Toast 提示（`show(msg)` 呼叫，2.5 秒後自動消失） | 否 |
+
+> 「最近瀏覽」(`$store.recent`) 已隨 `/Report` 明細頁一併移除：報表皆為 SmartQuery / SSRS 外部連結、
+> 開新視窗，本站沒有可記錄瀏覽的頁面載入時機。舊使用者的 `localStorage` key `rc_recent` 不再讀寫。
 
 ## 公司切換機制
 
@@ -261,8 +261,7 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 ### 權限檢查流程
 
 1. `SqlReportService.GetReports()` — 依 `GetAuthorizedReportIds()` 過濾報表列表
-2. `Report.cshtml.cs OnGet()` — 檢查 `HasPermission()`，無權限顯示「權限不足」頁面
-3. Admin 頁面目前不限制存取
+2. Admin 頁面目前不限制存取
 
 ## 資料庫結構 (DDL)
 
@@ -292,10 +291,7 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 | 頁面 | 篩選器 | 實作方式 |
 |------|--------|---------|
 | Department | 搜尋 + 分類 Tab | 前端 Alpine 篩選（固定依更新日期新到舊排序） |
-| Report | 日期期間（2026/03 等） | 前端依 `period` 欄位篩選 |
-| Report | 物料類別（原料/包材/設備/耗材） | 前端依 `category` 欄位篩選 |
-| Report | 供應商 | 前端依 `supplier` 欄位篩選 |
-| Admin/Catalog | 工具類型（全部/Internal/SmartQuery/SSRS） | 前端 Alpine 篩選 |
+| Admin/Catalog | 工具類型（全部/SmartQuery/SSRS） | 前端 Alpine 篩選 |
 | Admin/Catalog | 狀態（全部/啟用/停用） | 前端 Alpine 篩選 |
 | Admin/Catalog | 搜尋（名稱、來源、路徑） | 前端 Alpine 篩選 |
 
@@ -305,9 +301,12 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 | 類型 | 說明 | 色彩標記 |
 |------|------|---------|
-| Internal | 開發於本系統的報表 | emerald (綠) |
 | SmartQuery | 外部 SmartQuery 報表，開新視窗連結 | amber (橙) |
 | SSRS | SQL Server Reporting Services，開新視窗連結 | indigo (靛藍) |
+
+`Internal` (開發於本系統的報表，emerald 綠) 短期內不開發，已從報表目錄管理的選項與篩選中移除，
+`/Report` 明細頁亦已刪除。DB 欄位、`AdminStats.InternalCount`、badge 配色與 `IReportService`
+的 `GetMaterialRows` / `GetReportChartData` 等 Mock 方法仍保留，未來要重啟開發時再接回。
 
 ### 資料模型
 
@@ -340,7 +339,8 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 ## 匯出功能
 
-- **Excel:** UI 按鈕已存在，目前僅顯示 Toast 提示，未來改用後端套件（如 ClosedXML）實作實際下載
+- **Excel:** 原按鈕僅存在於 `/Report` 明細頁 (只顯示 Toast 提示)，該頁移除後目前全站無匯出入口；
+  未來若重啟內部報表開發，再改用後端套件（如 ClosedXML）實作實際下載
 - **PDF:** 已移除，未來不開放
 
 ## 設計系統 (Tailwind 色彩 Token)

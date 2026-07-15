@@ -73,23 +73,6 @@ document.addEventListener('alpine:init', () => {
             }
         }
     });
-
-    // 最近瀏覽 Store (localStorage 持久化)
-    Alpine.store('recent', {
-        items: JSON.parse(localStorage.getItem('rc_recent') || '[]'),
-
-        add(deptId, name, dept) {
-            // 移除重複
-            this.items = this.items.filter(r => !(r.deptId === deptId && r.name === name));
-            // 加到最前面
-            this.items.unshift({ deptId, name, dept, time: Date.now() });
-            // 只保留最近 20 筆
-            if (this.items.length > 20) this.items = this.items.slice(0, 20);
-            localStorage.setItem('rc_recent', JSON.stringify(this.items));
-        },
-
-        get count() { return Math.min(this.items.length, 20); }
-    });
 });
 
 // ─── 全域鍵盤快捷鍵 ⌘K / ESC ───

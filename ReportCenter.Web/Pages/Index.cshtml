@@ -9,20 +9,17 @@
     var pinnedJson = System.Text.Json.JsonSerializer.Serialize(
         Model.PinnedReports.Select(p => {
             // 找到報表所屬部門
-            var deptId = "";
             var deptLabel = "";
             foreach (var dept in Model.Departments)
             {
                 var reports = Model.AllReports.Cast<dynamic>();
                 var match = reports.FirstOrDefault(r => (int)r.reportId == p.ReportID);
-                if (match != null) { deptId = (string)match.deptId; deptLabel = (string)match.dept; break; }
+                if (match != null) { deptLabel = (string)match.dept; break; }
             }
-            var href = p.ReportTool switch {
-                "SmartQuery" => Model.SmartQueryBaseUrl + p.ReportCode,
-                "SSRS" => Model.SsrsBaseUrl + p.ReportCode,
-                _ => $"/Report?dept={deptId}&name={Uri.EscapeDataString(p.Name)}"
-            };
-            return new { p.ReportID, p.Name, p.Cat, p.ReportTool, href, target = p.ReportTool == "Internal" ? "_self" : "_blank", dept = deptLabel };
+            var href = p.ReportTool == "SSRS"
+                ? Model.SsrsBaseUrl + p.ReportCode
+                : Model.SmartQueryBaseUrl + p.ReportCode;
+            return new { p.ReportID, p.Name, p.Cat, p.ReportTool, href, target = "_blank", dept = deptLabel };
         }), jsonOpts);
 
     var pinnedIdsJson = System.Text.Json.JsonSerializer.Serialize(Model.PinnedIds, jsonOpts);
@@ -140,11 +137,10 @@ function indexPage() {
                         const item = this.allReports.find(r => r.reportId === reportId);
                         if (item) {
                             const baseUrls = { smartQuery: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SmartQueryBaseUrl, jsonOpts)), ssrs: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SsrsBaseUrl, jsonOpts)) };
-                            let href = '/Report?dept=' + item.deptId + '&name=' + encodeURIComponent(item.name);
-                            let target = '_self';
-                            if (item.reportTool === 'SmartQuery') { href = baseUrls.smartQuery + item.reportCode; target = '_blank'; }
-                            else if (item.reportTool === 'SSRS') { href = baseUrls.ssrs + item.reportCode; target = '_blank'; }
-                            this.pinnedReports.push({ ReportID: reportId, Name: item.name, Cat: item.cat, ReportTool: item.reportTool, href, target, dept: item.dept });
+                            const href = item.reportTool === 'SSRS'
+                                ? baseUrls.ssrs + item.reportCode
+                                : baseUrls.smartQuery + item.reportCode;
+                            this.pinnedReports.push({ ReportID: reportId, Name: item.name, Cat: item.cat, ReportTool: item.reportTool, href, target: '_blank', dept: item.dept });
                         }
                         Alpine.store('toast').show('已釘選');
                     } else {

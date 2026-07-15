@@ -84,7 +84,7 @@ public class CatalogModel : AdminPageModel
         var item = reportId > 0 ? _catalogSvc.GetCatalogItem(reportId) ?? new() : new();
         item.ReportID = reportId;
         item.ReportName = reportName ?? "";
-        item.ReportTool = reportTool ?? "Internal";
+        item.ReportTool = reportTool ?? "SmartQuery";
         item.ReportPath = reportPath ?? "";
         item.ReportCode = reportCode ?? "";
         item.SourceName = sourceName ?? "";

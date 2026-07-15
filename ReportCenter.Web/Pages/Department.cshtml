@@ -117,7 +117,7 @@
     <!-- Card View -->
     <div x-show="filtered.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
         <template x-for="r in filtered" :key="r.reportId">
-            <a :href="getReportHref(r)" :target="r.reportTool === 'Internal' ? '_self' : '_blank'" rel="noopener"
+            <a :href="getReportHref(r)" target="_blank" rel="noopener"
                class="group bg-white border border-bdr rounded-[10px] p-4 flex flex-col gap-2 shadow-sm no-underline
                       hover:shadow-md hover:border-pri hover:-translate-y-0.5 transition-all duration-200">
                 <div class="flex items-center justify-between gap-2 min-h-[22px]">
@@ -133,9 +133,7 @@
                 </div>
                 <div class="flex items-start gap-1.5">
                     <span class="text-[15px] font-semibold text-txt leading-snug flex-1 group-hover:text-pri transition-colors" x-text="r.name"></span>
-                    <template x-if="r.reportTool !== 'Internal'">
-                        <svg class="w-3.5 h-3.5 text-txt-ter shrink-0 mt-0.5 group-hover:text-pri transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                    </template>
+                    <svg class="w-3.5 h-3.5 text-txt-ter shrink-0 mt-0.5 group-hover:text-pri transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                 </div>
                 <span class="text-[12px] text-txt-sec leading-relaxed" x-show="r.desc" x-text="r.desc"></span>
             </a>
@@ -173,10 +171,9 @@ function deptPage() {
         },
 
         getReportHref(r) {
-            let url;
-            if (r.reportTool === 'SmartQuery') url = this.baseUrls.smartQuery + r.reportCode;
-            else if (r.reportTool === 'SSRS') url = this.baseUrls.ssrs + r.reportCode;
-            else url = '/Report?dept=@Model.DeptId&name=' + encodeURIComponent(r.name);
+            let url = r.reportTool === 'SSRS'
+                ? this.baseUrls.ssrs + r.reportCode
+                : this.baseUrls.smartQuery + r.reportCode;
             if (r.useCompanyParam) {
                 const companyId = document.cookie.split('; ').find(c => c.startsWith('companyId='))?.split('=')[1] || '';
                 const sep = url.includes('?') ? '&' : '?';
@@ -204,8 +201,7 @@ function deptPage() {
                         Alpine.store('toast').show('已加入收藏');
                         // 通知 sidebar 更新收藏
                         const href = this.getReportHref(r);
-                        const target = r.reportTool === 'Internal' ? '_self' : '_blank';
-                        window.dispatchEvent(new CustomEvent('fav-changed', { detail: { reportId, isFavorite: true, report: { reportId, name: r.name, href, target } } }));
+                        window.dispatchEvent(new CustomEvent('fav-changed', { detail: { reportId, isFavorite: true, report: { reportId, name: r.name, href, target: '_blank' } } }));
                     } else {
                         this.favoriteIds = this.favoriteIds.filter(id => id !== reportId);
                         Alpine.store('toast').show('已取消收藏');
