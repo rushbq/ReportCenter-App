@@ -36,8 +36,8 @@ ReportCenter.Web/
 │   ├── IPermissionService.cs       # 權限管理 BLL 介面
 │   └── PermissionService.cs        # 權限管理 BLL 實作
 ├── Pages/
-│   ├── Index.cshtml(.cs)           # 首頁儀表板 (KPI、圖表、篩選、快速存取)
-│   ├── Department.cshtml(.cs)      # 部門報表列表 (搜尋、篩選、排序、卡片/表格切換)
+│   ├── Index.cshtml(.cs)           # 首頁 (快速存取釘選報表；營運總覽儀表板規劃中，暫已移除)
+│   ├── Department.cshtml(.cs)      # 部門報表列表 (搜尋、分類 Tab、卡片檢視)
 │   ├── Report.cshtml(.cs)          # 報表明細 (圖表切換、篩選、收藏、匯出、分頁)
 │   ├── Admin/
 │   │   ├── Index.cshtml(.cs)       # 管理總覽 (KPI、部門矩陣、孤立報表、相依性分析)
@@ -71,7 +71,7 @@ ReportCenter.Web/
 
 | 路由 | 頁面 | 說明 |
 |------|------|------|
-| `/` | Index | 營運總覽儀表板 |
+| `/` | Index | 首頁 (快速存取釘選報表) |
 | `/Department?dept={id}` | Department | 部門報表列表 |
 | `/Report?dept={id}&name={name}&page={n}` | Report | 報表明細頁 |
 | `/Admin` | Admin/Index | 報表管理總覽 (KPI、部門矩陣、孤立報表) |
@@ -291,11 +291,7 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 | 頁面 | 篩選器 | 實作方式 |
 |------|--------|---------|
-| Index | 期間（本月/上月/本季/本年） | 前端 Alpine 切換 Mock KPI 資料集 |
-| Index | 區域（全部/北中南東） | 前端依區域比例調整數值與圖表 |
-| Index | 部門（全部/各部門） | 前端篩選部門比較圖表 |
-| Department | 日期（全部/本週/本月/本季） | 前端依報表更新日期相對篩選 |
-| Department | 排序（最近更新/最早更新/名稱 A-Z） | 前端排序 |
+| Department | 搜尋 + 分類 Tab | 前端 Alpine 篩選（固定依更新日期新到舊排序） |
 | Report | 日期期間（2026/03 等） | 前端依 `period` 欄位篩選 |
 | Report | 物料類別（原料/包材/設備/耗材） | 前端依 `category` 欄位篩選 |
 | Report | 供應商 | 前端依 `supplier` 欄位篩選 |

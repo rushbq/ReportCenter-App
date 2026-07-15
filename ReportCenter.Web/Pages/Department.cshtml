@@ -37,24 +37,16 @@
             </div>
             <div>
                 <h1 class="text-lg md:text-[20px] font-bold text-txt">@Model.Dept.Label 報表</h1>
-                <div class="text-[12px] text-txt-ter mt-0.5">共 <span x-text="filtered.length"></span> 份報表</div>
+                <div class="text-[12px] text-txt-ter mt-0.5" aria-live="polite">共 <span x-text="filtered.length"></span> 份報表</div>
             </div>
         </div>
         <div class="flex gap-2 items-center w-full sm:w-auto">
             <div class="bg-white border border-bdr rounded-lg px-3 py-[7px] flex items-center gap-1.5 flex-1 sm:flex-none sm:w-[220px]">
                 <i data-lucide="search" class="w-3.5 h-3.5 text-txt-ter"></i>
-                <input type="text" placeholder="搜尋部門報表…" x-model="searchQuery"
+                <input type="text" placeholder="搜尋部門報表…" aria-label="搜尋部門報表" x-model="searchQuery"
                        class="flex-1 bg-transparent border-0 outline-none text-[12px] text-txt placeholder:text-txt-ter w-full" />
-                <button x-show="searchQuery" @@click="searchQuery = ''" class="bg-transparent border-0 cursor-pointer p-0">
+                <button x-show="searchQuery" @@click="searchQuery = ''" aria-label="清除搜尋" class="bg-transparent border-0 cursor-pointer p-0">
                     <i data-lucide="x" class="w-3 h-3 text-txt-ter"></i>
-                </button>
-            </div>
-            <div class="flex border border-bdr rounded-lg overflow-hidden">
-                <button @@click="view='card'" :class="view==='card' ? 'bg-pri text-white' : 'bg-white text-txt-ter'" class="px-2.5 py-1.5 cursor-pointer border-0">
-                    <i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i>
-                </button>
-                <button @@click="view='table'" :class="view==='table' ? 'bg-pri text-white' : 'bg-white text-txt-ter'" class="px-2.5 py-1.5 cursor-pointer border-0">
-                    <i data-lucide="list" class="w-3.5 h-3.5"></i>
                 </button>
             </div>
         </div>
@@ -62,102 +54,81 @@
 
     <!-- Desktop Tabs -->
     <div class="hidden md:flex border-b-2 border-bdr mb-4">
-        <button @@click="tab='all'"
+        <button @@click="tab='all'" :aria-pressed="tab==='all'"
                 :class="tab==='all' ? 'font-semibold text-pri border-b-2 border-pri' : 'text-txt-sec border-b-2 border-transparent'"
                 class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent whitespace-nowrap">
             全部
-            <span :class="tab==='all' ? 'bg-pri-light text-pri' : 'bg-bdr-light text-txt-ter'"
+            <span :class="tab==='all' ? 'bg-pri-light text-pri' : 'bg-bdr-light text-txt-sec'"
                   class="badge" x-text="tabCount('all')"></span>
         </button>
         @for (var i = 0; i < Model.Dept.Subs.Count; i++)
         {
             var sub = Model.Dept.Subs[i];
-            <button @@click="tab='@sub'"
+            <button @@click="tab='@sub'" :aria-pressed="tab==='@sub'"
                     :class="tab==='@sub' ? 'font-semibold text-pri border-b-2 border-pri' : 'text-txt-sec border-b-2 border-transparent'"
                     class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent whitespace-nowrap">
                 <span class="w-1.5 h-1.5 rounded-full shrink-0 @CategoryPalette.DotByIndex(i)"></span>
                 @sub
-                <span :class="tab==='@sub' ? 'bg-pri-light text-pri' : 'bg-bdr-light text-txt-ter'"
+                <span :class="tab==='@sub' ? 'bg-pri-light text-pri' : 'bg-bdr-light text-txt-sec'"
                       class="badge" x-text="tabCount('@sub')"></span>
             </button>
         }
     </div>
     <!-- Mobile Tabs (單列水平捲動，避免換行擁擠) -->
     <div class="flex md:hidden gap-2 mb-4 overflow-x-auto no-scrollbar -mx-4 px-4">
-        <button @@click="tab='all'"
+        <button @@click="tab='all'" :aria-pressed="tab==='all'"
                 :class="tab==='all' ? 'bg-pri text-white border-pri' : 'bg-white text-txt-sec border-bdr'"
                 class="shrink-0 whitespace-nowrap px-3 py-1.5 text-[13px] cursor-pointer rounded-full border flex items-center gap-1.5">
             全部
-            <span :class="tab==='all' ? 'bg-white/20 text-white' : 'bg-bdr-light text-txt-ter'"
+            <span :class="tab==='all' ? 'bg-white/20 text-white' : 'bg-bdr-light text-txt-sec'"
                   class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" x-text="tabCount('all')"></span>
         </button>
         @for (var i = 0; i < Model.Dept.Subs.Count; i++)
         {
             var sub = Model.Dept.Subs[i];
-            <button @@click="tab='@sub'"
+            <button @@click="tab='@sub'" :aria-pressed="tab==='@sub'"
                     :class="tab==='@sub' ? 'bg-pri text-white border-pri' : 'bg-white text-txt-sec border-bdr'"
                     class="shrink-0 whitespace-nowrap px-3 py-1.5 text-[13px] cursor-pointer rounded-full border flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full shrink-0 @CategoryPalette.DotByIndex(i)" :class="tab==='@sub' && 'ring-1 ring-white/60'"></span>
                 @sub
-                <span :class="tab==='@sub' ? 'bg-white/20 text-white' : 'bg-bdr-light text-txt-ter'"
+                <span :class="tab==='@sub' ? 'bg-white/20 text-white' : 'bg-bdr-light text-txt-sec'"
                       class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" x-text="tabCount('@sub')"></span>
             </button>
         }
     </div>
 
-    <!-- Filters -->
-    <div class="flex gap-2 mb-4">
-        <div class="relative" @@click.outside="dateOpen = false">
-            <span class="chip" :class="dateFilter !== '全部' && 'chip-active'" @@click="dateOpen = !dateOpen">
-                <i data-lucide="filter" class="w-3 h-3"></i>日期: <span x-text="dateFilter"></span>
-                <i data-lucide="chevron-down" class="w-3 h-3 opacity-50"></i>
-            </span>
-            <div x-show="dateOpen" x-cloak class="absolute left-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[120px] z-40">
-                <template x-for="d in ['全部','本週','本月','本季']">
-                    <button :class="dateFilter === d ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                            class="menu-item"
-                            @@click="dateFilter = d; dateOpen = false" x-text="d"></button>
-                </template>
-            </div>
+    <!-- 部門無任何報表 (伺服器端即可判定，與「篩選無結果」區分) -->
+    @if (Model.Reports.Count == 0)
+    {
+        <div class="text-center py-12">
+            <i data-lucide="inbox" class="w-10 h-10 text-txt-ter mx-auto mb-3"></i>
+            <div class="text-txt-sec text-sm">此部門尚未提供任何報表</div>
         </div>
-        <div class="relative" @@click.outside="sortOpen = false">
-            <span class="chip" @@click="sortOpen = !sortOpen">
-                排序: <span x-text="sortBy"></span>
-                <i data-lucide="chevron-down" class="w-3 h-3 opacity-50"></i>
-            </span>
-            <div x-show="sortOpen" x-cloak class="absolute left-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[130px] z-40">
-                <template x-for="s in ['最近更新','最早更新','名稱 A-Z']">
-                    <button :class="sortBy === s ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                            class="menu-item"
-                            @@click="sortBy = s; sortOpen = false" x-text="s"></button>
-                </template>
-            </div>
-        </div>
-    </div>
+    }
 
-    <!-- No Results -->
-    <div x-show="filtered.length === 0" x-cloak class="text-center py-12">
+    <!-- 篩選無結果 -->
+    <div x-show="reports.length > 0 && filtered.length === 0" x-cloak class="text-center py-12">
         <i data-lucide="search-x" class="w-10 h-10 text-txt-ter mx-auto mb-3"></i>
         <div class="text-txt-sec text-sm">找不到符合條件的報表</div>
-        <button @@click="searchQuery = ''; tab = 'all'; dateFilter = '全部'"
+        <button @@click="searchQuery = ''; tab = 'all'"
                 class="mt-3 text-[13px] text-pri font-medium cursor-pointer bg-transparent border-0 underline">清除篩選</button>
     </div>
 
     <!-- Card View -->
-    <div x-show="view==='card' && filtered.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+    <div x-show="filtered.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
         <template x-for="r in filtered" :key="r.reportId">
-            <a :href="getReportHref(r)" :target="r.reportTool === 'Internal' ? '_self' : '_blank'"
+            <a :href="getReportHref(r)" :target="r.reportTool === 'Internal' ? '_self' : '_blank'" rel="noopener"
                class="group bg-white border border-bdr rounded-[10px] p-4 flex flex-col gap-2 shadow-sm no-underline
                       hover:shadow-md hover:border-pri hover:-translate-y-0.5 transition-all duration-200">
                 <div class="flex items-center justify-between gap-2 min-h-[22px]">
                     <span class="badge" :class="catBadge(r.cat)" x-text="r.cat" x-show="r.cat"></span>
                     <span role="button" tabindex="0" :aria-label="isFav(r.reportId) ? '取消收藏 ' + r.name : '收藏 ' + r.name"
                           :aria-pressed="isFav(r.reportId)"
-                          class="ml-auto -mr-1 p-1 rounded-full cursor-pointer hover:bg-surface transition-colors"
+                          class="ml-auto -my-1.5 -mr-1.5 p-2 rounded-full cursor-pointer hover:bg-surface transition-colors"
                           @@click.prevent.stop="toggleFav(r.reportId)"
                           @@keydown.enter.prevent.stop="toggleFav(r.reportId)"
                           @@keydown.space.prevent.stop="toggleFav(r.reportId)">
-                        <svg class="w-3.5 h-3.5 transition-transform hover:scale-110" :class="isFav(r.reportId) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-txt-ter fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        <svg class="w-3.5 h-3.5 transition-transform hover:scale-110" :class="isFav(r.reportId) ? 'text-star fill-star' : 'text-txt-ter fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     </span>
                 </div>
                 <div class="flex items-start gap-1.5">
@@ -171,96 +142,14 @@
         </template>
     </div>
 
-    <!-- List View -->
-    <div x-show="view==='table' && filtered.length > 0" x-cloak class="bg-white border border-bdr rounded-[10px] overflow-hidden shadow-sm">
-        <!-- 桌面表頭 (手機隱藏) -->
-        <div class="hidden md:grid grid-cols-[2fr_3fr_1fr_80px] px-5 py-2.5 bg-surface text-[11px] font-bold text-txt-ter uppercase tracking-wider">
-            <span>報表名稱</span><span>說明</span><span>分類</span><span>操作</span>
-        </div>
-        <template x-for="r in filtered" :key="r.reportId">
-            <div class="border-t border-bdr-light">
-                <!-- 桌面列 (grid) -->
-                <a :href="getReportHref(r)" :target="r.reportTool === 'Internal' ? '_self' : '_blank'"
-                   class="hidden md:grid grid-cols-[2fr_3fr_1fr_80px] px-5 py-3 text-[13px] items-center
-                          no-underline hover:bg-[#fafcfc] transition-colors">
-                    <span class="font-medium text-txt flex items-center gap-1.5 min-w-0">
-                        <span role="button" tabindex="0" :aria-label="isFav(r.reportId) ? '取消收藏 ' + r.name : '收藏 ' + r.name"
-                              :aria-pressed="isFav(r.reportId)"
-                              class="p-1 -m-1 rounded-full cursor-pointer hover:bg-surface transition-colors shrink-0"
-                              @@click.prevent.stop="toggleFav(r.reportId)"
-                              @@keydown.enter.prevent.stop="toggleFav(r.reportId)"
-                              @@keydown.space.prevent.stop="toggleFav(r.reportId)">
-                            <svg class="w-3 h-3" :class="isFav(r.reportId) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-txt-ter fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        </span>
-                        <span class="truncate" x-text="r.name"></span>
-                    </span>
-                    <span class="text-txt-sec text-[12px] truncate" x-text="r.desc"></span>
-                    <span class="badge inline-block w-fit" :class="catBadge(r.cat)" x-text="r.cat" x-show="r.cat"></span>
-                    <span class="text-[12px] text-pri font-semibold flex items-center gap-1">
-                        <template x-if="r.reportTool !== 'Internal'">
-                            <i data-lucide="external-link" class="w-3 h-3"></i>
-                        </template>
-                        <template x-if="r.reportTool === 'Internal'">
-                            <i data-lucide="eye" class="w-3 h-3"></i>
-                        </template>
-                        <span x-text="r.reportTool === 'Internal' ? '檢視' : '開啟'"></span>
-                    </span>
-                </a>
-                <!-- 手機列 (精簡堆疊) -->
-                <a :href="getReportHref(r)" :target="r.reportTool === 'Internal' ? '_self' : '_blank'"
-                   class="flex md:hidden items-center gap-2.5 px-4 py-3 no-underline hover:bg-[#fafcfc] transition-colors">
-                    <span role="button" tabindex="0" :aria-label="isFav(r.reportId) ? '取消收藏 ' + r.name : '收藏 ' + r.name"
-                          :aria-pressed="isFav(r.reportId)"
-                          class="p-1.5 -m-1 rounded-full cursor-pointer hover:bg-surface transition-colors shrink-0"
-                          @@click.prevent.stop="toggleFav(r.reportId)"
-                          @@keydown.enter.prevent.stop="toggleFav(r.reportId)"
-                          @@keydown.space.prevent.stop="toggleFav(r.reportId)">
-                        <svg class="w-3.5 h-3.5" :class="isFav(r.reportId) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-txt-ter fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    </span>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-[13px] font-semibold text-txt truncate" x-text="r.name"></div>
-                        <div class="flex items-center gap-1.5 mt-1" x-show="r.cat">
-                            <span class="badge" :class="catBadge(r.cat)" x-text="r.cat"></span>
-                        </div>
-                    </div>
-                    <span class="text-[12px] text-pri font-semibold shrink-0 flex items-center gap-1">
-                        <template x-if="r.reportTool !== 'Internal'">
-                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                        </template>
-                        <template x-if="r.reportTool === 'Internal'">
-                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                        </template>
-                    </span>
-                </a>
-            </div>
-        </template>
-    </div>
 </div>
-
-@section Styles {
-<style>
-    .chip {
-        font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;
-        border: 1px solid #e2e8ea; background: white; color: #5c7576;
-        white-space: nowrap; user-select: none; display: inline-flex; align-items: center; gap: 4px;
-    }
-    .chip-active {
-        border-color: #005758; background: #e8f4f4; color: #005758; font-weight: 600;
-    }
-</style>
-}
 
 @section Scripts {
 <script>
 function deptPage() {
     return {
-        view: 'card',
         tab: 'all',
         searchQuery: '',
-        dateFilter: '全部',
-        sortBy: '最近更新',
-        dateOpen: false,
-        sortOpen: false,
         reports: [],
         favoriteIds: [],
         catColors: {},
@@ -328,9 +217,9 @@ function deptPage() {
             }
         },
 
-        get filtered() {
+        // 搜尋篩選 (filtered 與 tabCount 共用，避免邏輯分岔)
+        baseFiltered() {
             let list = this.reports;
-            if (this.tab !== 'all') list = list.filter(r => r.cat === this.tab);
             if (this.searchQuery.trim()) {
                 const q = this.searchQuery.trim().toLowerCase();
                 list = list.filter(r =>
@@ -339,66 +228,19 @@ function deptPage() {
                     r.cat.toLowerCase().includes(q)
                 );
             }
-            if (this.dateFilter !== '全部') {
-                const now = new Date();
-                const year = now.getFullYear();
-                list = list.filter(r => {
-                    const parts = r.updated.split('/');
-                    const month = parseInt(parts[0], 10);
-                    const day = parseInt(parts[1], 10);
-                    const d = new Date(year, month - 1, day);
-                    if (this.dateFilter === '本週') {
-                        const weekAgo = new Date(now);
-                        weekAgo.setDate(weekAgo.getDate() - 7);
-                        return d >= weekAgo;
-                    } else if (this.dateFilter === '本月') {
-                        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                    } else if (this.dateFilter === '本季') {
-                        const qStart = new Date(year, Math.floor(now.getMonth() / 3) * 3, 1);
-                        return d >= qStart;
-                    }
-                    return true;
-                });
-            }
-            if (this.sortBy === '名稱 A-Z') list = [...list].sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
-            else if (this.sortBy === '最早更新') list = [...list].sort((a, b) => a.updated.localeCompare(b.updated));
-            else list = [...list].sort((a, b) => b.updated.localeCompare(a.updated));
             return list;
         },
 
+        get filtered() {
+            let list = this.baseFiltered();
+            if (this.tab !== 'all') list = list.filter(r => r.cat === this.tab);
+            // 固定依更新日期新到舊 (updated 為 yyyy/MM/dd 零填格式，可直接字串排序)
+            return [...list].sort((a, b) => b.updated.localeCompare(a.updated));
+        },
+
         tabCount(cat) {
-            let list = this.reports;
-            if (cat !== 'all') list = list.filter(r => r.cat === cat);
-            if (this.searchQuery.trim()) {
-                const q = this.searchQuery.trim().toLowerCase();
-                list = list.filter(r =>
-                    r.name.toLowerCase().includes(q) ||
-                    r.desc.toLowerCase().includes(q) ||
-                    r.cat.toLowerCase().includes(q)
-                );
-            }
-            if (this.dateFilter !== '全部') {
-                const now = new Date();
-                const year = now.getFullYear();
-                list = list.filter(r => {
-                    const parts = r.updated.split('/');
-                    const month = parseInt(parts[0], 10);
-                    const day = parseInt(parts[1], 10);
-                    const d = new Date(year, month - 1, day);
-                    if (this.dateFilter === '本週') {
-                        const weekAgo = new Date(now);
-                        weekAgo.setDate(weekAgo.getDate() - 7);
-                        return d >= weekAgo;
-                    } else if (this.dateFilter === '本月') {
-                        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                    } else if (this.dateFilter === '本季') {
-                        const qStart = new Date(year, Math.floor(now.getMonth() / 3) * 3, 1);
-                        return d >= qStart;
-                    }
-                    return true;
-                });
-            }
-            return list.length;
+            const list = this.baseFiltered();
+            return cat === 'all' ? list.length : list.filter(r => r.cat === cat).length;
         }
     };
 }

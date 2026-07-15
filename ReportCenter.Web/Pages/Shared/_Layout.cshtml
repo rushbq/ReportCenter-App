@@ -21,8 +21,9 @@
                     colors: {
                         pri: { DEFAULT: '#005758', hover: '#006d6e', light: '#e8f4f4' },
                         acc: '#00b4b6',
-                        surface: '#f5f7f8',
-                        txt: { DEFAULT: '#1a2e2f', sec: '#5c7576', ter: '#94aeb0' },
+                        surface: { DEFAULT: '#f5f7f8', hover: '#fafcfc' },
+                        star: '#f5a623',
+                        txt: { DEFAULT: '#1a2e2f', sec: '#4a6465', ter: '#5c7576' },
                         ok: '#0d9668',
                         bad: '#dc4a4a',
                         bdr: { DEFAULT: '#e2e8ea', light: '#eef2f3' },
@@ -123,7 +124,12 @@
                 <template x-for="r in $store.search.results" :key="r.url">
                     <button class="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-surface border-0 bg-transparent cursor-pointer border-b border-bdr-light"
                             @@click="$store.search.go(r.url, r.target)">
-                        <i :data-lucide="r.reportTool === 'Internal' ? 'file-text' : 'external-link'" class="w-4 h-4 text-pri mt-0.5 shrink-0"></i>
+                        <template x-if="r.reportTool === 'Internal'">
+                            <svg class="w-4 h-4 text-pri mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                        </template>
+                        <template x-if="r.reportTool !== 'Internal'">
+                            <svg class="w-4 h-4 text-pri mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                        </template>
                         <div class="flex-1 min-w-0">
                             <div class="text-[13px] font-semibold text-txt truncate" x-text="r.name"></div>
                             <div class="text-[11px] text-txt-sec truncate" x-text="r.desc"></div>

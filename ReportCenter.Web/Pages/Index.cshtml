@@ -26,122 +26,18 @@
         }), jsonOpts);
 
     var pinnedIdsJson = System.Text.Json.JsonSerializer.Serialize(Model.PinnedIds, jsonOpts);
-
-    // 部門篩選選項
-    var deptLabels = Model.Departments.Select(d => d.Label).ToList();
-    deptLabels.Insert(0, "全部");
-    var deptLabelsJson = System.Text.Json.JsonSerializer.Serialize(deptLabels, jsonOpts);
 }
 
 <div class="page-container"
      x-data="indexPage()" x-init="init()">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start mb-5 gap-3">
+    <!-- Header (快速存取) -->
+    <div class="flex justify-between items-center mb-5">
         <div>
-            <h1 class="text-[20px] md:text-[22px] font-bold text-txt">營運總覽</h1>
-            <div class="text-[12px] text-txt-ter mt-1">@Model.Companies.FirstOrDefault(c => c.Id == Model.ActiveCompanyId)?.ShortName ・ 最後更新 @Model.Kpi.LastUpdated</div>
+            <h1 class="text-[20px] md:text-[22px] font-bold text-txt">快速存取</h1>
+            <div class="text-[12px] text-txt-ter mt-1">釘選常用報表，一鍵直達</div>
         </div>
-        <div class="flex gap-2 flex-wrap">
-            <!-- 時間篩選 -->
-            <div class="relative" @@click.outside="periodOpen = false">
-                <span class="chip" :class="period !== '本月' && 'chip-active'" @@click="periodOpen = !periodOpen">
-                    <i data-lucide="filter" class="w-3 h-3"></i><span x-text="period"></span>
-                    <i data-lucide="chevron-down" class="w-3 h-3 opacity-50"></i>
-                </span>
-                <div x-show="periodOpen" x-cloak class="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[120px] z-40">
-                    <template x-for="p in ['本月','上月','本季','本年']">
-                        <button :class="period === p ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                                class="menu-item"
-                                @@click="period = p; periodOpen = false" x-text="p"></button>
-                    </template>
-                </div>
-            </div>
-            <!-- 區域篩選 -->
-            <div class="relative" @@click.outside="regionOpen = false">
-                <span class="chip" :class="region !== '全部' && 'chip-active'" @@click="regionOpen = !regionOpen">
-                    區域: <span x-text="region"></span>
-                    <i data-lucide="chevron-down" class="w-3 h-3 opacity-50"></i>
-                </span>
-                <div x-show="regionOpen" x-cloak class="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[120px] z-40">
-                    <template x-for="r in ['全部','北區','中區','南區','東區']">
-                        <button :class="region === r ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                                class="menu-item"
-                                @@click="region = r; regionOpen = false" x-text="r"></button>
-                    </template>
-                </div>
-            </div>
-            <!-- 部門篩選 -->
-            <div class="relative" @@click.outside="deptOpen = false">
-                <span class="chip" :class="dept !== '全部' && 'chip-active'" @@click="deptOpen = !deptOpen">
-                    部門: <span x-text="dept"></span>
-                    <i data-lucide="chevron-down" class="w-3 h-3 opacity-50"></i>
-                </span>
-                <div x-show="deptOpen" x-cloak class="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-bdr py-1 min-w-[120px] z-40">
-                    <template x-for="d in deptLabels">
-                        <button :class="dept === d ? 'bg-pri-light text-pri font-semibold' : 'text-txt hover:bg-surface'"
-                                class="menu-item"
-                                @@click="dept = d; deptOpen = false" x-text="d"></button>
-                    </template>
-                </div>
-            </div>
-            <!-- 更新 -->
-            <span class="chip" @@click="window.location.reload()"><i data-lucide="refresh-cw" class="w-3 h-3"></i>更新</span>
-        </div>
-    </div>
-
-    <!-- KPIs -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
-        <template x-for="kpi in filteredKpis" :key="kpi.title">
-            <div class="bg-white border border-bdr rounded-[10px] p-[18px] shadow-sm">
-                <div class="text-[11px] text-txt-ter font-semibold uppercase tracking-wider mb-2" x-text="kpi.title"></div>
-                <div class="text-[22px] font-bold text-txt leading-none mb-1.5" x-text="kpi.value"></div>
-                <div class="flex items-center gap-1">
-                    <template x-if="kpi.trend !== 0">
-                        <span class="inline-flex items-center gap-0.5 text-[12px] font-semibold"
-                              :class="kpi.trend > 0 ? 'text-ok' : 'text-bad'">
-                            <i :data-lucide="kpi.trend > 0 ? 'arrow-up-right' : 'arrow-down-right'" class="w-3 h-3"></i>
-                            <span x-text="(kpi.trend > 0 ? '+' : '') + kpi.trend + '%'"></span>
-                        </span>
-                    </template>
-                    <template x-if="kpi.note">
-                        <span class="text-[11px] text-txt-ter" x-text="kpi.note"></span>
-                    </template>
-                </div>
-            </div>
-        </template>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-4 mb-6">
-        <!-- Revenue Trend -->
-        <div class="card">
-            <div class="flex justify-between items-center mb-1">
-                <span class="font-semibold text-sm text-txt">營收趨勢</span>
-                <div class="flex gap-1">
-                    <template x-for="cp in ['月','季','年']">
-                        <span class="chip" :class="chartPeriod === cp && 'chip-active'"
-                              @@click="chartPeriod = cp; updateRevenueChart(cp); $nextTick(() => lucide.createIcons())" x-text="cp"></span>
-                    </template>
-                </div>
-            </div>
-            <div class="relative h-[220px]">
-                <canvas id="revenueChart"></canvas>
-            </div>
-        </div>
-        <!-- Department Comparison -->
-        <div class="card">
-            <span class="font-semibold text-sm text-txt">部門比較（百萬）</span>
-            <div class="relative h-[220px] mt-2">
-                <canvas id="deptChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Access -->
-    <div class="flex justify-between items-center mb-3.5">
-        <span class="font-semibold text-[15px] text-txt">快速存取</span>
-        <span class="text-[12px] text-pri font-medium cursor-pointer"
-              @@click="pinModalOpen = true">管理釘選 →</span>
+        <button class="text-[12px] text-pri font-medium cursor-pointer bg-transparent border-0"
+                @@click="pinModalOpen = true">管理釘選 →</button>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <template x-for="p in pinnedReports" :key="p.ReportID">
@@ -215,58 +111,15 @@
     </div>
 </div>
 
-@section Styles {
-<style>
-    .chip {
-        font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;
-        border: 1px solid #e2e8ea; background: white; color: #5c7576;
-        white-space: nowrap; user-select: none; display: inline-flex; align-items: center; gap: 4px;
-    }
-    .chip-active {
-        border-color: #005758; background: #e8f4f4; color: #005758; font-weight: 600;
-    }
-</style>
-}
-
 @section Scripts {
 <script>
 function indexPage() {
-    let _revenueDataSets = null;
-    let _revenueChart = null;
-    let _deptChart = null;
-
     return {
-        period: '本月',
-        region: '全部',
-        dept: '全部',
-        chartPeriod: '月',
-        periodOpen: false,
-        regionOpen: false,
-        deptOpen: false,
         pinModalOpen: false,
         pinSearch: '',
         allReports: [],
         pinnedReports: [],
         pinnedIds: [],
-        deptLabels: [],
-
-        kpiData: {
-            '本月':  [{ title: '本月營收', value: '$12.8M', trend: 8.3, note: 'vs 上月' }, { title: '採購成本', value: '$4.2M', trend: -3.1, note: 'vs 上月' }, { title: '毛利率', value: '67.2%', trend: 2.4, note: '' }, { title: '訂單數', value: '1,847', trend: 12.6, note: 'vs 上月' }],
-            '上月':  [{ title: '上月營收', value: '$11.6M', trend: 5.1, note: 'vs 前月' }, { title: '採購成本', value: '$4.0M', trend: -1.5, note: 'vs 前月' }, { title: '毛利率', value: '65.5%', trend: 1.8, note: '' }, { title: '訂單數', value: '1,723', trend: 8.4, note: 'vs 前月' }],
-            '本季':  [{ title: '本季營收', value: '$35.2M', trend: 10.2, note: 'vs 上季' }, { title: '採購成本', value: '$12.1M', trend: -2.4, note: 'vs 上季' }, { title: '毛利率', value: '65.6%', trend: 1.5, note: '' }, { title: '訂單數', value: '5,417', trend: 11.3, note: 'vs 上季' }],
-            '本年':  [{ title: '本年營收', value: '$140.5M', trend: 9.6, note: 'vs 去年' }, { title: '採購成本', value: '$48.3M', trend: -1.9, note: 'vs 去年' }, { title: '毛利率', value: '65.6%', trend: 0.8, note: '' }, { title: '訂單數', value: '21,530', trend: 14.2, note: 'vs 去年' }],
-        },
-
-        regionFactor: { '全部': 1.0, '北區': 0.42, '中區': 0.25, '南區': 0.22, '東區': 0.11 },
-
-        deptCompData: {
-            '全部':   { actual: [4.2,5.8,1.2,0.8,1.6], target: [4.5,5.2,1.3,0.9,1.8] },
-            '採購部': { actual: [4.2,0,0,0,0], target: [4.5,0,0,0,0] },
-            '業務部': { actual: [0,5.8,0,0,0], target: [0,5.2,0,0,0] },
-            '財務部': { actual: [0,0,1.2,0,0], target: [0,0,1.3,0,0] },
-            '人資部': { actual: [0,0,0,0.8,0], target: [0,0,0,0.9,0] },
-            '資訊部': { actual: [0,0,0,0,1.6], target: [0,0,0,0,1.8] },
-        },
 
         isPinned(reportId) {
             return this.pinnedIds.includes(reportId);
@@ -315,98 +168,10 @@ function indexPage() {
             );
         },
 
-        get filteredKpis() {
-            const base = this.kpiData[this.period] || this.kpiData['本月'];
-            const factor = this.regionFactor[this.region] || 1.0;
-            if (this.region === '全部' && this.dept === '全部') return base;
-            return base.map(k => {
-                if (k.title.includes('毛利率')) return k;
-                const numMatch = k.value.match(/([\$¥]?)([\d,.]+)(.*)/);
-                if (!numMatch) return k;
-                const prefix = numMatch[1], num = parseFloat(numMatch[2].replace(/,/g, '')), suffix = numMatch[3];
-                const adjusted = num * factor;
-                const formatted = adjusted >= 1000 ? adjusted.toLocaleString('en-US', { maximumFractionDigits: 1 }) : adjusted.toFixed(1);
-                return { ...k, value: prefix + formatted + suffix };
-            });
-        },
-
         init() {
             this.allReports = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllReports, jsonOpts));
             this.pinnedReports = @Html.Raw(pinnedJson);
             this.pinnedIds = @Html.Raw(pinnedIdsJson);
-            this.deptLabels = @Html.Raw(deptLabelsJson);
-            this.$nextTick(() => this.initCharts());
-            this.$watch('region', () => this.updateDeptChart());
-            this.$watch('dept', () => this.updateDeptChart());
-            this.$watch('period', () => { this.$nextTick(() => lucide.createIcons()); });
-        },
-
-        initCharts() {
-            const C = { pri: '#005758', acc: '#00b4b6', priH: '#006d6e', ter: '#94aeb0', borderL: '#eef2f3' };
-
-            _revenueDataSets = {
-                '月': { labels: ['10月','11月','12月','1月','2月','3月'], current: [10.2,11.1,12.5,10.8,11.6,12.8], last: [9.8,10.3,11.0,9.5,10.1,10.9], budget: [10.5,10.8,11.2,11.0,11.3,11.5] },
-                '季': { labels: ['Q1','Q2','Q3','Q4'], current: [33.8,35.2,34.6,37.1], last: [30.2,32.1,31.5,33.8], budget: [32.0,33.5,34.0,35.0] },
-                '年': { labels: ['2022','2023','2024','2025','2026(預)'], current: [105.3,118.6,128.2,140.5,152.0], last: [95.1,105.3,118.6,128.2,140.5], budget: [100.0,112.0,125.0,138.0,150.0] }
-            };
-
-            const monthData = _revenueDataSets['月'];
-            _revenueChart = new Chart(document.getElementById('revenueChart'), {
-                type: 'line',
-                data: {
-                    labels: [...monthData.labels],
-                    datasets: [
-                        { label: '本年', data: [...monthData.current], borderColor: C.pri, backgroundColor: C.pri + '20', borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 0 },
-                        { label: '去年', data: [...monthData.last], borderColor: C.acc, borderWidth: 1.5, borderDash: [4,3], fill: false, tension: 0.4, pointRadius: 0 },
-                        { label: '預算', data: [...monthData.budget], borderColor: C.ter, borderWidth: 1, borderDash: [2,2], fill: false, tension: 0.4, pointRadius: 0 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter } },
-                        y: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter, callback: v => v + 'M' } }
-                    }
-                }
-            });
-
-            _deptChart = new Chart(document.getElementById('deptChart'), {
-                type: 'bar',
-                data: {
-                    labels: ['採購部','業務部','財務部','人資部','資訊部'],
-                    datasets: [
-                        { label: '實際', data: [4.2,5.8,1.2,0.8,1.6], backgroundColor: C.pri, borderRadius: 4, barPercentage: 0.6 },
-                        { label: '目標', data: [4.5,5.2,1.3,0.9,1.8], backgroundColor: C.borderL, borderRadius: 4, barPercentage: 0.6 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: C.ter } },
-                        y: { grid: { color: C.borderL }, ticks: { font: { size: 11 }, color: C.ter } }
-                    }
-                }
-            });
-        },
-
-        updateRevenueChart(period) {
-            const ds = _revenueDataSets[period];
-            const factor = this.regionFactor[this.region] || 1.0;
-            _revenueChart.data.labels = [...ds.labels];
-            _revenueChart.data.datasets[0].data = ds.current.map(v => +(v * factor).toFixed(1));
-            _revenueChart.data.datasets[1].data = ds.last.map(v => +(v * factor).toFixed(1));
-            _revenueChart.data.datasets[2].data = ds.budget.map(v => +(v * factor).toFixed(1));
-            _revenueChart.update();
-        },
-
-        updateDeptChart() {
-            const data = this.deptCompData[this.dept] || this.deptCompData['全部'];
-            const factor = this.regionFactor[this.region] || 1.0;
-            _deptChart.data.datasets[0].data = data.actual.map(v => +(v * factor).toFixed(1));
-            _deptChart.data.datasets[1].data = data.target.map(v => +(v * factor).toFixed(1));
-            _deptChart.update();
         }
     };
 }

@@ -468,7 +468,9 @@ public class SqlReportService : IReportService
         Name = item.ReportName,
         Desc = item.Remarks,
         Cat = item.CategoryName,
-        Updated = (item.ModifyDate ?? item.CreateDate).ToString("MM/dd"),
+        // yyyy/MM/dd 零填格式：前端可直接字串排序，且跨年份篩選不會誤判
+        // InvariantCulture 確保 "/" 不被伺服器文化替換為其他分隔符
+        Updated = (item.ModifyDate ?? item.CreateDate).ToString("yyyy/MM/dd", System.Globalization.CultureInfo.InvariantCulture),
         ReportTool = item.ReportTool,
         ReportCode = item.ReportCode,
         UseCompanyParam = item.UseCompanyParam,

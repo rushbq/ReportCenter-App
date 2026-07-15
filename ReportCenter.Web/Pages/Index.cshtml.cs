@@ -17,34 +17,16 @@ public class IndexModel : PageModel
         _baseUrls = baseUrls.Value;
     }
 
-    public UserInfo CurrentUser { get; set; } = null!;
-    public List<Company> Companies { get; set; } = [];
-    public DashboardKpi Kpi { get; set; } = null!;
-    public ChartData RevenueChart { get; set; } = null!;
-    public ChartData DeptChart { get; set; } = null!;
     public List<object> AllReports { get; set; } = [];
     public List<Report> PinnedReports { get; set; } = [];
     public List<int> PinnedIds { get; set; } = [];
     public List<Department> Departments { get; set; } = [];
 
-    public string ActiveCompanyId { get; set; } = "";
     public string SmartQueryBaseUrl => _baseUrls.SmartQuery;
     public string SsrsBaseUrl => _baseUrls.SSRS;
 
     public void OnGet()
     {
-        CurrentUser = _svc.GetCurrentUser();
-        Companies = _svc.GetCompanies();
-
-        var cookieCompanyId = HttpContext.Request.Cookies["companyId"];
-        ActiveCompanyId = !string.IsNullOrEmpty(cookieCompanyId) && Companies.Any(c => c.Id == cookieCompanyId)
-            ? cookieCompanyId
-            : CurrentUser.CompanyId;
-
-        Kpi = _svc.GetDashboardKpi(ActiveCompanyId);
-        RevenueChart = _svc.GetRevenueChartData(ActiveCompanyId);
-        DeptChart = _svc.GetDeptComparisonData(ActiveCompanyId);
-
         Departments = _svc.GetDepartments();
 
         // 組裝所有報表清單供釘選 Modal 使用
