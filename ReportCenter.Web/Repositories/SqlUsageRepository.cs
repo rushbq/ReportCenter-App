@@ -139,15 +139,21 @@ public class SqlUsageRepository : IUsageRepository
         var total = conn.QuerySingle<int>(
             $"SELECT COUNT(*) FROM ReportUsageLog u {where}", param);
 
+        // 分頁採 ROW_NUMBER() 而非 OFFSET/FETCH — 後者為 SQL Server 2012+ 語法，
+        // 正式環境為 2008 R2 (compatibility level 100) 不支援。詳見 AGENTS.md 相容性規範。
         var items = conn.Query<UsageLogItem>(
             $"""
-            SELECT u.LogID, u.ReportID, u.EmployeeId, u.CompanyId, u.Source, u.ClickedAt,
-                   c.ReportName
-            FROM ReportUsageLog u
-            INNER JOIN ReportCatalog c ON u.ReportID = c.ReportID
-            {where}
-            ORDER BY u.ClickedAt DESC, u.LogID DESC
-            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY
+            SELECT t.LogID, t.ReportID, t.EmployeeId, t.CompanyId, t.Source, t.ClickedAt, t.ReportName
+            FROM (
+                SELECT u.LogID, u.ReportID, u.EmployeeId, u.CompanyId, u.Source, u.ClickedAt,
+                       c.ReportName,
+                       ROW_NUMBER() OVER (ORDER BY u.ClickedAt DESC, u.LogID DESC) AS RowNum
+                FROM ReportUsageLog u
+                INNER JOIN ReportCatalog c ON u.ReportID = c.ReportID
+                {where}
+            ) AS t
+            WHERE t.RowNum > @Offset AND t.RowNum <= @Offset + @PageSize
+            ORDER BY t.RowNum
             """, param).ToList();
 
         return new UsageLogPage { Total = total, Page = page, PageSize = pageSize, Items = items };

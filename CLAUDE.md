@@ -436,6 +436,25 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 | `bad` | `#dc4a4a` | 負向趨勢 (紅) |
 | `bdr` | `#e2e8ea` | 邊框 |
 
+## SQL Server 相容性規範 ⚠️
+
+**正式環境為 SQL Server 2008 R2 (compatibility level 100)，開發環境版本較新，
+本機測試不會踩到相容性問題——寫 SQL 時必須主動確認，不能靠跑得起來判斷。**
+
+所有 SQL / T-SQL / Dapper 查詢 / migration script 皆須相容 2008 R2。
+完整規範見 `AGENTS.md`「SQL Server 相容性規範」，重點如下：
+
+| 禁止 (2012+ 語法) | 改用 |
+|------------------|------|
+| `OFFSET ... FETCH` | `ROW_NUMBER() OVER (...)` 包成子查詢後篩 RowNum |
+| `IIF`, `CHOOSE` | `CASE WHEN` |
+| `CONCAT` | `ISNULL(a, '') + ISNULL(b, '')` |
+| `TRY_CAST`, `TRY_CONVERT` | 應用層先驗證 |
+| `FORMAT`, `DATEFROMPARTS`, `EOMONTH` | `CONVERT` / `DATEADD` / `DATEDIFF` |
+| `LEAD`, `LAG`, `THROW`, `SEQUENCE` | — |
+
+現有分頁實作範例：`SqlUsageRepository.GetLogs()`。
+
 ## 開發指令
 
 ```bash
