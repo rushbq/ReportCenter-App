@@ -15,11 +15,14 @@ namespace ReportCenter.Web.Pages.Admin;
 public class CatalogModel : AdminPageModel
 {
     private readonly ICatalogService _catalogSvc;
+    private readonly IUsageService _usageSvc;
 
-    public CatalogModel(ICatalogService catalogSvc, IPermissionService permSvc, IReportService reportSvc)
+    public CatalogModel(ICatalogService catalogSvc, IUsageService usageSvc,
+        IPermissionService permSvc, IReportService reportSvc)
         : base(reportSvc, permSvc)
     {
         _catalogSvc = catalogSvc;
+        _usageSvc = usageSvc;
     }
 
     // ─── 頁面資料屬性 ───
@@ -48,6 +51,9 @@ public class CatalogModel : AdminPageModel
     /// <summary>上海部門清單 (依 User_Dept Area=SH)</summary>
     public List<CatalogDept> AllDeptsCN { get; set; } = [];
 
+    /// <summary>近 30 日使用彙總 (ReportID → 彙總)；清單中查無 key 者表示期間內 0 次</summary>
+    public Dictionary<int, ReportUsageSummary> UsageMap { get; set; } = [];
+
     // ─── GET Handler ───
 
     public IActionResult OnGet(string? tool, string? active, string? search)
@@ -60,6 +66,7 @@ public class CatalogModel : AdminPageModel
         };
 
         CatalogItems = _catalogSvc.GetCatalogItems(tool, isActive, search);
+        UsageMap = _usageSvc.GetRecentUsageMap();
         AllDependencies = _catalogSvc.GetAllDependencyObjects();
         Categories = _catalogSvc.GetCategories();
 

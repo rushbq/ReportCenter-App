@@ -27,7 +27,10 @@
         categoryID = i.CategoryID,
         categoryName = i.CategoryName,
         departments = i.Departments.Select(d => new { deptID = d.DeptID, deptName = d.DeptName }),
-        dependencies = i.Dependencies
+        dependencies = i.Dependencies,
+        // 近 30 日使用彙總；查無 key 表示期間內 0 次
+        usageClicks = Model.UsageMap.TryGetValue(i.ReportID, out var u) ? u.Clicks : 0,
+        usageLastUsed = Model.UsageMap.TryGetValue(i.ReportID, out var u2) ? u2.LastUsed?.ToString("yyyy/MM/dd") ?? "" : ""
     }), jsonOpts);
     var deptsTwJson = JsonSerializer.Serialize(Model.AllDeptsTW.Select(d => new {
         area = d.Area,
@@ -159,6 +162,7 @@
                         <th class="px-3 py-3 text-left font-semibold w-[74px]">狀態</th>
                         <th class="px-3 py-3 text-left font-semibold hidden md:table-cell">部門</th>
                         <th class="px-3 py-3 text-left font-semibold hidden lg:table-cell w-[100px]">分類</th>
+                        <th class="px-3 py-3 text-right font-semibold w-[104px] hidden lg:table-cell">近 30 日使用</th>
                         <th class="px-3 py-3 text-right font-semibold w-[104px] hidden sm:table-cell">更新日期</th>
                         <th class="px-4 py-3 text-right font-semibold w-[112px]">操作</th>
                     </tr>
@@ -209,6 +213,21 @@
                             <td class="px-3 py-3.5 hidden lg:table-cell">
                                 <span x-show="item.categoryName" class="text-[10px] px-1.5 py-0.5 rounded-full font-medium" :class="catBadge(item.categoryName)" x-text="item.categoryName"></span>
                                 <span x-show="!item.categoryName" class="text-[10px] text-txt-ter">-</span>
+                            </td>
+                            <td class="px-3 py-3.5 text-right hidden lg:table-cell">
+                                <a :href="'/Admin/Usage?reportId=' + item.reportID"
+                                   :title="item.usageClicks > 0
+                                       ? '近 30 日 ' + item.usageClicks + ' 次，最後使用 ' + item.usageLastUsed + ' — 點擊查看明細'
+                                       : '近 30 日無使用記錄 — 點擊查看明細'"
+                                   class="inline-flex flex-col items-end gap-0.5 no-underline group">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-semibold tabular-nums transition-colors"
+                                          :class="item.usageClicks > 0
+                                              ? 'bg-pri/10 text-pri group-hover:bg-pri/20'
+                                              : (item.isActive ? 'bg-bad/10 text-bad group-hover:bg-bad/20' : 'bg-surface text-txt-ter')"
+                                          x-text="item.usageClicks"></span>
+                                    <span class="text-[10px] text-txt-ter tabular-nums whitespace-nowrap"
+                                          x-text="item.usageLastUsed || '—'"></span>
+                                </a>
                             </td>
                             <td class="px-3 py-3.5 text-right text-[11px] text-txt-sec tabular-nums whitespace-nowrap hidden sm:table-cell" x-text="item.displayDate"></td>
                             <td class="px-4 py-3.5">

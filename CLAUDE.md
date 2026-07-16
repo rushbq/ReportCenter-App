@@ -28,20 +28,29 @@ ReportCenter.Web/
 │   ├── IPksysRepository.cs         # PKSYS DAL 介面 (User_Dept + User_Profile)
 │   ├── SqlPksysRepository.cs       # PKSYS Dapper 實作
 │   ├── IPermissionRepository.cs    # 權限 DAL 介面 (ReportCenter DB)
-│   └── SqlPermissionRepository.cs  # 權限 Dapper 實作
+│   ├── SqlPermissionRepository.cs  # 權限 Dapper 實作
+│   ├── IUsageRepository.cs         # 使用記錄 DAL 介面 (ReportCenter DB)
+│   └── SqlUsageRepository.cs       # 使用記錄 Dapper 實作
 ├── Services/
 │   ├── IReportService.cs           # 資料服務介面
 │   ├── SqlReportService.cs         # SQL 實作 (含權限過濾)
 │   ├── MockReportService.cs        # Mock 實作 (儀表板 KPI/圖表)
 │   ├── IPermissionService.cs       # 權限管理 BLL 介面
-│   └── PermissionService.cs        # 權限管理 BLL 實作
+│   ├── PermissionService.cs        # 權限管理 BLL 實作
+│   ├── IUsageService.cs            # 報表使用記錄 BLL 介面
+│   └── UsageService.cs             # 報表使用記錄 BLL 實作 (防重複、統計)
 ├── Pages/
 │   ├── Index.cshtml(.cs)           # 首頁 (快速存取釘選報表；營運總覽儀表板規劃中，暫已移除)
 │   ├── Department.cshtml(.cs)      # 部門報表列表 (搜尋、分類 Tab、卡片檢視)
 │   ├── Admin/
-│   │   ├── Index.cshtml(.cs)       # 管理總覽 (KPI、部門矩陣、孤立報表、相依性分析)
+│   │   ├── Index.cshtml(.cs)       # 管理總覽 (KPI、部門矩陣、孤立報表、冷門報表)
 │   │   ├── Catalog.cshtml(.cs)     # 報表目錄管理 (CRUD、篩選、編輯 Modal)
+│   │   ├── Usage.cshtml(.cs)       # 使用分析 (分析總覽 / 明細查詢 兩 Tab)
 │   │   └── Permission.cshtml(.cs)  # 權限管理 (批次指派、個人權限)
+│   ├── Api/
+│   │   ├── Favorite.cshtml(.cs)    # 收藏切換 API
+│   │   ├── Pin.cshtml(.cs)         # 釘選 API
+│   │   └── Usage.cshtml(.cs)       # 使用記錄埋點 API (sendBeacon 呼叫)
 │   └── Shared/
 │       ├── _Layout.cshtml          # 主版面配置 (TopNav + Sidebar + Content + 搜尋 Modal)
 │       ├── _TopNav.cshtml          # 頂部導航列 (Logo、公司選單、搜尋、使用者資訊)
@@ -62,6 +71,7 @@ ReportCenter.Web/
     ├── frontend-spec.md            # 前端技術規格文件
     ├── db-ddl.sql                  # ReportCenter DB 完整 DDL
     ├── migration-001-permission.sql # 權限表 Migration
+    ├── migration-002-usage-log.sql  # 使用記錄表 Migration
     ├── shared-infra.Production.template.json        # 伺服器共用機密範本
     └── reportWebApp-Site.Production.template.json   # 站台專用機密範本
 ```
@@ -72,8 +82,9 @@ ReportCenter.Web/
 |------|------|------|
 | `/` | Index | 首頁 (快速存取釘選報表) |
 | `/Department?dept={id}` | Department | 部門報表列表 |
-| `/Admin` | Admin/Index | 報表管理總覽 (KPI、部門矩陣、孤立報表) |
+| `/Admin` | Admin/Index | 報表管理總覽 (KPI、部門矩陣、孤立報表、冷門報表) |
 | `/Admin/Catalog` | Admin/Catalog | 報表目錄管理 (CRUD) |
+| `/Admin/Usage` | Admin/Usage | 使用分析 (分析總覽 / 明細查詢 兩 Tab) |
 | `/Admin/Permission` | Admin/Permission | 權限管理 (批次指派、個人權限) |
 
 ## 資料架構 (Service Layer)
@@ -103,6 +114,17 @@ IPksysRepository (介面)             # PKSYS 資料存取層 (User_Dept + User_
 
 IPermissionRepository (介面)        # 權限資料存取層 (ReportCenter DB)
   └── SqlPermissionRepository       # Dapper + SQL Server
+
+IUsageService (介面)                # 報表使用記錄 BLL
+  └── UsageService                  # 依賴 IUsageRepository + IPksysRepository + IReportService
+      ├── TrackClick()              → 記錄點擊 (30 秒防重複、解析公司別與來源)
+      ├── GetOverview()             → 使用分析總覽 (KPI、30 日趨勢、熱門 Top、冷門清單)
+      ├── GetLogs()                 → 明細分頁查詢 (使用者關鍵字先經 PKSYS 解析為員編)
+      ├── GetColdReports()          → 冷門報表 (啟用中且 90 日 0 次)
+      └── GetRecentUsageMap()       → 近 30 日彙總對照 (目錄管理清單欄位用)
+
+IUsageRepository (介面)             # 使用記錄資料存取層 (ReportCenter DB)
+  └── SqlUsageRepository            # Dapper + SQL Server
 ```
 
 ## 雙連線字串
@@ -278,6 +300,7 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 | `UserReportPermission` | 使用者報表權限 | `PermissionID` (IDENTITY) + UQ `(EmployeeId, ReportID)` |
 | `UserFavorite` | 使用者收藏 | `(UserID, ReportID)` |
 | `UserPin` | 使用者釘選 (快速存取) | `(UserID, ReportID)` |
+| `ReportUsageLog` | 報表使用記錄 (點擊埋點) | `LogID` (IDENTITY) |
 
 ### PKSYS 資料庫 (外部系統，唯讀)
 
@@ -285,6 +308,59 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 |--------|------|
 | `User_Dept` | 部門主檔 (Area, DeptID, DeptName) |
 | `User_Profile` | 人員主檔 (Account_Name, Display_Name, DeptID) |
+
+## 報表使用記錄
+
+### 埋點機制
+
+報表皆為外部連結 (`<a target="_blank">`)，**不做中介導向頁**——使用者點擊即直接開啟報表，記錄在背景送出。
+
+- `site.js` 以 **document 委派監聽** `click` / `auxclick` (中鍵開新分頁)，
+  抓取最近的 `[data-report-id]` 祖先元素，用 `navigator.sendBeacon()` 送 `/Api/Usage?handler=Track`
+- `sendBeacon` 不阻塞、不延遲開新視窗；記錄遺漏可接受 (分析數據，非稽核數據)
+- 使用者身分由後端從 Windows 驗證 Claims 取得，前端不傳
+
+**四個埋點入口** (新增報表連結時務必比照加上這兩個屬性)：
+
+| 入口 | 位置 | `data-report-source` |
+|------|------|---------------------|
+| 部門報表卡片 | `Department.cshtml` | `department` |
+| 首頁釘選 | `Index.cshtml` | `pin` |
+| 側欄收藏 | `_Sidebar.cshtml` | `favorite` |
+| 全站搜尋 Modal | `_Layout.cshtml` → `$store.search.go()` | `search` |
+
+> 搜尋 Modal 是動態建立 `<a>` 後 `.click()`，不經委派監聽，因此 `go()` 內直接呼叫
+> `window.trackReportClick(reportId, 'search')`。
+
+### 防重複點擊 (30 秒)
+
+同一使用者對同一報表 30 秒內重複點擊只記錄一次。雙層防護：
+
+1. **前端節流** (`site.js`)：頁面內記住各報表最後送出時間，省下無謂請求
+2. **後端防護** (`UsageService.DedupeSeconds`)：INSERT 前檢查最後一筆是否在 30 秒內 —
+   **這層才是權威**，跨分頁 / 重新整理都擋得住
+
+> 30 秒的取捨：誤觸雙擊、開了沒載入又點一次都在數秒內；超過 30 秒的重複點擊
+> (如換參數重查) 視為有意義的再次使用，應該記錄。
+
+### 公司別解析
+
+`UsageService.ResolveCompanyId()` **必須與 `_TopNav` 的顯示邏輯一致**：cookie 有效才採用，
+否則退回 `user.CompanyId`。`companyId` cookie 只在使用者主動切換公司時才寫入，
+直接讀 cookie 會讓沒切換過的使用者記錄全成空值。
+
+### 統計期間
+
+| 用途 | 期間 | 定義 |
+|------|------|------|
+| 近期統計 (KPI、趨勢、目錄欄位) | 30 日 | `DateTime.Today.AddDays(-29)` 起 (含今天的滾動天數) |
+| 冷門判定 | 90 日 | 啟用中且期間內 0 次 |
+
+### 資料保留
+
+- 量小 (估計每年 < 10 萬筆)，**不做彙總表**，加索引直接查原始表；真的變慢再加
+- 廢除報表走 `IsActive=0` (非刪除)，記錄完整保留；硬刪除才會 FK CASCADE 清掉
+- 目前不做保留期限清理
 
 ## 篩選功能
 
@@ -294,6 +370,7 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 | Admin/Catalog | 工具類型（全部/SmartQuery/SSRS） | 前端 Alpine 篩選 |
 | Admin/Catalog | 狀態（全部/啟用/停用） | 前端 Alpine 篩選 |
 | Admin/Catalog | 搜尋（名稱、來源、路徑） | 前端 Alpine 篩選 |
+| Admin/Usage | 明細查詢（報表、使用者、日期區間） | **伺服器端**篩選 + 分頁（明細持續成長，不走前端全載） |
 
 ## 報表目錄管理
 
@@ -315,12 +392,13 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 - `Dependencies` — 相依物件清單 (對應 DB `ReportDependency`)
 - `AdminStats` — 管理總覽 KPI ViewModel，含 `DeptUsagesTW` / `DeptUsagesSH` (依區域分開)
 - `DeptUsage` — 部門 → 報表對照
-- `DependencyGroup` — 相依性分析 ViewModel (Admin/Index.cshtml.cs)
 
 ### 管理功能
 
-- **總覽頁 (`/Admin`)**: KPI 卡片、部門使用矩陣 (台灣/上海雙欄)、孤立報表警示、最近異動、相依性分析
-- **目錄管理 (`/Admin/Catalog`)**: 搜尋篩選 (工具類型/啟停狀態/資料夾)、新增/編輯 Modal (Tab 分頁: 基本設定、部門指派、進階設定)、啟停切換、刪除確認
+- **總覽頁 (`/Admin`)**: KPI 卡片、部門使用矩陣 (台灣/上海雙欄)、孤立報表警示、冷門報表警示 (預覽 6 筆，完整清單在 `/Admin/Usage`)
+- **目錄管理 (`/Admin/Catalog`)**: 搜尋篩選 (工具類型/啟停狀態/資料夾)、新增/編輯 Modal (Tab 分頁: 基本設定、部門指派、進階設定)、啟停切換、刪除確認、
+  「近 30 日使用」欄 (點擊數 badge + 最後使用日；啟用中 0 次顯示警示色，數字連結下鑽至 `/Admin/Usage?reportId=`)
+- **使用分析 (`/Admin/Usage`)**: 分析總覽 Tab (KPI、30 日趨勢圖、熱門 Top 10 可切 30/90 日、冷門清單)、明細查詢 Tab (篩選 + 伺服器端分頁)
 
 ### 部門過濾規則
 

@@ -1,6 +1,6 @@
 -- ============================================================
 --  ReportCenter 資料庫 DDL — 完整結構定義
---  最後更新：2026-04-08
+--  最後更新：2026-07-15
 --
 --  本檔案包含 ReportCenter 資料庫的所有資料表、索引、
 --  條件約束定義。執行順序已考慮 FK 相依性。
@@ -143,6 +143,29 @@ BEGIN
         CONSTRAINT FK_Pin_Catalog FOREIGN KEY (ReportID)
             REFERENCES ReportCatalog(ReportID) ON DELETE CASCADE
     );
+END
+GO
+
+
+-- ────────────────────────────────────────────────────────────
+--  8. ReportUsageLog — 報表使用記錄
+-- ────────────────────────────────────────────────────────────
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ReportUsageLog')
+BEGIN
+    CREATE TABLE ReportUsageLog (
+        LogID       BIGINT        IDENTITY(1,1) PRIMARY KEY,
+        ReportID    INT           NOT NULL,                     -- 對應 ReportCatalog.ReportID
+        EmployeeId  NVARCHAR(20)  NOT NULL,                     -- 對應 PKSYS.User_Profile.Account_Name
+        CompanyId   NVARCHAR(10)  NOT NULL DEFAULT '',          -- 點擊當下的公司別 (companyId Cookie)
+        Source      NVARCHAR(20)  NOT NULL DEFAULT '',          -- 入口：department / pin / favorite / search
+        ClickedAt   DATETIME2(0)  NOT NULL DEFAULT SYSDATETIME(),
+
+        CONSTRAINT FK_UsageLog_Catalog FOREIGN KEY (ReportID)
+            REFERENCES ReportCatalog(ReportID) ON DELETE CASCADE
+    );
+
+    CREATE NONCLUSTERED INDEX IX_UsageLog_Report   ON ReportUsageLog (ReportID, ClickedAt);
+    CREATE NONCLUSTERED INDEX IX_UsageLog_Employee ON ReportUsageLog (EmployeeId, ClickedAt);
 END
 GO
 

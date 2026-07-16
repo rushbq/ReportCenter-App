@@ -115,12 +115,14 @@ try
     builder.Services.AddScoped<ICatalogRepository, SqlCatalogRepository>();
     builder.Services.AddScoped<IPksysRepository, SqlPksysRepository>();
     builder.Services.AddScoped<IPermissionRepository, SqlPermissionRepository>();
+    builder.Services.AddScoped<IUsageRepository, SqlUsageRepository>();
 
     // BLL — 商業邏輯層
     builder.Services.AddScoped<SqlReportService>();
     builder.Services.AddScoped<IReportService>(sp => sp.GetRequiredService<SqlReportService>());
     builder.Services.AddScoped<ICatalogService, CatalogService>();
     builder.Services.AddScoped<IPermissionService, PermissionService>();
+    builder.Services.AddScoped<IUsageService, UsageService>();
 
     var app = builder.Build();
 

@@ -123,7 +123,7 @@
                 </template>
                 <template x-for="r in $store.search.results" :key="r.url">
                     <button class="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-surface border-0 bg-transparent cursor-pointer border-b border-bdr-light"
-                            @@click="$store.search.go(r.url, r.target)">
+                            @@click="$store.search.go(r.url, r.target, r.reportId)">
                         <svg class="w-4 h-4 text-pri mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                         <div class="flex-1 min-w-0">
                             <div class="text-[13px] font-semibold text-txt truncate" x-text="r.name"></div>
@@ -170,7 +170,7 @@
                 var url = report.ReportTool == "SSRS"
                     ? layoutBaseUrls.SSRS + report.ReportCode
                     : layoutBaseUrls.SmartQuery + report.ReportCode;
-                searchIndex.Add(new { name = report.Name, desc = report.Desc, dept = dept.Label, deptId = dept.Id, cat = report.Cat, reportTool = report.ReportTool, url, target = "_blank" });
+                searchIndex.Add(new { reportId = report.ReportID, name = report.Name, desc = report.Desc, dept = dept.Label, deptId = dept.Id, cat = report.Cat, reportTool = report.ReportTool, url, target = "_blank" });
             }
         }
     }

@@ -73,7 +73,6 @@ public class CatalogService : ICatalogService
             SmartQueryCount = items.Count(i => i.ReportTool == "SmartQuery"),
             SsrsCount = items.Count(i => i.ReportTool == "SSRS"),
             OrphanCount = items.Count(i => i.Departments.Count == 0),
-            RecentItems = items.OrderByDescending(i => i.ModifyDate ?? i.CreateDate).Take(10).ToList(),
             OrphanItems = items.Where(i => i.Departments.Count == 0).ToList(),
         };
 

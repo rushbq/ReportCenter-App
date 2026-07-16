@@ -1,0 +1,396 @@
+@page
+@using System.Text.Json
+@using System.Text.Encodings.Web
+@model ReportCenter.Web.Pages.Admin.UsageModel
+
+@if (Model.AccessDenied)
+{
+    <partial name="_AccessDenied" />
+    return;
+}
+
+@{
+    var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    var dailyLabelsJson = JsonSerializer.Serialize(Model.Overview.Daily30.Select(d => d.Date.ToString("MM/dd")), jsonOpts);
+    var dailyCountsJson = JsonSerializer.Serialize(Model.Overview.Daily30.Select(d => d.Count), jsonOpts);
+
+    string SourceLabel(string source) => source switch
+    {
+        "department" => "部門頁",
+        "pin" => "釘選",
+        "favorite" => "收藏",
+        "search" => "搜尋",
+        _ => "—"
+    };
+
+    string CompanyLabel(string companyId) => companyId switch
+    {
+        "tw" => "台灣",
+        "sh" => "上海",
+        _ => companyId
+    };
+
+    // x-cloak 為「屬性存在即隱藏」(見 _Layout 的 [x-cloak] 規則)，值是什麼都一樣。
+    // 因此只在「Alpine 初始化後會被 x-show 藏起來」的區塊掛上，用 null 讓 Razor 整個省略屬性。
+    string? Cloak(bool hiddenAfterInit) => hiddenAfterInit ? "" : null;
+}
+
+<div class="page-container" x-data="{ tab: '@Model.Tab', topPeriod: '30' }">
+
+    <!-- 麵包屑 -->
+    <div class="flex items-center gap-1.5 text-[12px] text-txt-ter mb-4">
+        <a href="/" class="hover:text-pri no-underline text-txt-ter">首頁</a>
+        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        <a href="/Admin" class="hover:text-pri no-underline text-txt-ter">系統管理</a>
+        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        <span class="text-txt font-medium">使用分析</span>
+    </div>
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start mb-5 gap-3">
+        <div>
+            <h1 class="text-[20px] md:text-[22px] font-bold text-txt">報表使用分析</h1>
+            <div class="text-[12px] text-txt-ter mt-1">點擊記錄統計 — 熱門/冷門報表與使用明細</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b-2 border-bdr mb-5">
+        <button @@click="tab='overview'" :aria-pressed="tab==='overview'"
+                :class="tab==='overview' ? 'font-semibold text-pri border-b-2 border-pri' : 'text-txt-sec border-b-2 border-transparent'"
+                class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent whitespace-nowrap">
+            <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>分析總覽
+        </button>
+        <button @@click="tab='logs'" :aria-pressed="tab==='logs'"
+                :class="tab==='logs' ? 'font-semibold text-pri border-b-2 border-pri' : 'text-txt-sec border-b-2 border-transparent'"
+                class="px-4 py-2.5 text-[13px] cursor-pointer -mb-[2px] flex items-center gap-1.5 bg-transparent whitespace-nowrap">
+            <i data-lucide="list" class="w-3.5 h-3.5"></i>明細查詢
+        </button>
+    </div>
+
+    <!-- ═══ Tab 1：分析總覽 ═══ -->
+    <div x-show="tab==='overview'" x-cloak="@Cloak(Model.Tab != "overview")">
+
+        <!-- KPI 卡片 -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
+            <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[12px] text-txt-sec">近 30 日總點擊</span>
+                    <span class="w-7 h-7 rounded-lg bg-pri-light flex items-center justify-center shrink-0">
+                        <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-pri"></i>
+                    </span>
+                </div>
+                <div class="text-[26px] font-bold text-pri leading-none">@Model.Overview.Clicks30</div>
+                <div class="text-[11px] text-txt-ter mt-1.5">30 秒內重複點擊已排除</div>
+            </div>
+            <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[12px] text-txt-sec">活躍使用者</span>
+                    <span class="w-7 h-7 rounded-lg bg-sky-50 flex items-center justify-center shrink-0">
+                        <i data-lucide="users" class="w-4 h-4 text-sky-600"></i>
+                    </span>
+                </div>
+                <div class="text-[26px] font-bold text-sky-700 leading-none">@Model.Overview.ActiveUsers30</div>
+                <div class="text-[11px] text-txt-ter mt-1.5">近 30 日有開啟報表的人數</div>
+            </div>
+            <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[12px] text-txt-sec">使用中報表</span>
+                    <span class="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                        <i data-lucide="file-check" class="w-4 h-4 text-emerald-600"></i>
+                    </span>
+                </div>
+                <div class="text-[26px] font-bold text-emerald-700 leading-none">
+                    @Model.Overview.UsedReports30<span class="text-[14px] text-txt-ter font-medium"> / @Model.Overview.ActiveReportTotal</span>
+                </div>
+                <div class="text-[11px] text-txt-ter mt-1.5">近 30 日有被使用 / 啟用總數</div>
+            </div>
+            <div class="bg-white rounded-xl border border-bdr p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[12px] text-txt-sec">冷門報表</span>
+                    <span class="w-7 h-7 rounded-lg bg-bad/10 flex items-center justify-center shrink-0">
+                        <i data-lucide="snowflake" class="w-4 h-4 text-bad"></i>
+                    </span>
+                </div>
+                <div class="text-[26px] font-bold text-bad leading-none">@Model.Overview.ColdReports.Count</div>
+                <div class="text-[11px] text-txt-ter mt-1.5">啟用中但 90 日內 0 次使用</div>
+            </div>
+        </div>
+
+        <!-- 每日點擊趨勢 -->
+        <div class="bg-white rounded-xl border border-bdr shadow-sm mb-5">
+            <div class="px-5 py-3.5 border-b border-bdr flex items-center gap-2">
+                <i data-lucide="trending-up" class="w-4 h-4 text-pri"></i>
+                <h2 class="text-[14px] font-semibold text-txt">每日點擊趨勢（近 30 日）</h2>
+            </div>
+            <div class="p-5">
+                <div class="h-[220px]">
+                    <canvas id="usageTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+            <!-- 熱門排行 -->
+            <div class="bg-white rounded-xl border border-bdr shadow-sm">
+                <div class="px-5 py-3.5 border-b border-bdr flex items-center gap-2">
+                    <i data-lucide="flame" class="w-4 h-4 text-amber-500"></i>
+                    <h2 class="text-[14px] font-semibold text-txt">熱門報表 Top 10</h2>
+                    <div class="ml-auto flex rounded-lg border border-bdr overflow-hidden">
+                        <button @@click="topPeriod='30'"
+                                :class="topPeriod==='30' ? 'bg-pri text-white' : 'bg-white text-txt-sec'"
+                                class="px-2.5 py-1 text-[11px] cursor-pointer border-0">近 30 日</button>
+                        <button @@click="topPeriod='90'"
+                                :class="topPeriod==='90' ? 'bg-pri text-white' : 'bg-white text-txt-sec'"
+                                class="px-2.5 py-1 text-[11px] cursor-pointer border-0">近 90 日</button>
+                    </div>
+                </div>
+                @foreach (var (list, period) in new[] { (Model.Overview.Top30, "30"), (Model.Overview.Top90, "90") })
+                {
+                    <div x-show="topPeriod==='@period'" x-cloak="@Cloak(period == "90")" class="overflow-x-auto">
+                        @if (list.Count == 0)
+                        {
+                            <div class="text-center py-8 text-[12px] text-txt-ter">期間內尚無使用記錄</div>
+                        }
+                        else
+                        {
+                            <table class="w-full text-[13px]">
+                                <thead>
+                                    <tr class="bg-surface text-txt-sec text-[11px]">
+                                        <th class="px-4 py-2.5 text-left font-semibold w-8">#</th>
+                                        <th class="px-2 py-2.5 text-left font-semibold">報表名稱</th>
+                                        <th class="px-2 py-2.5 text-right font-semibold">點擊</th>
+                                        <th class="px-2 py-2.5 text-right font-semibold">人數</th>
+                                        <th class="px-4 py-2.5 text-right font-semibold">最後使用</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (var i = 0; i < list.Count; i++)
+                                    {
+                                        var r = list[i];
+                                        <tr class="border-t border-bdr-light hover:bg-surface/50 transition-colors">
+                                            <td class="px-4 py-2.5 text-[12px] font-bold @(i < 3 ? "text-amber-500" : "text-txt-ter")">@(i + 1)</td>
+                                            <td class="px-2 py-2.5">
+                                                <a href="/Admin/Usage?reportId=@r.ReportID" class="font-medium text-txt no-underline hover:text-pri transition-colors">@r.ReportName</a>
+                                                @if (!string.IsNullOrEmpty(r.CategoryName))
+                                                {
+                                                    <div class="text-[10px] text-txt-ter mt-0.5">@r.CategoryName</div>
+                                                }
+                                            </td>
+                                            <td class="px-2 py-2.5 text-right font-semibold text-pri">@r.Clicks</td>
+                                            <td class="px-2 py-2.5 text-right text-txt-sec">@r.Users</td>
+                                            <td class="px-4 py-2.5 text-right text-[11px] text-txt-sec">@r.LastUsed?.ToString("yyyy/MM/dd")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- 冷門清單 -->
+            <div class="bg-white rounded-xl border border-bdr shadow-sm">
+                <div class="px-5 py-3.5 border-b border-bdr flex items-center gap-2">
+                    <i data-lucide="snowflake" class="w-4 h-4 text-sky-500"></i>
+                    <h2 class="text-[14px] font-semibold text-txt">冷門報表（90 日內 0 次使用）</h2>
+                    @if (Model.Overview.ColdReports.Count > 0)
+                    {
+                        <span class="ml-auto px-2 py-0.5 rounded-full bg-bad/10 text-bad text-[11px] font-semibold">@Model.Overview.ColdReports.Count</span>
+                    }
+                </div>
+                <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+                    @if (Model.Overview.ColdReports.Count == 0)
+                    {
+                        <div class="text-center py-8">
+                            <i data-lucide="check-circle" class="w-8 h-8 text-ok mx-auto mb-2"></i>
+                            <div class="text-[13px] text-txt-sec">所有啟用中的報表近 90 日皆有使用</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="w-full text-[13px]">
+                            <thead>
+                                <tr class="bg-surface text-txt-sec text-[11px]">
+                                    <th class="px-4 py-2.5 text-left font-semibold">報表名稱</th>
+                                    <th class="px-2 py-2.5 text-left font-semibold">分類</th>
+                                    <th class="px-4 py-2.5 text-right font-semibold">最後使用</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in Model.Overview.ColdReports)
+                                {
+                                    <tr class="border-t border-bdr-light hover:bg-surface/50 transition-colors">
+                                        <td class="px-4 py-2.5">
+                                            <a href="/Admin/Catalog?edit=@r.ReportID" class="font-medium text-txt no-underline hover:text-pri transition-colors">@r.ReportName</a>
+                                        </td>
+                                        <td class="px-2 py-2.5 text-[11px] text-txt-sec">@r.CategoryName</td>
+                                        <td class="px-4 py-2.5 text-right text-[11px]">
+                                            @if (r.LastUsed.HasValue)
+                                            {
+                                                <span class="text-txt-sec">@r.LastUsed.Value.ToString("yyyy/MM/dd")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-bad/10 text-bad text-[10px] font-medium">從未使用</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Tab 2：明細查詢 ═══ -->
+    <div x-show="tab==='logs'" x-cloak="@Cloak(Model.Tab != "logs")">
+
+        <!-- 篩選列 -->
+        <form method="get" class="bg-white rounded-xl border border-bdr shadow-sm p-4 mb-4 flex flex-wrap items-end gap-3">
+            <input type="hidden" name="tab" value="logs" />
+            <div>
+                <label for="filterReport" class="block text-[11px] text-txt-sec mb-1">報表</label>
+                <select id="filterReport" name="reportId"
+                        class="border border-bdr rounded-lg px-2.5 py-[7px] text-[12px] text-txt bg-white min-w-[200px]">
+                    <option value="">全部報表</option>
+                    @foreach (var r in Model.AllReports)
+                    {
+                        <option value="@r.ReportID" selected="@(Model.FilterReportId == r.ReportID)">@r.ReportName@(r.IsActive ? "" : "（停用）")</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label for="filterUser" class="block text-[11px] text-txt-sec mb-1">使用者</label>
+                <input id="filterUser" type="text" name="user" value="@Model.FilterUser" placeholder="員編或姓名"
+                       class="border border-bdr rounded-lg px-2.5 py-[7px] text-[12px] text-txt w-[140px] placeholder:text-txt-ter" />
+            </div>
+            <div>
+                <label for="filterFrom" class="block text-[11px] text-txt-sec mb-1">起始日</label>
+                <input id="filterFrom" type="date" name="from" value="@Model.FilterFrom?.ToString("yyyy-MM-dd")"
+                       class="border border-bdr rounded-lg px-2.5 py-[6px] text-[12px] text-txt" />
+            </div>
+            <div>
+                <label for="filterTo" class="block text-[11px] text-txt-sec mb-1">結束日</label>
+                <input id="filterTo" type="date" name="to" value="@Model.FilterTo?.ToString("yyyy-MM-dd")"
+                       class="border border-bdr rounded-lg px-2.5 py-[6px] text-[12px] text-txt" />
+            </div>
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 bg-pri text-white rounded-lg text-[12px] font-medium cursor-pointer border-0 hover:bg-pri-hover transition-colors">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>查詢
+            </button>
+            <a href="/Admin/Usage?tab=logs"
+               class="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-txt-sec border border-bdr rounded-lg text-[12px] no-underline hover:text-pri hover:border-pri/40 transition-colors">
+                清除
+            </a>
+        </form>
+
+        <!-- 明細表格 -->
+        <div class="bg-white rounded-xl border border-bdr shadow-sm">
+            <div class="px-5 py-3.5 border-b border-bdr flex items-center gap-2">
+                <i data-lucide="list" class="w-4 h-4 text-pri"></i>
+                <h2 class="text-[14px] font-semibold text-txt">使用明細</h2>
+                <span class="ml-auto text-[11px] text-txt-ter">共 @Model.Logs.Total 筆</span>
+            </div>
+            @if (Model.Logs.Items.Count == 0)
+            {
+                <div class="text-center py-12">
+                    <i data-lucide="inbox" class="w-10 h-10 text-txt-ter mx-auto mb-3"></i>
+                    <div class="text-txt-sec text-sm">查無符合條件的使用記錄</div>
+                </div>
+            }
+            else
+            {
+                <div class="overflow-x-auto">
+                    <table class="w-full text-[13px]">
+                        <thead>
+                            <tr class="bg-surface text-txt-sec text-[11px]">
+                                <th class="px-5 py-2.5 text-left font-semibold">時間</th>
+                                <th class="px-3 py-2.5 text-left font-semibold">報表名稱</th>
+                                <th class="px-3 py-2.5 text-left font-semibold">使用者</th>
+                                <th class="px-3 py-2.5 text-center font-semibold">來源</th>
+                                <th class="px-5 py-2.5 text-center font-semibold">公司別</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in Model.Logs.Items)
+                            {
+                                <tr class="border-t border-bdr-light hover:bg-surface/50 transition-colors">
+                                    <td class="px-5 py-2.5 text-[12px] text-txt-sec whitespace-nowrap">@log.ClickedAt.ToString("yyyy/MM/dd HH:mm:ss")</td>
+                                    <td class="px-3 py-2.5 font-medium text-txt">@log.ReportName</td>
+                                    <td class="px-3 py-2.5">
+                                        <div class="text-txt">@log.UserName</div>
+                                        <div class="text-[11px] text-txt-ter">
+                                            @log.EmployeeId@(string.IsNullOrEmpty(log.DeptName) ? "" : " · " + log.DeptName)
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-2.5 text-center text-[11px] text-txt-sec">@SourceLabel(log.Source)</td>
+                                    <td class="px-5 py-2.5 text-center text-[11px] text-txt-sec">@CompanyLabel(log.CompanyId)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 分頁 -->
+                @if (Model.Logs.TotalPages > 1)
+                {
+                    <div class="px-5 py-3 border-t border-bdr flex items-center justify-between">
+                        <span class="text-[11px] text-txt-ter">第 @Model.Logs.Page / @Model.Logs.TotalPages 頁</span>
+                        <div class="flex gap-2">
+                            @if (Model.Logs.Page > 1)
+                            {
+                                <a href="@Model.LogsPageUrl(Model.Logs.Page - 1)"
+                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-bdr bg-white text-[12px] text-txt-sec no-underline hover:text-pri hover:border-pri/40 transition-colors">
+                                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>上一頁
+                                </a>
+                            }
+                            @if (Model.Logs.Page < Model.Logs.TotalPages)
+                            {
+                                <a href="@Model.LogsPageUrl(Model.Logs.Page + 1)"
+                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-bdr bg-white text-[12px] text-txt-sec no-underline hover:text-pri hover:border-pri/40 transition-colors">
+                                    下一頁<i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ctx = document.getElementById('usageTrendChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: @Html.Raw(dailyLabelsJson),
+            datasets: [{
+                label: '點擊數',
+                data: @Html.Raw(dailyCountsJson),
+                borderColor: '#005758',
+                backgroundColor: 'rgba(0, 180, 182, 0.08)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 2,
+                pointHoverRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } }
+            }
+        }
+    });
+});
+</script>
+}

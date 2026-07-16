@@ -182,7 +182,6 @@ public class AdminStats
     public int SmartQueryCount { get; set; }
     public int SsrsCount { get; set; }
     public int OrphanCount { get; set; }
-    public List<ReportCatalogItem> RecentItems { get; set; } = [];
     public List<ReportCatalogItem> OrphanItems { get; set; } = [];
     public List<DeptUsage> DeptUsagesTW { get; set; } = [];
     public List<DeptUsage> DeptUsagesSH { get; set; } = [];
@@ -244,4 +243,74 @@ public class ReportTreeItem
     public string ReportName { get; set; } = "";
     public string ReportTool { get; set; } = "";
     public bool IsActive { get; set; }
+}
+
+// ─── 報表使用記錄 ───
+
+/// <summary>報表使用記錄明細列 (含 JOIN 顯示欄位)</summary>
+public class UsageLogItem
+{
+    public long LogID { get; set; }
+    public int ReportID { get; set; }
+    public string EmployeeId { get; set; } = "";
+    public string CompanyId { get; set; } = "";
+    public string Source { get; set; } = "";       // department / pin / favorite / search
+    public DateTime ClickedAt { get; set; }
+    // JOIN 欄位 (顯示用)
+    public string ReportName { get; set; } = "";
+    public string UserName { get; set; } = "";     // PKSYS Display_Name (BLL 補齊)
+    public string DeptName { get; set; } = "";     // PKSYS DeptName (BLL 補齊)
+}
+
+/// <summary>使用明細分頁結果</summary>
+public class UsageLogPage
+{
+    public int Total { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+    public List<UsageLogItem> Items { get; set; } = [];
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)Total / PageSize) : 0;
+}
+
+/// <summary>使用明細查詢條件</summary>
+public class UsageLogQuery
+{
+    public int? ReportId { get; set; }
+    public string? UserKeyword { get; set; }       // 員工編號或姓名模糊查詢
+    public DateTime? From { get; set; }
+    public DateTime? To { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+}
+
+/// <summary>單一報表的使用彙總 (期間點擊數、使用人數、最後使用時間)</summary>
+public class ReportUsageSummary
+{
+    public int ReportID { get; set; }
+    public string ReportName { get; set; } = "";
+    public string ReportTool { get; set; } = "";
+    public string CategoryName { get; set; } = "";
+    public int Clicks { get; set; }
+    public int Users { get; set; }
+    public DateTime? LastUsed { get; set; }        // null = 從未被使用
+}
+
+/// <summary>單日點擊數 (趨勢圖用)</summary>
+public class DailyUsageCount
+{
+    public DateTime Date { get; set; }
+    public int Count { get; set; }
+}
+
+/// <summary>使用分析總覽 ViewModel (/Admin/Usage Tab1)</summary>
+public class UsageOverview
+{
+    public int Clicks30 { get; set; }              // 近 30 日總點擊
+    public int ActiveUsers30 { get; set; }         // 近 30 日活躍使用者數
+    public int UsedReports30 { get; set; }         // 近 30 日有被使用的報表數
+    public int ActiveReportTotal { get; set; }     // 啟用中報表總數
+    public List<DailyUsageCount> Daily30 { get; set; } = [];
+    public List<ReportUsageSummary> Top30 { get; set; } = [];
+    public List<ReportUsageSummary> Top90 { get; set; } = [];
+    public List<ReportUsageSummary> ColdReports { get; set; } = [];  // 啟用中且 90 日內 0 次
 }

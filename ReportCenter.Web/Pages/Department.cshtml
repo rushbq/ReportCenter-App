@@ -118,6 +118,7 @@
     <div x-show="filtered.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
         <template x-for="r in filtered" :key="r.reportId">
             <a :href="getReportHref(r)" target="_blank" rel="noopener"
+               :data-report-id="r.reportId" data-report-source="department"
                class="group bg-white border border-bdr rounded-[10px] p-4 flex flex-col gap-2 shadow-sm no-underline
                       hover:shadow-md hover:border-pri hover:-translate-y-0.5 transition-all duration-200">
                 <div class="flex items-center justify-between gap-2 min-h-[22px]">

@@ -63,8 +63,9 @@ document.addEventListener('alpine:init', () => {
                 .slice(0, 8);
         },
 
-        go(url, target) {
+        go(url, target, reportId) {
             this.open = false;
+            if (reportId) window.trackReportClick(reportId, 'search');
             if (target === '_blank') {
                 // 外部報表：用動態 <a> 開新分頁
                 Object.assign(document.createElement('a'), { href: url, target: '_blank', rel: 'noopener' }).click();
@@ -74,6 +75,40 @@ document.addEventListener('alpine:init', () => {
         }
     });
 });
+
+// ─── 報表使用記錄埋點 (sendBeacon 非同步送出，不阻塞開新視窗) ───
+// 30 秒內同一報表重複點擊不再送出；後端 UsageService 另有相同時間窗的權威防護
+(() => {
+    const sentAt = {};
+    window.trackReportClick = function (reportId, source) {
+        const id = parseInt(reportId, 10);
+        if (!id) return;
+        const now = Date.now();
+        if (sentAt[id] && now - sentAt[id] < 30000) return;
+        sentAt[id] = now;
+
+        const fd = new FormData();
+        fd.append('reportId', id);
+        fd.append('source', source || '');
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        if (token) fd.append('__RequestVerificationToken', token);
+
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon('/Api/Usage?handler=Track', fd);
+        } else {
+            fetch('/Api/Usage?handler=Track', { method: 'POST', body: fd, keepalive: true }).catch(() => {});
+        }
+    };
+
+    // 委派監聽：任何帶 data-report-id 的元素被點擊 (含中鍵開新分頁) 即記錄
+    const onReportClick = (e) => {
+        if (e.type === 'auxclick' && e.button !== 1) return;
+        const el = e.target.closest('[data-report-id]');
+        if (el) window.trackReportClick(el.dataset.reportId, el.dataset.reportSource);
+    };
+    document.addEventListener('click', onReportClick);
+    document.addEventListener('auxclick', onReportClick);
+})();
 
 // ─── 全域鍵盤快捷鍵 ⌘K / ESC ───
 document.addEventListener('keydown', (e) => {
