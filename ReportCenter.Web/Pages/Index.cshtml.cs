@@ -9,11 +9,13 @@ namespace ReportCenter.Web.Pages;
 public class IndexModel : PageModel
 {
     private readonly IReportService _svc;
+    private readonly IHomeDashboardService _dashSvc;
     private readonly ReportBaseUrlSettings _baseUrls;
 
-    public IndexModel(IReportService svc, IOptions<ReportBaseUrlSettings> baseUrls)
+    public IndexModel(IReportService svc, IHomeDashboardService dashSvc, IOptions<ReportBaseUrlSettings> baseUrls)
     {
         _svc = svc;
+        _dashSvc = dashSvc;
         _baseUrls = baseUrls.Value;
     }
 
@@ -22,11 +24,15 @@ public class IndexModel : PageModel
     public List<int> PinnedIds { get; set; } = [];
     public List<Department> Departments { get; set; } = [];
 
+    /// <summary>首頁年度目標戰情初始資料 (預設：銷售 + 即時累計)，切換由前端 fetch 更新。</summary>
+    public HomeYtdDashboard Dashboard { get; set; } = new();
+
     public string SmartQueryBaseUrl => _baseUrls.SmartQuery;
     public string SsrsBaseUrl => _baseUrls.SSRS;
 
     public void OnGet()
     {
+        Dashboard = _dashSvc.GetYtdTarget("S", "R");
         Departments = _svc.GetDepartments();
 
         // 組裝所有報表清單供釘選 Modal 使用

@@ -117,12 +117,20 @@ try
     builder.Services.AddScoped<IPermissionRepository, SqlPermissionRepository>();
     builder.Services.AddScoped<IUsageRepository, SqlUsageRepository>();
 
+    // 首頁戰情室資料源 — Dev 用 Mock (不依賴 SP，可獨立驗證前端)；
+    // Staging/Production 走真實 usp_Rpt_Home_YtdTarget，正式環境永不顯示假資料。
+    if (builder.Environment.IsDevelopment())
+        builder.Services.AddScoped<IHomeDashboardRepository, MockHomeDashboardRepository>();
+    else
+        builder.Services.AddScoped<IHomeDashboardRepository, SqlHomeDashboardRepository>();
+
     // BLL — 商業邏輯層
     builder.Services.AddScoped<SqlReportService>();
     builder.Services.AddScoped<IReportService>(sp => sp.GetRequiredService<SqlReportService>());
     builder.Services.AddScoped<ICatalogService, CatalogService>();
     builder.Services.AddScoped<IPermissionService, PermissionService>();
     builder.Services.AddScoped<IUsageService, UsageService>();
+    builder.Services.AddScoped<IHomeDashboardService, HomeDashboardService>();
 
     var app = builder.Build();
 

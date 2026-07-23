@@ -23,10 +23,157 @@
         }), jsonOpts);
 
     var pinnedIdsJson = System.Text.Json.JsonSerializer.Serialize(Model.PinnedIds, jsonOpts);
+
+    // 戰情室初始資料 (camelCase，與 /Api/HomeDashboard 回傳形狀一致)
+    var dashOpts = new System.Text.Json.JsonSerializerOptions
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+    };
+    var dashJson = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        mode = Model.Dashboard.Mode,
+        cumType = Model.Dashboard.CumulativeType,
+        reportYear = Model.Dashboard.ReportYear,
+        endMonth = Model.Dashboard.EndMonth,
+        blocks = Model.Dashboard.Blocks,
+        trend = Model.Dashboard.Trend
+    }, dashOpts);
 }
 
 <div class="page-container"
      x-data="indexPage()" x-init="init()">
+
+    <!-- ═══ 年度目標戰情 (戰情室) ═══ -->
+    <section x-data="dashboardPage()" x-init="init()" class="mb-8">
+
+        <!-- 標題 + 控制列 -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+            <div>
+                <h1 class="text-[22px] md:text-[26px] font-bold text-txt leading-tight">
+                    <span x-text="reportYear"></span>年度目標戰情
+                </h1>
+            </div>
+            <div class="flex items-center gap-2.5 shrink-0">
+                <!-- 銷售 / 接單 -->
+                <div class="inline-flex rounded-lg border border-bdr bg-white p-0.5 shadow-sm">
+                    <button @@click="setMode('S')" :aria-pressed="mode==='S'"
+                            :class="mode==='S' ? 'bg-pri text-white shadow-sm' : 'bg-transparent text-txt-sec hover:text-pri'"
+                            class="px-5 py-1.5 text-[13px] font-semibold rounded-md cursor-pointer border-0 transition-colors">銷售</button>
+                    <button @@click="setMode('O')" :aria-pressed="mode==='O'"
+                            :class="mode==='O' ? 'bg-pri text-white shadow-sm' : 'bg-transparent text-txt-sec hover:text-pri'"
+                            class="px-5 py-1.5 text-[13px] font-semibold rounded-md cursor-pointer border-0 transition-colors">接單</button>
+                </div>
+                <!-- 區間 -->
+                <label class="flex items-center gap-1.5 rounded-lg border border-bdr bg-white px-3 py-1.5 text-[13px] cursor-pointer focus-within:border-pri">
+                    <span class="text-txt-ter">區間</span>
+                    <select x-model="cumType" @@change="reload()"
+                            class="font-semibold text-txt bg-transparent border-0 outline-none cursor-pointer pr-1">
+                        <option value="M">月結累計</option>
+                        <option value="R">即時累計</option>
+                    </select>
+                </label>
+                <!-- 區間說明 -->
+                <div class="relative" x-data="{ tip: false }" @@mouseenter="tip = true" @@mouseleave="tip = false">
+                    <button type="button" @@click="tip = !tip" aria-label="區間說明"
+                            class="flex items-center justify-center w-8 h-8 rounded-lg border border-bdr bg-white text-txt-ter hover:text-pri hover:border-pri/40 cursor-pointer transition-colors">
+                        <i data-lucide="info" class="w-4 h-4"></i>
+                    </button>
+                    <div x-show="tip" x-cloak
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="opacity-0 translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         class="absolute right-0 top-full mt-2 w-72 bg-white border border-bdr rounded-lg shadow-lg p-3.5 text-[12px] text-txt-sec leading-relaxed z-50">
+                        <div class="mb-2">
+                            <span class="font-semibold text-txt">月結累計</span>
+                            <span class="text-txt-ter">（統計至上月底）</span><br />
+                            數字已結帳、穩定，適合對外正式報告。
+                        </div>
+                        <div>
+                            <span class="font-semibold text-txt">即時累計</span>
+                            <span class="text-txt-ter">（統計至本月）</span><br />
+                            含當月即時數字，較新但尚未結帳。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 三張 KPI 卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5" :class="loading && 'opacity-60 transition-opacity'">
+            <template x-for="b in blocks" :key="b.blockCode">
+                <div class="bg-white border border-bdr rounded-xl shadow-sm overflow-hidden flex flex-col">
+                    <!-- 部門色條 (對應走勢圖線色) -->
+                    <div class="h-1" :style="`background:${colorFor(b.blockCode)}`"></div>
+                    <div class="p-5 flex flex-col">
+                        <!-- 標題 + 幣別 -->
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="`background:${colorFor(b.blockCode)}`"></span>
+                                <span class="text-[22px] font-bold text-txt" x-text="b.blockName"></span>
+                            </span>
+                            <span class="badge bg-surface text-txt-sec border border-bdr text-[11px] px-2.5 py-1" x-text="b.currency"></span>
+                        </div>
+                        <!-- 累計達成率 -->
+                        <div class="flex items-baseline justify-between mb-4">
+                            <span class="text-[14px] text-txt-sec">累計達成率</span>
+                            <span class="text-[40px] font-extrabold text-txt leading-none" x-text="pct(b.achievementRate)"></span>
+                        </div>
+                        <!-- 年度目標 | 累計金額 -->
+                        <div class="grid grid-cols-2 border-t border-b border-bdr divide-x divide-bdr">
+                            <div class="py-3 pr-3">
+                                <div class="text-[12px] text-txt-ter mb-1">年度目標</div>
+                                <div class="text-[17px] font-bold text-txt tabular-nums" x-text="money(b.annualTarget)"></div>
+                            </div>
+                            <div class="py-3 pl-3">
+                                <div class="text-[12px] text-txt-ter mb-1">累計金額</div>
+                                <div class="text-[17px] font-bold text-txt tabular-nums" x-text="money(b.cumAmount)"></div>
+                            </div>
+                        </div>
+                        <!-- 去年同期比較 -->
+                        <div class="flex items-center gap-2 pt-3 text-[14px]">
+                            <span class="text-txt-sec">去年同期比較</span>
+                        <template x-if="b.yoYRate > 0">
+                            <span class="inline-flex items-center gap-1 font-bold text-ok">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                                <span x-text="yoyAbs(b.yoYRate)"></span>
+                            </span>
+                        </template>
+                        <template x-if="b.yoYRate < 0">
+                            <span class="inline-flex items-center gap-1 font-bold text-bad">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+                                <span x-text="yoyAbs(b.yoYRate)"></span>
+                            </span>
+                        </template>
+                            <template x-if="b.yoYRate === 0">
+                                <span class="font-bold text-txt-sec">持平</span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- 累計達成率走勢 -->
+        <div class="bg-white rounded-xl border border-bdr shadow-sm">
+            <div class="px-5 py-3.5 border-b border-bdr flex items-center gap-2">
+                <i data-lucide="trending-up" class="w-4 h-4 text-pri"></i>
+                <h2 class="text-[14px] font-semibold text-txt">累計達成率走勢</h2>
+                <span class="badge bg-pri-light text-pri" x-text="mode==='O' ? '接單' : '銷售'"></span>
+                <span class="ml-auto text-[11px] text-txt-ter">占全年目標比例 · 至 <span x-text="endMonth"></span> 月</span>
+            </div>
+            <div class="p-5">
+                <div class="h-[260px]" x-show="hasTrend()">
+                    <canvas id="ytdTrendChart"></canvas>
+                </div>
+                <div x-show="!hasTrend()" x-cloak class="h-[260px] flex flex-col items-center justify-center text-txt-ter">
+                    <i data-lucide="line-chart" class="w-9 h-9 mb-2 opacity-50"></i>
+                    <div class="text-[13px]">尚無資料</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Header (快速存取) -->
     <div class="flex justify-between items-center mb-5">
         <div>
@@ -169,6 +316,128 @@ function indexPage() {
             this.allReports = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllReports, jsonOpts));
             this.pinnedReports = @Html.Raw(pinnedJson);
             this.pinnedIds = @Html.Raw(pinnedIdsJson);
+        }
+    };
+}
+
+// ─── 年度目標戰情 (戰情室) ───
+function dashboardPage() {
+    const BLOCK_COLORS = { EXPORT: '#005758', TW: '#f5a623', CN: '#6366f1' };
+    // Chart.js 實例存在閉包，切勿放進 Alpine 響應式狀態 —
+    // 被包成 Proxy 後 chart.update() 會 Maximum call stack / fullSize 崩潰。
+    let chart = null;
+    return {
+        mode: 'S',
+        cumType: 'R',
+        reportYear: new Date().getFullYear(),
+        endMonth: 0,
+        blocks: [],
+        trend: [],
+        loading: false,
+
+        init() {
+            this.apply(@Html.Raw(dashJson));
+            this.$nextTick(() => this.renderChart());
+        },
+
+        // 套用一份戰情資料 (初始注入或 fetch 回傳)
+        apply(d) {
+            this.mode = d.mode;
+            this.cumType = d.cumType;
+            this.reportYear = d.reportYear;
+            this.endMonth = d.endMonth;
+            this.blocks = d.blocks || [];
+            this.trend = d.trend || [];
+        },
+
+        async setMode(m) {
+            if (this.mode === m) return;
+            this.mode = m;
+            await this.reload();
+        },
+
+        async reload() {
+            this.loading = true;
+            try {
+                const res = await fetch(`/Api/HomeDashboard?handler=Data&mode=${this.mode}&cumType=${this.cumType}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                this.apply(await res.json());
+                this.updateChart();
+            } catch (e) {
+                console.error('戰情資料載入失敗', e);
+                Alpine.store('toast').show('戰情資料載入失敗');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // ── 格式化 (百分比 ×100 四捨五入 0 位；可 > 100%) ──
+        pct(rate) { return Math.round(rate * 100) + '%'; },
+        yoyAbs(rate) { return Math.round(Math.abs(rate) * 100) + '%'; },
+        money(v) { return Math.round(v).toLocaleString('en-US'); },
+
+        hasTrend() { return this.trend.length > 0 && this.endMonth > 0; },
+
+        // 部門對應色 (卡片色條/色點與走勢圖線色一致，方便辨識)
+        colorFor(code) { return BLOCK_COLORS[code] || '#005758'; },
+
+        // ── 走勢圖 ──
+        monthLabels() {
+            return Array.from({ length: this.endMonth }, (_, i) => (i + 1) + '月');
+        },
+
+        seriesFor(code) {
+            const map = {};
+            this.trend.filter(t => t.blockCode === code)
+                      .forEach(t => { map[t.reportMonth] = Math.round(t.trendRate * 1000) / 10; });
+            return Array.from({ length: this.endMonth }, (_, i) => map[i + 1] ?? null);
+        },
+
+        chartData() {
+            return {
+                labels: this.monthLabels(),
+                datasets: this.blocks.map(b => ({
+                    label: b.blockName,
+                    data: this.seriesFor(b.blockCode),
+                    borderColor: BLOCK_COLORS[b.blockCode] || '#005758',
+                    backgroundColor: 'transparent',
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    borderWidth: 2,
+                    spanGaps: true
+                }))
+            };
+        },
+
+        renderChart() {
+            const ctx = document.getElementById('ytdTrendChart');
+            if (!ctx || chart) return;
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: this.chartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: true, position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, padding: 24, font: { size: 12 } } },
+                        tooltip: { callbacks: { label: (c) => c.dataset.label + '：' + (c.parsed.y == null ? '—' : c.parsed.y + '%') } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: (v) => v + '%' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        },
+
+        updateChart() {
+            if (!chart) { this.$nextTick(() => this.renderChart()); return; }
+            const d = this.chartData();
+            chart.data.labels = d.labels;
+            chart.data.datasets = d.datasets;
+            chart.update();
         }
     };
 }

@@ -314,3 +314,48 @@ public class UsageOverview
     public List<ReportUsageSummary> Top90 { get; set; } = [];
     public List<ReportUsageSummary> ColdReports { get; set; } = [];  // 啟用中且 90 日內 0 次
 }
+
+// ─── 首頁年度目標戰情 (YTD Home Dashboard) ───
+
+/// <summary>
+/// 年度目標戰情 — 單一區塊 KPI (usp_Rpt_Home_YtdTarget 結果集 1 一列)。
+/// 三部門 (外銷/台灣/中國) 各自使用原幣，跨部門僅比較百分比，金額不可相加。
+/// </summary>
+public class YtdBlockKpi
+{
+    public int ReportYear { get; set; }              // 報表年度
+    public int EndMonth { get; set; }                // 實際截止月 M
+    public string BlockCode { get; set; } = "";      // EXPORT / TW / CN
+    public string BlockName { get; set; } = "";      // 外銷 / 台灣 / 中國
+    public int BlockSort { get; set; }               // 1 / 2 / 3
+    public string Currency { get; set; } = "";       // USD / NTD / RMB
+    public decimal AnnualTarget { get; set; }        // 年度目標
+    public decimal CumAmount { get; set; }           // 本年累計金額
+    public decimal LastYearAmount { get; set; }      // 去年同期累計 (供對照)
+    public decimal AchievementRate { get; set; }     // 累計達成率 = A ÷ T (0.199507 = 19.95%，可 > 1)
+    public decimal YoYRate { get; set; }             // 去年同期成長率 = (A − L) ÷ |L|，可負
+}
+
+/// <summary>年度目標戰情 — 逐月累計達成率 (結果集 2 一列，走勢圖用)。</summary>
+public class YtdTrendPoint
+{
+    public string BlockCode { get; set; } = "";
+    public string BlockName { get; set; } = "";
+    public int BlockSort { get; set; }
+    public string Currency { get; set; } = "";
+    public int ReportMonth { get; set; }             // 月份 1 ~ M
+    public decimal CumAmount { get; set; }           // 該月累計金額 (原幣)
+    public decimal AnnualTarget { get; set; }        // 全年目標 (走勢分母固定為全年目標)
+    public decimal TrendRate { get; set; }           // 該月累計達成率 = 當月累計 ÷ 全年目標
+}
+
+/// <summary>首頁年度目標戰情 ViewModel — 三卡 KPI + 逐月趨勢。</summary>
+public class HomeYtdDashboard
+{
+    public string Mode { get; set; } = "S";              // S=銷售 / O=接單
+    public string CumulativeType { get; set; } = "M";    // M=月結累計 / R=即時累計
+    public int ReportYear { get; set; }                  // 報表年度 (系統當年度)
+    public int EndMonth { get; set; }                    // 實際截止月 M
+    public List<YtdBlockKpi> Blocks { get; set; } = [];  // 固定 3 列：外銷→台灣→中國
+    public List<YtdTrendPoint> Trend { get; set; } = []; // 逐月趨勢 (1 月+月結時可能為空)
+}
