@@ -29,11 +29,12 @@
 
 ReportCenter.Web 是一套企業內部報表中心系統的前端展示層，提供：
 
-- **營運總覽儀表板** — KPI 卡片、營收趨勢圖、部門比較圖
-- **部門報表列表** — 卡片/表格雙檢視、分類篩選、搜尋
-- **報表明細頁** — 成本趨勢圖、圓餅圖、物料數據表、分頁
+- **年度目標戰情** — 銷售／接單、月結／即時累計、三區 KPI 與逐月達成率
+- **部門報表列表** — 分類、搜尋、收藏及 SmartQuery / SSRS 外部連結
+- **快速存取** — 釘選管理與全站搜尋
+- **系統管理** — 報表目錄、使用分析與權限管理
 
-系統以 **靜態假資料** (hard-coded mock data) 驅動，尚未串接後端 API。
+系統以 Service / Repository 分層存取 SQL Server；Development 可依 DI 設定切換 Mock 實作。
 
 ---
 
@@ -42,10 +43,10 @@ ReportCenter.Web 是一套企業內部報表中心系統的前端展示層，提
 | 層級 | 技術 | 說明 |
 |------|------|------|
 | **Server** | ASP.NET Core (.NET 10) | Razor Pages 架構 |
-| **CSS** | Tailwind CSS (CDN) | 透過 `<script>` 標籤引入，含自訂 config |
-| **JS 框架** | Alpine.js 3.x | 輕量互動（sidebar toggle、tab 切換等） |
-| **圖表** | Chart.js 4 | 折線圖、長條圖、甜甜圈圖 |
-| **圖標** | Lucide Icons | SVG icon library |
+| **CSS** | Tailwind CSS 3.4.17 (CDN) | 透過 `<script>` 標籤引入，含自訂 config |
+| **JS 框架** | Alpine.js 3.15.12 | 輕量互動（sidebar、Dialog、篩選等） |
+| **圖表** | Chart.js 4.5.1 | 年度達成率與使用量折線圖 |
+| **圖標** | Lucide Icons 1.25.0 | SVG icon library |
 | **動態載入** | HTMX 2.0.4 | 已引入但尚未深度使用 |
 | **字體** | Noto Sans TC | Google Fonts，支援繁體中文 |
 
@@ -248,7 +249,7 @@ font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
 │          │                                   │
 │          │   ┌─ Index.cshtml ─────────┐      │
 │          │   │  or Department.cshtml  │      │
-│          │   │  or Report.cshtml      │      │
+│          │   │  or Admin/*.cshtml     │      │
 │          │   └────────────────────────┘      │
 │          │                                   │
 └──────────┴───────────────────────────────────┘
@@ -283,41 +284,51 @@ document.addEventListener('htmx:afterSwap', () => lucide.createIcons());
 **區塊結構：**
 
 ```
-┌─ Header ────────────────────────────┐
-│ 營運總覽              [篩選] [重新整理] │
-│ 台灣寶工 ・ 最後更新 2026/03/20      │
-├─ KPI Cards (grid-cols-2 lg:4) ──────┤
-│ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ │
-│ │$12.8M│ │$4.2M │ │67.2% │ │1,847 │ │
-│ │+8.3% │ │-3.1% │ │+2.4% │ │+12.6%│ │
-│ └──────┘ └──────┘ └──────┘ └──────┘ │
-├─ Charts (grid-cols-1 lg:[1.6fr_1fr])┤
-│ ┌─ 營收趨勢圖 ──┐ ┌─ 部門比較圖 ─┐ │
-│ │ Line Chart     │ │ Bar Chart    │ │
-│ │ h-[220px]      │ │ h-[220px]    │ │
-│ └────────────────┘ └──────────────┘ │
-├─ 快速存取 (grid-cols-2 lg:4) ───────┤
-│ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ │
-│ │報表卡│ │報表卡│ │報表卡│ │報表卡│ │
-│ └──────┘ └──────┘ └──────┘ └──────┘ │
-└─────────────────────────────────────┘
+┌─ 年度目標戰情 ──────────────────────────┐
+│ 2026年度目標戰情 [銷售|接單] [月結|即時] [i] │
+├─ KPI Cards (grid-cols-1 md:3) ─────────┤
+│ ┌─外銷 USD─┐ ┌─台灣 NTD─┐ ┌─中國 RMB─┐ │
+│ │達成率/目標│ │達成率/目標│ │達成率/目標│ │
+│ │累計/年增率│ │累計/年增率│ │累計/年增率│ │
+│ └─────────┘ └─────────┘ └─────────┘ │
+├─ 累計達成率走勢 ────────────────────────┤
+│ Chart.js Line Chart + 無障礙摘要 + 文字資料表 │
+├─ 快速存取 (grid-cols-2 lg:4) ──────────┤
+│ 已釘選報表卡片                 [管理釘選] │
+└────────────────────────────────────────┘
 ```
+
+**年度戰情控制：**
+
+| 控制 | 值 | 行為 |
+|------|----|------|
+| 模式 | `S` 銷售 / `O` 接單 | 呼叫 `/Api/HomeDashboard?handler=Data` |
+| 區間 | `M` 月結累計 / `R` 即時累計 | 呼叫 `/Api/HomeDashboard?handler=Data` |
+| 初始值 | 銷售 + 即時累計 | 由 `IndexModel.Dashboard` 伺服器端注入 |
+
+切換模式或區間時保留上一份有效資料、顯示載入狀態，並以 `AbortController`
+取消過期請求；失敗時顯示可重試訊息。
 
 **KPI 卡片資料：**
 
-| 標題 | 數值 | 趨勢 | 對比 |
-|------|------|------|------|
-| 本月營收 | $12.8M | +8.3% | vs 上月 |
-| 採購成本 | $4.2M | -3.1% | vs 上月 |
-| 毛利率 | 67.2% | +2.4% | — |
-| 訂單數 | 1,847 | +12.6% | vs 上月 |
+| 區塊 | 幣別 | 顯示欄位 |
+|------|------|----------|
+| 外銷 (`EXPORT`) | USD | 累計達成率、年度目標、累計金額、去年同期比較 |
+| 台灣 (`TW`) | NTD | 累計達成率、年度目標、累計金額、去年同期比較 |
+| 中國 (`CN`) | RMB | 累計達成率、年度目標、累計金額、去年同期比較 |
+
+不同區塊使用原幣顯示，金額不可跨區加總；跨區比較以達成率為主。
 
 **快速存取卡片：**
-- 左上角：部門標籤 (`bg-pri-light text-pri`)
-- 右上角：星號收藏圖示
-- 報表名稱 + hashtag 標籤
+- 顯示部門、報表名稱及另開視窗提示
 - Hover: `hover:shadow-md hover:border-pri`
-- 連結: `/Report?dept={deptId}&name={encodedName}`
+- 連結依 `ReportTool` 組成 SmartQuery / SSRS 外部網址
+
+**管理釘選 Dialog：**
+- 原生 `<dialog>`，支援 Esc、背景點擊關閉及焦點歸還
+- 預設範圍為「已釘選」，可切換「全部報表」
+- 支援名稱、部門、分類搜尋與篩選
+- 透過 `/Api/Pin?handler=Toggle` 更新釘選狀態
 
 ---
 
@@ -327,7 +338,8 @@ document.addEventListener('htmx:afterSwap', () => lucide.createIcons());
 
 **Alpine.js 狀態：**
 ```javascript
-x-data="{ view: 'card', tab: 'all' }"
+x-data="deptPage()"
+// tab、searchQuery、reports、favoriteIds
 ```
 
 **區塊結構：**
@@ -335,20 +347,14 @@ x-data="{ view: 'card', tab: 'all' }"
 ```
 ┌─ Header ────────────────────────────┐
 │ 首頁 / 部門報表 / 採購部             │
-│ [icon] 採購部 報表  共 24 份報表      │
-├─ Controls ──────────────────────────┤
-│ [搜尋框 w-220px]    [卡片] [表格]    │
+│ [icon] 採購部 報表  [搜尋部門報表]    │
 ├─ Tabs ──────────────────────────────┤
 │ 桌面: 全部 | 成本分析 | 供應商管理 |..│
 │ 手機: [全部] [成本分析] [供應商管理]  │
-├─ Card View (grid 1→2→3 cols) ──────┤
+├─ Cards (grid 1→2→3 cols) ──────────┤
 │ ┌──────┐ ┌──────┐ ┌──────┐         │
 │ │報表卡│ │報表卡│ │報表卡│         │
 │ └──────┘ └──────┘ └──────┘         │
-├─ Table View (CSS Grid) ────────────┤
-│ 報表名稱 │ 說明 │ 分類 │ 更新 │ 操作│
-│ ────────┼─────┼─────┼─────┼─────│
-│ 月度採購 │ ... │ 成本 │03/20│ 檢視│
 └─────────────────────────────────────┘
 ```
 
@@ -359,71 +365,13 @@ x-data="{ view: 'card', tab: 'all' }"
 | 桌面 (`hidden md:flex`) | 底線式 Tab | `border-b-2 border-pri` active |
 | 手機 (`flex md:hidden`) | Pill 膠囊按鈕 | `rounded-full` + 換行 `flex-wrap` |
 
-**卡片檢視：**
+**報表卡片：**
 - Grid: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
 - 分類徽章 + 收藏星號
 - 報表名稱 + 說明 + 更新日期
-- 「檢視」連結含 eye icon
-- 篩選: `x-show="tab==='all' || tab==='@r.Cat'"`
-
-**表格檢視：**
-- CSS Grid: `grid-cols-[2.2fr_3fr_1fr_0.8fr_80px]`
-- Header: `bg-surface text-[11px] font-bold uppercase`
-- 行間分隔: `border-t border-bdr-light`
-- RWD: `overflow-x-auto` + `min-w-[700px]`
-
----
-
-### 6.3 報表明細 — Report.cshtml
-
-**路由：** `/Report?dept={deptId}&name={reportName}`
-
-**區塊結構：**
-
-```
-┌─ Breadcrumb ────────────────────────┐
-│ 首頁 / 採購部 / 月度採購成本分析      │
-├─ Header ────────────────────────────┤
-│ [←] 月度採購成本分析                 │
-│ 採購部 ・ 成本分析 ・ 最後更新 ...    │
-│ [收藏] [Excel] [PDF]                │
-├─ Filter Bar (sticky top-14) ────────┤
-│ [2026/03] [物料類別:全部] [+ 更多]   │
-├─ Charts (grid 1→[1.6fr_1fr]) ──────┤
-│ ┌─ 成本趨勢圖 ──┐ ┌─ 分類佔比 ───┐ │
-│ │ Line h-[240px] │ │ Donut h-200  │ │
-│ └────────────────┘ └──────────────┘ │
-├─ KPI Cards (grid-cols-2 lg:4) ──────┤
-│ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ │
-│ │$4.2M │ │原料62│ │47 家 │ │-2.1% │ │
-│ └──────┘ └──────┘ └──────┘ └──────┘ │
-├─ Data Table ────────────────────────┤
-│ 物料名稱│供應商│數量│單價│金額│變化  │
-│ ────────┼─────┼───┼───┼───┼─────│
-│ 碳鋼板  │台灣鋼│5200│$85│$442k│-2.3%│
-│ ...                                 │
-├─ Pagination ────────────────────────┤
-│ 每頁 20 筆   ◀ 1 2 3 … 8 ▶         │
-└─────────────────────────────────────┘
-```
-
-**篩選列：**
-- Position: `sticky top-14 z-40`
-- 樣式: `bg-white border border-bdr rounded-[10px] shadow-sm`
-- Chip: `.chip`, `.chip-active`, `.chip-dashed`
-- 重設連結: `text-pri font-medium`
-
-**數據表格：**
-- Grid: `grid-cols-[2fr_1.5fr_1fr_0.8fr_1fr_0.8fr]`
-- 變化欄位色彩：
-  - 下降（負值）: `text-ok` + `arrow-down-right`
-  - 上升（正值）: `text-bad` + `arrow-up-right`
-- RWD: `overflow-x-auto` + `min-w-[700px]`
-
-**分頁：**
-- Active 按鈕: `bg-pri text-white font-semibold`
-- 一般按鈕: `text-txt-ter`
-- 尺寸: `px-2.5 py-1 text-[12px] rounded-md`
+- 依 `ReportTool` 連至 SmartQuery / SSRS，另開新視窗
+- 搜尋與分類共用同一份 `filtered` 計算結果
+- 固定依更新日期新到舊排序
 
 ---
 
@@ -433,7 +381,7 @@ x-data="{ view: 'card', tab: 'all' }"
 
 **Alpine.js 狀態：**
 ```javascript
-x-data="{ mobileSearch: false }"
+x-data="{ companyOpen: false, selectedCompany: '台灣寶工' }"
 ```
 
 **高度：** `h-14` (56px) — sticky top-0 z-50
@@ -445,19 +393,11 @@ x-data="{ mobileSearch: false }"
 | 元素 | 顯示條件 | 說明 |
 |------|----------|------|
 | 漢堡選單 | `lg:hidden` | 觸發 `sidebarOpen` |
-| Logo icon | 常駐 | `bar-chart-3`，30x30px `rounded-lg bg-white/15` |
-| Logo 文字 | `hidden sm:inline` | "報表中心" |
-| 公司選擇器 | `hidden md:flex` | `building-2` icon + "台灣寶工" |
-| 桌面搜尋框 | `hidden sm:flex` | max-w-400px，含 `⌘K` 快捷鍵提示 |
-| 手機搜尋 icon | `sm:hidden` | 觸發 `mobileSearch` overlay |
-| 使用者頭像 | 常駐 | 34x34px circle, "CY" |
-
-**手機搜尋 Overlay：**
-- 位置: `absolute top-14` (導航列下方)
-- 寬度: 100%
-- 內容: 搜尋輸入框 + 「取消」按鈕
-- 關閉方式: 按「取消」或 `@@click.outside`
-- Transition: enter `ease-out 150ms`, leave `ease-in 100ms`
+| Logo | 常駐 | `/images/logo.png`，連回首頁 |
+| 公司選擇器 | `hidden md:block` | 寫入 `companyId` Cookie 後重新載入 |
+| 桌面搜尋按鈕 | `hidden sm:flex` | 開啟全站搜尋 Dialog，含 `⌘K` 提示 |
+| 手機搜尋按鈕 | `sm:hidden` | 開啟相同的全站搜尋 Dialog |
+| 使用者資訊 | `hidden md:flex` | 顯示姓名與暱稱 |
 
 ### 7.2 _Sidebar.cshtml — 側邊欄
 
@@ -484,29 +424,15 @@ x-data="{ expanded: '@currentDept' }"
    - 子分類連結: `/Department?dept=@d.Id&cat=@sub`
 
 3. **快速存取**
-   - 「我的收藏」(star icon, count: 8)
-   - 「最近瀏覽」(clock icon, count: 5)
+   - 「我的收藏」(star icon，數量由目前使用者收藏資料計算)
 
 4. **Footer**
    - 狀態燈: `w-1.5 h-1.5 rounded-full bg-ok`
-   - 文字: "報表總數: 107 份"
+   - 文字: `報表總數: {目前公司可見報表數} 份`
 
 ### 7.3 _KpiCard.cshtml — KPI 卡片
 
-**ViewData 參數：**
-
-| 參數 | 型別 | 範例 |
-|------|------|------|
-| `title` | string | "本月營收" |
-| `value` | string | "$12.8M" |
-| `trend` | string | "8.3" |
-| `note` | string (optional) | "vs 上月" |
-
-**容器樣式：** `bg-white border border-bdr rounded-xl px-5 py-[18px] shadow-sm min-w-[155px]`
-
-**趨勢判斷：**
-- `trend > 0` → 綠色 (`text-ok`) + `arrow-up-right` + `+` 前綴
-- `trend ≤ 0` → 紅色 (`text-bad`) + `arrow-down-right`
+此 Partial 目前保留供管理頁 KPI 使用；首頁年度戰情採用專用三區卡片，不透過此 Partial 呈現。
 
 ---
 
@@ -531,134 +457,74 @@ _Sidebar.cshtml: x-data="{ expanded: '@currentDept' }"
   └── Chevron icon: 依 expanded 切換 down/right
 ```
 
-### 8.3 檢視模式切換
+### 8.3 部門搜尋與分類
 
 ```
-Department.cshtml: x-data="{ view: 'card', tab: 'all' }"
-  └── Grid 按鈕: @@click="view='card'"
-  └── List 按鈕: @@click="view='table'"
-  └── Card View: x-show="view==='card'"
-  └── Table View: x-show="view==='table'" x-cloak
+Department.cshtml: x-data="deptPage()"
+  └── 搜尋框: x-model="searchQuery"
+  └── 分類按鈕: @@click="tab='@sub'"
+  └── filtered: 先搜尋，再套用分類，最後依 updated 倒序
+  └── tabCount(): 計算搜尋條件下各分類數量
 ```
 
-### 8.4 Tab 篩選
+### 8.4 收藏切換
 
 ```
-Department.cshtml:
-  └── Tab 按鈕: @@click="tab='@sub'"
-  └── 「全部」按鈕: @@click="tab='all'"
-  └── 報表卡片: x-show="tab==='all' || tab==='@r.Cat'"
+Department.cshtml: toggleFavorite(reportId)
+  └── POST /Api/Favorite?handler=Toggle
+  └── 成功後更新 favoriteIds 並顯示 Toast
+  └── 支援滑鼠點擊與 Enter / Space 鍵盤操作
 ```
 
-### 8.5 手機搜尋 Overlay
+### 8.5 全站搜尋 Dialog
 
 ```
-_TopNav.cshtml: x-data="{ mobileSearch: false }"
-  └── 搜尋 icon: @@click="mobileSearch = !mobileSearch"
-  └── Overlay: x-show="mobileSearch" @@click.outside="mobileSearch = false"
-  └── 取消按鈕: @@click="mobileSearch = false"
+_Layout.cshtml: <dialog id="globalSearchDialog">
+  └── TopNav 搜尋按鈕 / Ctrl+K: $store.search.openDialog($el)
+  └── Esc / 背景點擊 / 關閉按鈕: $store.search.close()
+  └── 開啟後焦點移入搜尋框，關閉後歸還觸發元素
+  └── 原生 showModal() 使背景內容不可互動
 ```
 
 ---
 
 ## 9. Chart.js 圖表設定
 
-### 9.1 營收趨勢圖（Index — `#revenueChart`）
+### 9.1 累計達成率走勢（Index — `#ytdTrendChart`）
 
 | 屬性 | 值 |
 |------|-----|
 | 類型 | `line` |
-| 高度 | `h-[220px]` (container) |
+| 高度 | `h-[260px]` |
 | responsive | `true` |
 | maintainAspectRatio | `false` |
+| Y 軸 | 百分比，從 `0` 起始 |
+| Tooltip | 一位小數百分比 |
 
 **資料集：**
 
-| 資料集 | 顏色 | 線條樣式 | 填滿 |
-|--------|------|----------|------|
-| 本年 | `pri` | 實線 `2px` | ✅ 漸層填滿 |
-| 去年 | `ter` | 虛線 `[4,4]` | ❌ |
-| 預算 | `acc` | 點線 `[2,2]` | ❌ |
+| 區塊 | 色彩 Token | 線條 | 點標記 |
+|------|------------|------|--------|
+| 外銷 | `--chart-export` | 實線 | circle |
+| 台灣 | `--chart-tw` | 虛線 `[7,4]` | rectRot |
+| 中國 | `--chart-cn` | 點線 `[2,3]` | triangle |
 
-**X 軸：** 10月、11月、12月、1月、2月、3月
-**Y 軸：** 數值 + `'M'` 後綴
+圖表外另提供：
+- `role="img"` 與螢幕閱讀器摘要
+- 可展開的完整文字資料表
+- 無資料狀態
+- `prefers-reduced-motion` 時停用 Chart.js 動畫
 
-### 9.2 部門比較圖（Index — `#deptChart`）
-
-| 屬性 | 值 |
-|------|-----|
-| 類型 | `bar` |
-| 高度 | `h-[220px]` |
-| barPercentage | `0.6` |
-| borderRadius | `4` |
-
-**資料集：**
-
-| 資料集 | 顏色 |
-|--------|------|
-| 實際 | `pri` |
-| 目標 | `borderL` (淺灰) |
-
-**標籤：** 採購部、業務部、財務部、人資部、資訊部
-
-### 9.3 成本趨勢圖（Report — `#costChart`）
+### 9.2 使用量趨勢（Admin/Usage — `#usageTrendChart`）
 
 | 屬性 | 值 |
 |------|-----|
 | 類型 | `line` |
-| 高度 | `h-[240px]` |
-
-**資料集：**
-
-| 資料集 | 顏色 | 線條樣式 | 填滿 | 點標記 |
-|--------|------|----------|------|--------|
-| 原料 | `pri` | 實線 | ✅ | ❌ |
-| 包材 | `acc` | 實線 | ✅ | ❌ |
-| 設備 | `priH` | 實線 | ❌ | ✅ `r:3` |
-| 其他 | `ter` | 虛線 `[3,3]` | ❌ | ❌ |
-
-### 9.4 分類佔比圖（Report — `#pieChart`）
-
-| 屬性 | 值 |
-|------|-----|
-| 類型 | `doughnut` |
-| 高度 | `h-[200px]` |
-| cutout | `'60%'` |
-| legend | 隱藏（自訂 HTML legend） |
-
-**資料：**
-
-| 分類 | 百分比 | 顏色 |
-|------|--------|------|
-| 原料 | 62% | `pri` |
-| 包材 | 18% | `acc` |
-| 設備 | 12% | `priH` |
-| 其他 | 8% | `ter` |
-
-**自訂 Legend：**
-```html
-<div class="flex gap-3 justify-center flex-wrap mt-3">
-  <span class="flex items-center gap-1.5 text-[11px] text-txt-sec">
-    <span class="w-2 h-2 rounded-full bg-pri inline-block"></span>原料 62%
-  </span>
-  <!-- 其餘分類... -->
-</div>
-```
-
-### 9.5 共用設定
-
-所有圖表共用：
-```javascript
-{
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: {
-    x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94aeb0' } },
-    y: { grid: { color: '#eef2f3' }, ticks: { callback: v => v + 'M' } }
-  }
-}
-```
+| 資料集 | 每日報表點擊數 |
+| 線色 | `#005758` |
+| 填色 | `rgba(0, 180, 182, 0.08)` |
+| Y 軸 | `beginAtZero: true`、整數刻度 |
+| X 軸 | 最多顯示 10 個刻度 |
 
 ---
 
@@ -682,13 +548,13 @@ _TopNav.cshtml: x-data="{ mobileSearch: false }"
 | TopNav Logo 文字 | 隱藏 | 顯示 (`sm:inline`) | 顯示 |
 | 公司選擇器 | 隱藏 | 隱藏 | 顯示 (`md:flex`) |
 | 桌面搜尋框 | 隱藏 | 顯示 (`sm:flex`) | 顯示 |
-| 手機搜尋 icon | 顯示 (`sm:hidden`) | 隱藏 | 隱藏 |
-| KPI 卡片 | 2 欄 | 2 欄 | 4 欄 (`lg:grid-cols-4`) |
-| 圖表區 | 單欄堆疊 | 單欄 | 雙欄 (`lg:grid-cols-[1.6fr_1fr]`) |
+| 手機搜尋按鈕 | 顯示 (`sm:hidden`) | 隱藏 | 隱藏 |
+| 年度戰情卡片 | 1 欄 | 3 欄 (`md:grid-cols-3`) | 3 欄 |
+| 年度走勢圖 | 滿寬 | 滿寬 | 滿寬 |
 | 報表卡片 | 1 欄 | 2 欄 (`sm:grid-cols-2`) | 3 欄 (`lg:grid-cols-3`) |
 | 快速存取 | 2 欄 | 2 欄 | 4 欄 (`lg:grid-cols-4`) |
 | 部門 Tab | Pill 膠囊 (`flex md:hidden`) | 底線式 (`hidden md:flex`) | 底線式 |
-| 數據表格 | 水平捲動 (`overflow-x-auto`) | 同左 | 完整顯示 |
+| 走勢文字資料表 | 水平捲動 (`overflow-x-auto`) | 同左 | 完整顯示 |
 | 內容 padding | `p-4` | `md:p-6` | `md:p-6` |
 | 容器最大寬 | 100% | 100% | `max-w-[1200px]`（`≥2xl` 延展至 `1600px`；寬版頁 1400/1800px） |
 
@@ -698,109 +564,37 @@ _TopNav.cshtml: x-data="{ mobileSearch: false }"
 
 ### 11.1 C# Model 定義
 
-**Department**
-```csharp
-public class Department
-{
-    public string Id { get; set; }       // "procurement"
-    public string Label { get; set; }    // "採購部"
-    public string Icon { get; set; }     // Lucide icon name: "package"
-    public int Count { get; set; }       // 報表數量: 24
-    public List<string> Subs { get; set; } // 子分類: ["成本分析", "供應商管理", ...]
-}
-```
+| Model | 用途 | 主要欄位 |
+|-------|------|----------|
+| `Department` | 部門導覽與分類 | `Id`, `Label`, `Icon`, `Count`, `Subs` |
+| `Report` | 報表卡片與外部連結 | `ReportID`, `Name`, `Desc`, `Cat`, `Updated`, `ReportTool`, `ReportCode` |
+| `HomeYtdDashboard` | 首頁年度戰情 | `Mode`, `CumulativeType`, `ReportYear`, `EndMonth`, `Blocks`, `Trend` |
+| `YtdBlockKpi` | 外銷／台灣／中國 KPI | 年度目標、累計金額、達成率、去年同期成長率 |
+| `YtdTrendPoint` | 逐月達成率走勢 | 區塊、月份、累計金額、年度目標、達成率 |
+| `ReportCatalogItem` | 管理端報表目錄 | 報表來源、工具類型、部門指派與相依性 |
 
-**Report**
-```csharp
-public class Report
-{
-    public string Name { get; set; }     // "月度採購成本分析"
-    public string Desc { get; set; }     // "各類物料採購金額與趨勢分析"
-    public string Cat { get; set; }      // "成本分析"
-    public string Updated { get; set; }  // "03/20"
-    public bool Fav { get; set; }        // 是否收藏
-}
-```
+### 11.2 資料來源
 
-**QuickAccess**
-```csharp
-public class QuickAccess
-{
-    public string Dept { get; set; }     // "採購部"
-    public string DeptId { get; set; }   // "procurement"
-    public string Name { get; set; }     // "月度採購成本分析"
-    public string Tag { get; set; }      // "成本"
-}
-```
+| 功能 | Development | Staging / Production |
+|------|-------------|----------------------|
+| 部門、報表、收藏、釘選 | `SqlReportService` | `SqlReportService` |
+| 首頁年度目標戰情 | `MockHomeDashboardRepository` | `SqlHomeDashboardRepository` |
+| 報表目錄、權限、使用記錄 | SQL Repository | SQL Repository |
 
-**MaterialRow**
-```csharp
-public class MaterialRow
-{
-    public string Material { get; set; }   // "碳鋼板 SUS304"
-    public string Supplier { get; set; }   // "台灣鋼鐵"
-    public string Qty { get; set; }        // "5,200 KG"
-    public string UnitPrice { get; set; }  // "$85"
-    public string Amount { get; set; }     // "$442,000"
-    public double Change { get; set; }     // -2.3 (百分比)
-}
-```
-
-### 11.2 靜態資料總覽
-
-**部門列表 (5)：**
-
-| Id | 名稱 | Icon | 報表數 | 子分類 |
-|----|------|------|--------|--------|
-| procurement | 採購部 | package | 24 | 成本分析、供應商管理、訂單追蹤、績效報告 |
-| sales | 業務部 | bar-chart-3 | 31 | 客戶分析、業績排名、區域統計、產品銷售 |
-| finance | 財務部 | dollar-sign | 18 | 收支分析、預算管理、帳齡分析、資金流向 |
-| hr | 人資部 | users | 12 | 出勤管理、薪資統計、人力配置、招募進度 |
-| it | 資訊部 | monitor | 22 | 系統監控、資安報告、設備管理、服務台統計 |
-
-**報表總數：** 107 份（5 部門合計）
-
-**快速存取項目 (8)：**
-
-| 部門 | 報表名稱 | 標籤 |
-|------|----------|------|
-| 採購部 | 月度採購成本分析 | 成本 |
-| 業務部 | 客戶銷售排名 | 銷售 |
-| 財務部 | 應收帳款帳齡表 | 財務 |
-| 業務部 | 區域營收分佈 | 銷售 |
-| 採購部 | 供應商績效評比 | 供應商 |
-| 人資部 | 人員出勤統計 | 人資 |
-| 資訊部 | 系統可用性報告 | IT |
-| 財務部 | 預算執行率追蹤 | 財務 |
-
-**物料資料 (7 rows)：**
-
-| 物料 | 供應商 | 數量 | 單價 | 金額 | 變化 |
-|------|--------|------|------|------|------|
-| 碳鋼板 SUS304 | 台灣鋼鐵 | 5,200 KG | $85 | $442,000 | -2.3% |
-| PE 包裝膜 | 永豐塑膠 | 12,000 M | $12 | $144,000 | +1.1% |
-| 電子控制模組 | 矽達科技 | 800 PCS | $320 | $256,000 | -5.2% |
-| 潤滑油 ISO VG68 | 中油化學 | 2,400 L | $45 | $108,000 | +0.8% |
-| 銅線 Ø1.2mm | 嘉義銅業 | 3,600 KG | $210 | $756,000 | -1.7% |
-| 不鏽鋼螺栓 M10 | 正達五金 | 20,000 PCS | $3.5 | $70,000 | +2.4% |
-| 矽膠密封圈 | 聯合橡膠 | 8,500 PCS | $8 | $68,000 | -0.9% |
+首頁戰情的 Repository 由 `Program.cs` 依環境註冊，正式環境不回傳 Mock 資料。
 
 ### 11.3 Page Model
 
-**IndexModel** — 無參數，靜態頁面
+**IndexModel**
+- 透過 `IHomeDashboardService` 載入「銷售 + 即時累計」初始戰情
+- 透過 `IReportService` 組裝可釘選清單、已釘選 ID 與外部報表網址
+- 頁面切換戰情條件時改呼叫 `/Api/HomeDashboard?handler=Data`
 
 **DepartmentModel**
 ```csharp
-public void OnGet(string dept)
-// Query: ?dept=procurement
-// 查找部門 → 載入該部門報表清單
-```
-
-**ReportModel**
-```csharp
-public void OnGet(string dept, string name)
-// Query: ?dept=procurement&name=月度採購成本分析
-// 查找部門 → 設定報表名稱
+public IActionResult OnGet(string dept)
+// Query: ?dept=100
+// 驗證目前公司可用部門 → 載入報表與收藏狀態
 ```
 
 ---
@@ -809,16 +603,21 @@ public void OnGet(string dept, string name)
 
 | 路徑 | 頁面 | 參數 | 說明 |
 |------|------|------|------|
-| `/` | Index.cshtml | — | 營運總覽儀表板 |
-| `/Department` | Department.cshtml | `dept`, `cat` | 部門報表列表 |
-| `/Report` | Report.cshtml | `dept`, `name` | 報表明細頁 |
+| `/` | Index.cshtml | — | 年度目標戰情與快速存取 |
+| `/Department` | Department.cshtml | `dept` | 部門報表列表 |
+| `/Admin` | Admin/Index.cshtml | — | 管理總覽 |
+| `/Admin/Catalog` | Admin/Catalog.cshtml | — | 報表目錄管理 |
+| `/Admin/Usage` | Admin/Usage.cshtml | — | 使用分析 |
+| `/Admin/Permission` | Admin/Permission.cshtml | — | 權限管理 |
+| `/Api/HomeDashboard?handler=Data` | Api/HomeDashboard.cshtml | `mode`, `cumType` | 首頁戰情 JSON |
+| `/Api/Pin?handler=Toggle` | Api/Pin.cshtml | `reportId` | 切換釘選 |
 | `/Error` | Error.cshtml | — | 錯誤頁面 |
 
 **範例 URL：**
 - `http://localhost:5276/`
-- `http://localhost:5276/Department?dept=procurement`
-- `http://localhost:5276/Department?dept=finance&cat=帳齡分析`
-- `http://localhost:5276/Report?dept=procurement&name=月度採購成本分析`
+- `http://localhost:5276/Department?dept=100`
+- `http://localhost:5276/Admin/Usage`
+- `http://localhost:5276/Api/HomeDashboard?handler=Data&mode=S&cumType=R`
 
 ---
 
@@ -829,56 +628,48 @@ ReportCenter.Web/
 ├── Program.cs                          # ASP.NET Core 啟動設定
 ├── ReportCenter.Web.csproj             # 專案檔
 ├── Models/
-│   └── ReportModels.cs                 # 資料模型 + 靜態假資料
+│   └── ReportModels.cs                 # 報表、目錄與首頁戰情模型
+├── Services/
+│   ├── IReportService.cs               # 報表查詢介面
+│   ├── SqlReportService.cs             # SQL + 權限過濾
+│   ├── IHomeDashboardService.cs        # 首頁戰情介面
+│   └── HomeDashboardService.cs         # 首頁戰情 BLL
 ├── Pages/
 │   ├── _ViewImports.cshtml             # 全域 using + TagHelpers
 │   ├── _ViewStart.cshtml               # 預設 Layout 指定
-│   ├── Index.cshtml                    # 首頁儀表板
+│   ├── Index.cshtml                    # 年度目標戰情與快速存取
 │   ├── Index.cshtml.cs                 # 首頁 PageModel
 │   ├── Department.cshtml               # 部門報表列表
 │   ├── Department.cshtml.cs            # 部門 PageModel
-│   ├── Report.cshtml                   # 報表明細
-│   ├── Report.cshtml.cs                # 報表 PageModel
+│   ├── Admin/                           # 目錄、使用分析、權限管理
+│   ├── Api/                             # 首頁戰情、收藏、釘選、使用埋點
 │   ├── Error.cshtml                    # 錯誤頁面
 │   ├── Error.cshtml.cs                 # 錯誤 PageModel
 │   └── Shared/
-│       ├── _Layout.cshtml              # 主版面（CDN 引入 + Sidebar 框架）
+│       ├── _Layout.cshtml              # 主版面、CDN、Sidebar、搜尋 Dialog
 │       ├── _TopNav.cshtml              # 頂部導航列（Partial）
 │       ├── _Sidebar.cshtml             # 側邊欄（Partial）
 │       └── _KpiCard.cshtml             # KPI 卡片（Partial）
 ├── wwwroot/
-│   ├── css/site.css                    # 自訂 CSS（目前空白）
-│   └── js/site.js                      # 自訂 JS（目前空白）
+│   ├── css/site.css                    # 自訂 CSS
+│   └── js/site.js                      # Alpine Store、版面互動與使用埋點
 └── docs/
     └── frontend-spec.md                # 本文件
 ```
 
 ---
 
-## Lucide Icons 使用清單
+## Lucide Icons 主要使用清單
 
 | Icon 名稱 | 使用位置 |
 |-----------|----------|
 | `menu` | TopNav 漢堡選單 |
-| `bar-chart-3` | Logo, 業務部 icon |
 | `building-2` | 公司選擇器 |
-| `search` | 搜尋框 |
+| `search` / `x` | 搜尋與清除／關閉操作 |
 | `chevron-down` | 下拉、Sidebar 展開 |
 | `chevron-right` | Sidebar 收合 |
-| `chevron-left` | Report 返回按鈕 |
 | `home` | Sidebar 首頁連結 |
-| `package` | 採購部 icon |
-| `dollar-sign` | 財務部 icon |
-| `users` | 人資部 icon |
-| `monitor` | 資訊部 icon |
 | `star` | 收藏 |
-| `clock` | 最近瀏覽 |
-| `filter` | 篩選 chip |
-| `refresh-cw` | 重新整理 chip |
-| `eye` | 檢視連結 |
-| `grid-3x3` | 卡片檢視按鈕 |
-| `list` | 表格檢視按鈕 |
-| `arrow-up-right` | 正向趨勢 |
-| `arrow-down-right` | 負向趨勢 |
-| `file-spreadsheet` | Excel 匯出 |
-| `file-text` | PDF 匯出 |
+| `settings` / `bar-chart-3` / `shield-check` | 系統管理導覽 |
+| `info` / `trending-up` / `line-chart` | 首頁年度戰情 |
+| 部門設定的動態 icon | Department 與 Sidebar 部門項目 |

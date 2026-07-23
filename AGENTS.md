@@ -5,10 +5,10 @@
 ## 技術架構
 
 - **後端:** ASP.NET Core 10 Razor Pages (C#)
-- **前端:** Tailwind CSS (CDN) + Alpine.js 3.x + Chart.js 4 + HTMX 2.0.4
-- **圖示:** Lucide Icons (unpkg CDN)
+- **前端:** Tailwind CSS 3.4.17 (CDN) + Alpine.js 3.15.12 + Chart.js 4.5.1 + HTMX 2.0.4
+- **圖示:** Lucide Icons 1.25.0 (unpkg CDN)
 - **字體:** Noto Sans TC (Google Fonts)
-- **資料:** MockReportService（DI 注入），可快速切換為 API 實作
+- **資料:** 報表目錄使用 `SqlReportService`；首頁戰情 Development 使用 Mock Repository，其他環境使用 SQL Repository
 
 ## 專案結構
 
@@ -21,25 +21,29 @@ ReportCenter.Web/
 │   ├── ReportBaseUrlSettings.cs    # 報表外部連結 BaseUrl 設定
 │   └── MockWindowsAuthSettings.cs  # 開發環境模擬 AD 使用者設定
 ├── Services/
-│   ├── IReportService.cs           # 資料服務介面 (切換 API 時實作此介面)
-│   └── MockReportService.cs        # Mock 實作 (模擬資料，含 14 筆報表目錄 seed data)
+│   ├── IReportService.cs           # 報表查詢介面
+│   ├── SqlReportService.cs         # SQL 實作 (含權限過濾)
+│   ├── IHomeDashboardService.cs    # 首頁戰情 BLL 介面
+│   └── HomeDashboardService.cs     # 首頁戰情 BLL
 ├── Pages/
-│   ├── Index.cshtml(.cs)           # 首頁儀表板 (KPI、圖表、篩選、快速存取)
-│   ├── Department.cshtml(.cs)      # 部門報表列表 (搜尋、篩選、排序、卡片/表格切換)
-│   ├── Report.cshtml(.cs)          # 報表明細 (圖表切換、篩選、收藏、匯出、分頁)
+│   ├── Index.cshtml(.cs)           # 年度目標戰情 (三區 KPI、逐月趨勢、快速存取)
+│   ├── Department.cshtml(.cs)      # 部門報表列表 (搜尋、分類、收藏、外部連結)
 │   ├── Admin/
 │   │   ├── Index.cshtml(.cs)       # 管理總覽 (KPI、部門矩陣、孤立報表、相依性分析)
 │   │   └── Catalog.cshtml(.cs)     # 報表目錄管理 (CRUD、篩選、編輯 Modal)
+│   ├── Api/
+│   │   ├── HomeDashboard.cshtml(.cs) # 首頁戰情 JSON API
+│   │   └── Pin.cshtml(.cs)         # 釘選切換 API
 │   └── Shared/
-│       ├── _Layout.cshtml          # 主版面配置 (TopNav + Sidebar + Content + 搜尋 Modal)
+│       ├── _Layout.cshtml          # 主版面配置 (TopNav + Sidebar + Content + 搜尋 Dialog)
 │       ├── _TopNav.cshtml          # 頂部導航列 (Logo、公司選單、搜尋、使用者資訊)
-│       ├── _Sidebar.cshtml         # 側邊欄 (部門選單、系統管理、收藏、最近瀏覽)
+│       ├── _Sidebar.cshtml         # 側邊欄 (部門選單、系統管理、收藏)
 │       └── _KpiCard.cshtml         # KPI 卡片元件
 ├── wwwroot/
 │   ├── images/logo.png             # 公司 Logo
 │   ├── favicon.svg                 # 品牌 Favicon
 │   ├── css/site.css                # 自訂樣式 (極少，主要用 Tailwind)
-│   └── js/site.js                  # Alpine Store (搜尋、收藏、最近瀏覽)
+│   └── js/site.js                  # Alpine Store (搜尋、Toast、側欄焦點與使用埋點)
 ├── web.config                         # IIS 部署設定 (Windows 驗證)
 └── docs/frontend-spec.md           # 前端技術規格文件
 ```
@@ -50,16 +54,22 @@ ReportCenter.Web/
 |------|------|------|
 | `/` | Index | 營運總覽儀表板 |
 | `/Department?dept={id}` | Department | 部門報表列表 |
-| `/Report?dept={id}&name={name}&page={n}` | Report | 報表明細頁 |
 | `/Admin` | Admin/Index | 報表管理總覽 (KPI、部門矩陣、孤立報表) |
 | `/Admin/Catalog` | Admin/Catalog | 報表目錄管理 (CRUD) |
+| `/Admin/Usage` | Admin/Usage | 使用分析 |
+| `/Admin/Permission` | Admin/Permission | 權限管理 |
 
 ## 資料架構 (Service Layer)
 
 ```
-IReportService (介面)               # 首頁/部門頁資料
-  └── MockReportService (目前使用)
-  └── ApiReportService (未來)
+IReportService (介面)               # 部門、報表、收藏與釘選資料
+  └── SqlReportService              # Dapper + 權限過濾
+
+IHomeDashboardService (介面)        # 首頁年度目標戰情
+  └── HomeDashboardService
+      └── IHomeDashboardRepository
+          ├── MockHomeDashboardRepository # Development
+          └── SqlHomeDashboardRepository  # Staging / Production
 
 ICatalogService (介面)              # 報表目錄管理 BLL
   └── CatalogService                # 依賴 ICatalogRepository + DepartmentDisplaySettings
@@ -71,18 +81,13 @@ ICatalogRepository (介面)           # 資料存取層
   └── SqlCatalogRepository          # Dapper + SQL Server
 ```
 
-**切換真實 API 只需：**
-1. 建立 `ApiReportService : IReportService`
-2. 在 `Program.cs` 將 `MockReportService` 換成 `ApiReportService`
-3. 頁面與前端完全不需修改
+首頁戰情資料源由 `Program.cs` 依環境註冊：Development 固定使用 Mock，Staging / Production 固定使用 SQL。
 
 ## Alpine.js Store (site.js)
 
 | Store | 用途 | 持久化 |
 |-------|------|--------|
-| `$store.search` | 全站搜尋 Modal、⌘K 快捷鍵 | 否 |
-| `$store.favorites` | 報表收藏管理（toggle 時自動顯示 Toast） | localStorage |
-| `$store.recent` | 最近瀏覽紀錄 (最多 20 筆) | localStorage |
+| `$store.search` | 全站搜尋 Dialog、⌘K 快捷鍵與焦點歸還 | 否 |
 | `$store.toast` | 全域 Toast 提示（`show(msg)` 呼叫，2.5 秒後自動消失） | 否 |
 
 ## 公司切換機制
@@ -129,14 +134,12 @@ ICatalogRepository (介面)           # 資料存取層
 
 | 頁面 | 篩選器 | 實作方式 |
 |------|--------|---------|
-| Index | 期間（本月/上月/本季/本年） | 前端 Alpine 切換 Mock KPI 資料集 |
-| Index | 區域（全部/北中南東） | 前端依區域比例調整數值與圖表 |
-| Index | 部門（全部/各部門） | 前端篩選部門比較圖表 |
-| Department | 日期（全部/本週/本月/本季） | 前端依報表更新日期相對篩選 |
-| Department | 排序（最近更新/最早更新/名稱 A-Z） | 前端排序 |
-| Report | 日期期間（2026/03 等） | 前端依 `period` 欄位篩選 |
-| Report | 物料類別（原料/包材/設備/耗材） | 前端依 `category` 欄位篩選 |
-| Report | 供應商 | 前端依 `supplier` 欄位篩選 |
+| Index | 模式（銷售/接單） | 呼叫 `/Api/HomeDashboard?handler=Data` 局部更新 KPI 與走勢 |
+| Index | 區間（月結累計/即時累計） | 呼叫 `/Api/HomeDashboard?handler=Data` 局部更新 KPI 與走勢 |
+| Index | 釘選範圍（已釘選/全部報表） | Alpine 前端篩選，開啟 Dialog 時預設「已釘選」 |
+| Index | 釘選搜尋（名稱/部門/分類） | Alpine 前端篩選 |
+| Department | 搜尋（名稱/說明/分類） | Alpine 前端篩選 |
+| Department | 分類 Tab | Alpine 前端篩選，結果固定依更新日期新到舊排序 |
 | Admin/Catalog | 工具類型（全部/Internal/SmartQuery/SSRS） | 前端 Alpine 篩選 |
 | Admin/Catalog | 狀態（全部/啟用/停用） | 前端 Alpine 篩選 |
 | Admin/Catalog | 搜尋（名稱、來源、路徑） | 前端 Alpine 篩選 |

@@ -5,11 +5,11 @@
 ## 技術架構
 
 - **後端:** ASP.NET Core 10 Razor Pages (C#)
-- **前端:** Tailwind CSS (CDN) + Alpine.js 3.x + Chart.js 4 + HTMX 2.0.4
-- **圖示:** Lucide Icons (unpkg CDN)
+- **前端:** Tailwind CSS 3.4.17 (CDN) + Alpine.js 3.15.12 + Chart.js 4.5.1 + HTMX 2.0.4
+- **圖示:** Lucide Icons 1.25.0 (unpkg CDN)
 - **字體:** Noto Sans TC (Google Fonts)
 - **日誌:** Serilog (Console + File + Seq)
-- **資料:** MockReportService（DI 注入），可快速切換為 API 實作
+- **資料:** 報表目錄使用 `SqlReportService`；首頁戰情 Development 使用 Mock Repository，其他環境使用 SQL Repository
 
 ## 專案結構
 
@@ -40,7 +40,7 @@ ReportCenter.Web/
 │   ├── IUsageService.cs            # 報表使用記錄 BLL 介面
 │   └── UsageService.cs             # 報表使用記錄 BLL 實作 (防重複、統計)
 ├── Pages/
-│   ├── Index.cshtml(.cs)           # 首頁 (快速存取釘選報表；營運總覽儀表板規劃中，暫已移除)
+│   ├── Index.cshtml(.cs)           # 年度目標戰情 (三區 KPI、逐月趨勢、快速存取)
 │   ├── Department.cshtml(.cs)      # 部門報表列表 (搜尋、分類 Tab、卡片檢視)
 │   ├── Admin/
 │   │   ├── Index.cshtml(.cs)       # 管理總覽 (KPI、部門矩陣、孤立報表、冷門報表)
@@ -52,7 +52,7 @@ ReportCenter.Web/
 │   │   ├── Pin.cshtml(.cs)         # 釘選 API
 │   │   └── Usage.cshtml(.cs)       # 使用記錄埋點 API (sendBeacon 呼叫)
 │   └── Shared/
-│       ├── _Layout.cshtml          # 主版面配置 (TopNav + Sidebar + Content + 搜尋 Modal)
+│       ├── _Layout.cshtml          # 主版面配置 (TopNav + Sidebar + Content + 搜尋 Dialog)
 │       ├── _TopNav.cshtml          # 頂部導航列 (Logo、公司選單、搜尋、使用者資訊)
 │       ├── _Sidebar.cshtml         # 側邊欄 (部門選單、系統管理、收藏)
 │       └── _KpiCard.cshtml         # KPI 卡片元件
@@ -60,7 +60,7 @@ ReportCenter.Web/
 │   ├── images/logo.png             # 公司 Logo
 │   ├── favicon.svg                 # 品牌 Favicon
 │   ├── css/site.css                # 自訂樣式 (極少，主要用 Tailwind)
-│   └── js/site.js                  # Alpine Store (搜尋、收藏、Toast)
+│   └── js/site.js                  # Alpine Store (搜尋、Toast、側欄焦點與使用埋點)
 ├── appsettings.json                # 共用設定 (base)
 ├── appsettings.Development.json    # 開發環境設定
 ├── appsettings.Staging.json        # 測試環境設定
@@ -80,7 +80,7 @@ ReportCenter.Web/
 
 | 路由 | 頁面 | 說明 |
 |------|------|------|
-| `/` | Index | 首頁 (快速存取釘選報表) |
+| `/` | Index | 年度目標戰情與快速存取 |
 | `/Department?dept={id}` | Department | 部門報表列表 |
 | `/Admin` | Admin/Index | 報表管理總覽 (KPI、部門矩陣、孤立報表、冷門報表) |
 | `/Admin/Catalog` | Admin/Catalog | 報表目錄管理 (CRUD) |
@@ -90,9 +90,14 @@ ReportCenter.Web/
 ## 資料架構 (Service Layer)
 
 ```
-IReportService (介面)               # 首頁/部門頁資料
+IReportService (介面)               # 部門、報表、收藏與釘選資料
   └── SqlReportService              # Dapper + 權限過濾
-  └── MockReportService             # Mock 資料 (儀表板 KPI/圖表仍沿用)
+
+IHomeDashboardService (介面)        # 首頁年度目標戰情
+  └── HomeDashboardService
+      └── IHomeDashboardRepository
+          ├── MockHomeDashboardRepository # Development
+          └── SqlHomeDashboardRepository  # Staging / Production
 
 ICatalogService (介面)              # 報表目錄管理 BLL
   └── CatalogService                # 依賴 ICatalogRepository + IPksysRepository + DepartmentDisplaySettings
@@ -142,10 +147,7 @@ IUsageRepository (介面)             # 使用記錄資料存取層 (ReportCente
 | `SHARED_INFRA_PATH` | 伺服器各站台共用的機密設定 (如共用連線字串、Seq) | `D:\CompanySecrets\shared-infra.Production.json` |
 | `RC_CONFIG_PATH` | 本站台專用的機密設定 (如站台連線字串、AdminUsers) | `D:\CompanySecrets\reportWebApp-Site.Production.json` |
 
-**切換真實 API 只需：**
-1. 建立 `ApiReportService : IReportService`
-2. 在 `Program.cs` 將 `MockReportService` 換成 `ApiReportService`
-3. 頁面與前端完全不需修改
+首頁戰情資料源由 `Program.cs` 依環境註冊：Development 固定使用 Mock，Staging / Production 固定使用 SQL。
 
 ## Logging 架構
 
@@ -210,8 +212,7 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 | Store | 用途 | 持久化 |
 |-------|------|--------|
-| `$store.search` | 全站搜尋 Modal、⌘K 快捷鍵 | 否 |
-| `$store.favorites` | 報表收藏管理（toggle 時自動顯示 Toast） | localStorage |
+| `$store.search` | 全站搜尋 Dialog、⌘K 快捷鍵與焦點歸還 | 否 |
 | `$store.toast` | 全域 Toast 提示（`show(msg)` 呼叫，2.5 秒後自動消失） | 否 |
 
 > 「最近瀏覽」(`$store.recent`) 已隨 `/Report` 明細頁一併移除：報表皆為 SmartQuery / SSRS 外部連結、
@@ -327,9 +328,9 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 | 部門報表卡片 | `Department.cshtml` | `department` |
 | 首頁釘選 | `Index.cshtml` | `pin` |
 | 側欄收藏 | `_Sidebar.cshtml` | `favorite` |
-| 全站搜尋 Modal | `_Layout.cshtml` → `$store.search.go()` | `search` |
+| 全站搜尋 Dialog | `_Layout.cshtml` → `$store.search.go()` | `search` |
 
-> 搜尋 Modal 是動態建立 `<a>` 後 `.click()`，不經委派監聽，因此 `go()` 內直接呼叫
+> 搜尋 Dialog 是動態建立 `<a>` 後 `.click()`，不經委派監聽，因此 `go()` 內直接呼叫
 > `window.trackReportClick(reportId, 'search')`。
 
 ### 防重複點擊 (30 秒)
