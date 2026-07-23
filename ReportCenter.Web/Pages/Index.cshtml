@@ -5,23 +5,7 @@
 @{
     var jsonOpts = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
-    // 釘選報表含完整 href
-    var pinnedJson = System.Text.Json.JsonSerializer.Serialize(
-        Model.PinnedReports.Select(p => {
-            // 找到報表所屬部門
-            var deptLabel = "";
-            foreach (var dept in Model.Departments)
-            {
-                var reports = Model.AllReports.Cast<dynamic>();
-                var match = reports.FirstOrDefault(r => (int)r.reportId == p.ReportID);
-                if (match != null) { deptLabel = (string)match.dept; break; }
-            }
-            var href = p.ReportTool == "SSRS"
-                ? Model.SsrsBaseUrl + p.ReportCode
-                : Model.SmartQueryBaseUrl + p.ReportCode;
-            return new { p.ReportID, p.Name, p.Cat, p.ReportTool, href, target = "_blank", dept = deptLabel };
-        }), jsonOpts);
-
+    var pinnedJson = System.Text.Json.JsonSerializer.Serialize(Model.PinnedReportLinks, jsonOpts);
     var pinnedIdsJson = System.Text.Json.JsonSerializer.Serialize(Model.PinnedIds, jsonOpts);
 
     // 戰情室初始資料 (camelCase，與 /Api/HomeDashboard 回傳形狀一致)
@@ -41,11 +25,11 @@
     }, dashOpts);
 }
 
-<div class="page-container"
+<div class="page-container w-full min-w-0 max-w-full overflow-x-hidden"
      x-data="indexPage()" x-init="init()">
 
     <!-- ═══ 年度目標戰情 (戰情室) ═══ -->
-    <section x-data="dashboardPage()" x-init="init()" class="mb-8">
+    <section x-data="dashboardPage()" x-init="init()" class="mb-8" :aria-busy="loading">
 
         <!-- 標題 + 控制列 -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
@@ -54,32 +38,36 @@
                     <span x-text="reportYear"></span>年度目標戰情
                 </h1>
             </div>
-            <div class="flex items-center gap-2.5 shrink-0">
+            <div class="flex flex-wrap items-center gap-2.5 md:justify-end">
                 <!-- 銷售 / 接單 -->
                 <div class="inline-flex rounded-lg border border-bdr bg-white p-0.5 shadow-sm">
-                    <button @@click="setMode('S')" :aria-pressed="mode==='S'"
+                    <button type="button" @@click="setMode('S')" :aria-pressed="mode==='S'" :disabled="loading"
                             :class="mode==='S' ? 'bg-pri text-white shadow-sm' : 'bg-transparent text-txt-sec hover:text-pri'"
-                            class="px-5 py-1.5 text-[13px] font-semibold rounded-md cursor-pointer border-0 transition-colors">銷售</button>
-                    <button @@click="setMode('O')" :aria-pressed="mode==='O'"
+                            class="min-h-11 px-5 py-1.5 text-[13px] font-semibold rounded-md cursor-pointer border-0 transition-colors disabled:cursor-wait disabled:opacity-60">銷售</button>
+                    <button type="button" @@click="setMode('O')" :aria-pressed="mode==='O'" :disabled="loading"
                             :class="mode==='O' ? 'bg-pri text-white shadow-sm' : 'bg-transparent text-txt-sec hover:text-pri'"
-                            class="px-5 py-1.5 text-[13px] font-semibold rounded-md cursor-pointer border-0 transition-colors">接單</button>
+                            class="min-h-11 px-5 py-1.5 text-[13px] font-semibold rounded-md cursor-pointer border-0 transition-colors disabled:cursor-wait disabled:opacity-60">接單</button>
                 </div>
                 <!-- 區間 -->
-                <label class="flex items-center gap-1.5 rounded-lg border border-bdr bg-white px-3 py-1.5 text-[13px] cursor-pointer focus-within:border-pri">
+                <label class="flex min-h-11 items-center gap-1.5 rounded-lg border border-bdr bg-white px-3 py-1.5 text-[13px] cursor-pointer focus-within:border-pri">
                     <span class="text-txt-ter">區間</span>
-                    <select x-model="cumType" @@change="reload()"
-                            class="font-semibold text-txt bg-transparent border-0 outline-none cursor-pointer pr-1">
+                    <select :value="cumType" @@change="setCumType($event)" :disabled="loading"
+                            class="font-semibold text-txt bg-transparent border-0 outline-none cursor-pointer pr-1 disabled:cursor-wait">
                         <option value="M">月結累計</option>
                         <option value="R">即時累計</option>
                     </select>
                 </label>
                 <!-- 區間說明 -->
-                <div class="relative" x-data="{ tip: false }" @@mouseenter="tip = true" @@mouseleave="tip = false">
+                <div class="relative" x-data="{ tip: false }"
+                     @@mouseenter="tip = true" @@mouseleave="tip = false"
+                     @@focusin="tip = true" @@focusout="tip = false"
+                     @@keydown.escape.stop="tip = false">
                     <button type="button" @@click="tip = !tip" aria-label="區間說明"
-                            class="flex items-center justify-center w-8 h-8 rounded-lg border border-bdr bg-white text-txt-ter hover:text-pri hover:border-pri/40 cursor-pointer transition-colors">
+                            aria-controls="interval-help" :aria-expanded="tip"
+                            class="flex items-center justify-center w-11 h-11 rounded-lg border border-bdr bg-white text-txt-ter hover:text-pri hover:border-pri/40 cursor-pointer transition-colors">
                         <i data-lucide="info" class="w-4 h-4"></i>
                     </button>
-                    <div x-show="tip" x-cloak
+                    <div id="interval-help" role="tooltip" x-show="tip" x-cloak
                          x-transition:enter="transition ease-out duration-100"
                          x-transition:enter-start="opacity-0 translate-y-1"
                          x-transition:enter-end="opacity-100 translate-y-0"
@@ -99,10 +87,29 @@
             </div>
         </div>
 
+        <div x-show="loading" x-cloak role="status" aria-live="polite"
+             class="mb-4 flex items-center gap-2 rounded-lg bg-pri-light px-3 py-2 text-[13px] font-medium text-pri">
+            <svg class="h-4 w-4 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-75" d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+            </svg>
+            <span x-text="loadingMessage()"></span>
+        </div>
+
+        <div x-show="errorMessage" x-cloak role="alert"
+             class="mb-4 flex flex-col gap-2 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2.5 text-[13px] text-bad sm:flex-row sm:items-center">
+            <span class="font-medium" x-text="errorMessage"></span>
+            <button type="button" @@click="retry()" :disabled="loading"
+                    class="min-h-11 rounded-md border border-bad/40 bg-white px-3 font-semibold text-bad hover:bg-bad/5 disabled:cursor-wait disabled:opacity-60 sm:ml-auto">
+                重新載入
+            </button>
+        </div>
+
         <!-- 三張 KPI 卡片 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5" :class="loading && 'opacity-60 transition-opacity'">
+        <div class="grid min-w-0 grid-cols-1 md:grid-cols-3 gap-4 mb-5 transition-opacity"
+             :class="loading && 'opacity-60'">
             <template x-for="b in blocks" :key="b.blockCode">
-                <div class="bg-white border border-bdr rounded-xl shadow-sm overflow-hidden flex flex-col">
+                <div class="min-w-0 bg-white border border-bdr rounded-xl shadow-sm overflow-hidden flex flex-col">
                     <!-- 部門色條 (對應走勢圖線色) -->
                     <div class="h-1" :style="`background:${colorFor(b.blockCode)}`"></div>
                     <div class="p-5 flex flex-col">
@@ -155,20 +162,54 @@
         </div>
 
         <!-- 累計達成率走勢 -->
-        <div class="bg-white rounded-xl border border-bdr shadow-sm">
-            <div class="px-5 py-3.5 border-b border-bdr flex items-center gap-2">
+        <div class="min-w-0 bg-white rounded-xl border border-bdr shadow-sm transition-opacity"
+             :class="loading && 'opacity-60'">
+            <div class="px-5 py-3.5 border-b border-bdr flex flex-wrap items-center gap-2">
                 <i data-lucide="trending-up" class="w-4 h-4 text-pri"></i>
-                <h2 class="text-[14px] font-semibold text-txt">累計達成率走勢</h2>
+                <h2 id="trend-chart-title" class="text-[14px] font-semibold text-txt">累計達成率走勢</h2>
                 <span class="badge bg-pri-light text-pri" x-text="mode==='O' ? '接單' : '銷售'"></span>
-                <span class="ml-auto text-[11px] text-txt-ter">占全年目標比例 · 至 <span x-text="endMonth"></span> 月</span>
+                <span class="w-full text-[12px] text-txt-ter sm:ml-auto sm:w-auto">占全年目標比例 · 至 <span x-text="endMonth"></span> 月</span>
             </div>
             <div class="p-5">
                 <div class="h-[260px]" x-show="hasTrend()">
-                    <canvas id="ytdTrendChart"></canvas>
+                    <div class="h-full" role="img" aria-labelledby="trend-chart-title trend-chart-summary">
+                        <canvas id="ytdTrendChart" aria-hidden="true"></canvas>
+                    </div>
+                    <p id="trend-chart-summary" class="sr-only" x-text="trendSummary()"></p>
                 </div>
                 <div x-show="!hasTrend()" x-cloak class="h-[260px] flex flex-col items-center justify-center text-txt-ter">
                     <i data-lucide="line-chart" class="w-9 h-9 mb-2 opacity-50"></i>
-                    <div class="text-[13px]">尚無資料</div>
+                    <div class="text-[13px]">目前沒有可顯示的趨勢資料</div>
+                </div>
+                <div x-show="hasTrend()" class="mt-3 border-t border-bdr pt-3">
+                    <button type="button" @@click="showTrendTable = !showTrendTable"
+                            aria-controls="trend-data-table" :aria-expanded="showTrendTable"
+                            class="min-h-11 rounded-md border border-bdr bg-white px-3 text-[12px] font-semibold text-pri hover:border-pri">
+                        <span x-text="showTrendTable ? '隱藏文字資料' : '查看文字資料'"></span>
+                    </button>
+                    <div id="trend-data-table" x-show="showTrendTable" x-cloak class="mt-3 max-w-full overflow-x-auto">
+                        <table class="w-full min-w-[560px] border-collapse text-[12px]">
+                            <caption class="sr-only" x-text="`${reportYear} 年累計達成率文字資料`"></caption>
+                            <thead>
+                                <tr class="border-b border-bdr text-left text-txt-sec">
+                                    <th scope="col" class="px-2 py-2 font-semibold">區域</th>
+                                    <template x-for="month in monthLabels()" :key="month">
+                                        <th scope="col" class="px-2 py-2 text-right font-semibold" x-text="month"></th>
+                                    </template>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-bdr-light">
+                                <template x-for="block in blocks" :key="block.blockCode">
+                                    <tr>
+                                        <th scope="row" class="whitespace-nowrap px-2 py-2 text-left font-semibold text-txt" x-text="block.blockName"></th>
+                                        <template x-for="(value, index) in seriesFor(block.blockCode)" :key="index">
+                                            <td class="px-2 py-2 text-right tabular-nums text-txt-sec" x-text="displayRate(value)"></td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -177,21 +218,24 @@
     <!-- Header (快速存取) -->
     <div class="flex justify-between items-center mb-5">
         <div>
-            <h1 class="text-[20px] md:text-[22px] font-bold text-txt">快速存取</h1>
+            <h2 class="text-[20px] md:text-[22px] font-bold text-txt">快速存取</h2>
             <div class="text-[12px] text-txt-ter mt-1">釘選常用報表，一鍵直達</div>
         </div>
-        <button class="text-[12px] text-pri font-medium cursor-pointer bg-transparent border-0"
-                @@click="pinModalOpen = true">管理釘選 →</button>
+        <button type="button" x-ref="pinTrigger"
+                class="min-h-11 px-2 text-[12px] text-pri font-medium cursor-pointer bg-transparent border-0"
+                @@click="openPinModal()">管理釘選 →</button>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <template x-for="p in pinnedReports" :key="p.ReportID">
-            <a :href="p.href" :target="p.target"
+            <a :href="p.href" :target="p.target" rel="noopener"
+               :aria-label="`${p.Name}（另開新分頁）`"
                :data-report-id="p.ReportID" data-report-source="pin"
                class="group bg-white border border-bdr rounded-[10px] p-4 flex flex-col gap-2 shadow-sm no-underline
                       hover:shadow-md hover:border-pri hover:-translate-y-0.5 transition-all duration-200">
                 <div class="flex items-center gap-1.5 text-[11px] text-txt-ter font-medium">
                     <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
                     <span class="truncate" x-text="p.dept"></span>
+                    <svg class="ml-auto h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                 </div>
                 <span class="text-[13px] font-semibold text-txt leading-snug" x-text="p.Name"></span>
             </a>
@@ -203,31 +247,67 @@
         </template>
     </div>
 
-    <!-- 管理釘選 Modal -->
-    <div x-show="pinModalOpen" x-cloak
-         class="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh]">
-        <div class="absolute inset-0 bg-black/40" @@click="pinModalOpen = false"></div>
-        <div class="relative bg-white rounded-xl shadow-2xl border border-bdr w-full max-w-[560px] mx-4 max-h-[70vh] flex flex-col"
-             x-transition:enter="transition ease-out duration-150"
-             x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100">
+    <!-- 管理釘選 Dialog -->
+    <dialog x-ref="pinDialog"
+            aria-labelledby="pin-dialog-title"
+            @@cancel.prevent="closePinModal()"
+            @@close="onPinDialogClosed()"
+            @@click.self="closePinModal()"
+            class="m-auto w-[calc(100%_-_2rem)] max-w-[560px] overflow-visible border-0 bg-transparent p-0 backdrop:bg-black/40">
+        <div class="flex max-h-[calc(100vh_-_2rem)] w-full flex-col overflow-hidden rounded-xl border border-bdr bg-white shadow-2xl sm:max-h-[70vh]">
             <!-- Header -->
             <div class="flex items-center justify-between px-5 py-3.5 border-b border-bdr shrink-0">
-                <span class="font-semibold text-[15px] text-txt">管理釘選報表</span>
-                <button class="text-txt-ter hover:text-txt border-0 bg-transparent cursor-pointer p-1" @@click="pinModalOpen = false">
+                <h2 id="pin-dialog-title" class="font-semibold text-[15px] text-txt">管理釘選報表</h2>
+                <button type="button" aria-label="關閉管理釘選"
+                        class="flex h-11 w-11 items-center justify-center rounded-md text-txt-ter hover:bg-surface hover:text-txt border-0 bg-transparent cursor-pointer"
+                        @@click="closePinModal()">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
             </div>
-            <!-- 搜尋 -->
+            <!-- 搜尋與篩選 -->
             <div class="px-5 py-3 border-b border-bdr shrink-0">
-                <input type="text" placeholder="搜尋報表名稱…"
+                <label for="pin-report-search" class="sr-only">搜尋報表名稱、部門或分類</label>
+                <input id="pin-report-search" x-ref="pinSearchInput" type="search" placeholder="搜尋報表名稱、部門或分類…"
                        class="w-full bg-surface border border-bdr rounded-lg px-3 py-2 text-[13px] text-txt placeholder:text-txt-ter outline-none focus:border-pri"
                        x-model="pinSearch" />
+                <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <label>
+                        <span class="sr-only">依部門篩選</span>
+                        <select x-model="pinDepartment"
+                                class="min-h-11 w-full rounded-lg border border-bdr bg-white px-3 text-[13px] text-txt focus:border-pri">
+                            <option value="">全部部門</option>
+                            <template x-for="department in pinDepartments" :key="department">
+                                <option :value="department" x-text="department"></option>
+                            </template>
+                        </select>
+                    </label>
+                    <label>
+                        <span class="sr-only">依分類篩選</span>
+                        <select x-model="pinCategory"
+                                class="min-h-11 w-full rounded-lg border border-bdr bg-white px-3 text-[13px] text-txt focus:border-pri">
+                            <option value="">全部分類</option>
+                            <template x-for="category in pinCategories" :key="category">
+                                <option :value="category" x-text="category"></option>
+                            </template>
+                        </select>
+                    </label>
+                </div>
+                <div class="mt-2 flex items-center gap-2 text-[12px] text-txt-ter">
+                    <span aria-live="polite" x-text="`顯示 ${filteredPinItems.length} 筆報表`"></span>
+                    <button type="button" x-show="pinSearch || pinDepartment || pinCategory"
+                            @@click="clearPinFilters()"
+                            class="ml-auto min-h-11 border-0 bg-transparent px-2 font-medium text-pri hover:underline">
+                        清除篩選
+                    </button>
+                </div>
+                <div x-show="pinError" x-cloak role="alert"
+                     class="mt-2 rounded-md border border-bad/30 bg-bad/10 px-3 py-2 text-[12px] font-medium text-bad"
+                     x-text="pinError"></div>
             </div>
             <!-- 報表列表 -->
-            <div class="overflow-y-auto flex-1 px-2 py-2">
+            <div class="overflow-y-auto flex-1 px-2 py-2" role="list" aria-label="可釘選報表">
                 <template x-for="item in filteredPinItems" :key="item.reportId">
-                    <div class="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface">
+                    <div role="listitem" class="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface">
                         <div class="flex-1 min-w-0 mr-3">
                             <div class="text-[13px] font-semibold text-txt truncate" x-text="item.name"></div>
                             <div class="flex items-center gap-2 mt-0.5 text-[10px]">
@@ -235,10 +315,13 @@
                                 <span class="badge" :class="catBadge(item.cat)" x-text="item.cat" x-show="item.cat"></span>
                             </div>
                         </div>
-                        <button class="shrink-0 text-[12px] px-3 py-1.5 rounded-md border cursor-pointer transition-colors"
+                        <button type="button"
+                                class="min-h-11 shrink-0 text-[12px] px-3 py-1.5 rounded-md border cursor-pointer transition-colors disabled:cursor-wait disabled:opacity-60"
                                 :class="isPinned(item.reportId) ? 'bg-pri text-white border-pri' : 'bg-white text-pri border-bdr hover:border-pri'"
+                                :disabled="pinUpdatingId !== null"
+                                :aria-busy="pinUpdatingId === item.reportId"
                                 @@click="togglePin(item.reportId)">
-                            <span x-text="isPinned(item.reportId) ? '已釘選' : '釘選'"></span>
+                            <span x-text="pinUpdatingId === item.reportId ? '處理中…' : (isPinned(item.reportId) ? '已釘選' : '釘選')"></span>
                         </button>
                     </div>
                 </template>
@@ -249,67 +332,114 @@
             <!-- Footer -->
             <div class="px-5 py-3 border-t border-bdr shrink-0 flex justify-between items-center">
                 <span class="text-[12px] text-txt-ter">已釘選 <span class="font-semibold text-pri" x-text="pinnedIds.length"></span> 個報表</span>
-                <button class="text-[12px] px-4 py-1.5 bg-pri text-white rounded-md border-0 cursor-pointer hover:bg-pri-hover transition-colors"
-                        @@click="pinModalOpen = false">完成</button>
+                <button type="button"
+                        class="min-h-11 text-[12px] px-4 py-1.5 bg-pri text-white rounded-md border-0 cursor-pointer hover:bg-pri-hover transition-colors"
+                        @@click="closePinModal()">完成</button>
             </div>
         </div>
-    </div>
+    </dialog>
 </div>
 
 @section Scripts {
 <script>
 function indexPage() {
     return {
-        pinModalOpen: false,
         pinSearch: '',
+        pinDepartment: '',
+        pinCategory: '',
+        pinUpdatingId: null,
+        pinError: '',
         allReports: [],
         pinnedReports: [],
         pinnedIds: [],
+
+        openPinModal() {
+            this.pinError = '';
+            const dialog = this.$refs.pinDialog;
+            if (!dialog?.open) dialog?.showModal();
+            this.$nextTick(() => this.$refs.pinSearchInput?.focus());
+        },
+
+        closePinModal() {
+            this.$refs.pinDialog?.close();
+        },
+
+        onPinDialogClosed() {
+            this.pinError = '';
+            this.$nextTick(() => this.$refs.pinTrigger?.focus());
+        },
 
         isPinned(reportId) {
             return this.pinnedIds.includes(reportId);
         },
 
         async togglePin(reportId) {
+            if (this.pinUpdatingId !== null) return;
+            this.pinUpdatingId = reportId;
+            this.pinError = '';
             try {
                 const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
                 const res = await fetch('/Api/Pin?handler=Toggle&reportId=' + reportId, {
                     method: 'POST',
                     headers: { 'RequestVerificationToken': token || '' }
                 });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
-                if (data.success) {
-                    if (data.isPinned) {
-                        this.pinnedIds.push(reportId);
-                        // 找到並加入 pinnedReports 顯示
-                        const item = this.allReports.find(r => r.reportId === reportId);
-                        if (item) {
-                            const baseUrls = { smartQuery: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SmartQueryBaseUrl, jsonOpts)), ssrs: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SsrsBaseUrl, jsonOpts)) };
-                            const href = item.reportTool === 'SSRS'
-                                ? baseUrls.ssrs + item.reportCode
-                                : baseUrls.smartQuery + item.reportCode;
-                            this.pinnedReports.push({ ReportID: reportId, Name: item.name, Cat: item.cat, ReportTool: item.reportTool, href, target: '_blank', dept: item.dept });
-                        }
-                        Alpine.store('toast').show('已釘選');
-                    } else {
-                        this.pinnedIds = this.pinnedIds.filter(id => id !== reportId);
-                        this.pinnedReports = this.pinnedReports.filter(p => p.ReportID !== reportId);
-                        Alpine.store('toast').show('已取消釘選');
+                if (!data.success) throw new Error(data.message || '伺服器未完成更新');
+
+                if (data.isPinned) {
+                    if (!this.pinnedIds.includes(reportId)) this.pinnedIds.push(reportId);
+                    // 找到並加入 pinnedReports 顯示
+                    const item = this.allReports.find(r => r.reportId === reportId);
+                    if (item && !this.pinnedReports.some(p => p.ReportID === reportId)) {
+                        const baseUrls = { smartQuery: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SmartQueryBaseUrl, jsonOpts)), ssrs: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SsrsBaseUrl, jsonOpts)) };
+                        const href = item.reportTool === 'SSRS'
+                            ? baseUrls.ssrs + item.reportCode
+                            : baseUrls.smartQuery + item.reportCode;
+                        this.pinnedReports.push({ ReportID: reportId, Name: item.name, Cat: item.cat, ReportTool: item.reportTool, href, target: '_blank', dept: item.dept });
                     }
+                    Alpine.store('toast').show('已釘選');
+                } else {
+                    this.pinnedIds = this.pinnedIds.filter(id => id !== reportId);
+                    this.pinnedReports = this.pinnedReports.filter(p => p.ReportID !== reportId);
+                    Alpine.store('toast').show('已取消釘選');
                 }
             } catch (e) {
                 console.error('釘選切換失敗', e);
+                this.pinError = '無法更新釘選狀態，請稍後再試。';
+                Alpine.store('toast').show(this.pinError, 'error');
+            } finally {
+                this.pinUpdatingId = null;
             }
+        },
+
+        get pinDepartments() {
+            return [...new Set(this.allReports.map(r => r.dept).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+        },
+
+        get pinCategories() {
+            return [...new Set(this.allReports.map(r => r.cat).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
         },
 
         get filteredPinItems() {
             const q = this.pinSearch.trim().toLowerCase();
-            if (!q) return this.allReports;
             return this.allReports.filter(r =>
-                r.name.toLowerCase().includes(q) ||
-                r.dept.toLowerCase().includes(q) ||
-                r.cat.toLowerCase().includes(q)
+                (!this.pinDepartment || r.dept === this.pinDepartment) &&
+                (!this.pinCategory || r.cat === this.pinCategory) &&
+                (!q ||
+                    (r.name || '').toLowerCase().includes(q) ||
+                    (r.dept || '').toLowerCase().includes(q) ||
+                    (r.cat || '').toLowerCase().includes(q))
             );
+        },
+
+        clearPinFilters() {
+            this.pinSearch = '';
+            this.pinDepartment = '';
+            this.pinCategory = '';
+            this.$nextTick(() => this.$refs.pinSearchInput?.focus());
         },
 
         init() {
@@ -322,10 +452,16 @@ function indexPage() {
 
 // ─── 年度目標戰情 (戰情室) ───
 function dashboardPage() {
-    const BLOCK_COLORS = { EXPORT: '#005758', TW: '#f5a623', CN: '#6366f1' };
+    const BLOCK_COLORS = { EXPORT: '#005758', TW: '#c27600', CN: '#6366f1' };
+    const BLOCK_STYLES = {
+        EXPORT: { borderDash: [], pointStyle: 'circle' },
+        TW: { borderDash: [7, 4], pointStyle: 'rectRot' },
+        CN: { borderDash: [2, 3], pointStyle: 'triangle' }
+    };
     // Chart.js 實例存在閉包，切勿放進 Alpine 響應式狀態 —
     // 被包成 Proxy 後 chart.update() 會 Maximum call stack / fullSize 崩潰。
     let chart = null;
+    let requestController = null;
     return {
         mode: 'S',
         cumType: 'R',
@@ -334,9 +470,13 @@ function dashboardPage() {
         blocks: [],
         trend: [],
         loading: false,
+        errorMessage: '',
+        showTrendTable: false,
+        lastRequest: { mode: 'S', cumType: 'R' },
 
         init() {
             this.apply(@Html.Raw(dashJson));
+            this.lastRequest = { mode: this.mode, cumType: this.cumType };
             this.$nextTick(() => this.renderChart());
         },
 
@@ -351,30 +491,59 @@ function dashboardPage() {
         },
 
         async setMode(m) {
-            if (this.mode === m) return;
-            this.mode = m;
-            await this.reload();
+            if (this.loading || this.mode === m) return;
+            await this.reload(m, this.cumType);
         },
 
-        async reload() {
+        async setCumType(event) {
+            const nextCumType = event.target.value;
+            if (this.loading || this.cumType === nextCumType) return;
+            await this.reload(this.mode, nextCumType);
+            event.target.value = this.cumType;
+        },
+
+        async reload(nextMode, nextCumType) {
+            this.lastRequest = { mode: nextMode, cumType: nextCumType };
+            this.errorMessage = '';
             this.loading = true;
+            requestController?.abort();
+            const controller = new AbortController();
+            requestController = controller;
             try {
-                const res = await fetch(`/Api/HomeDashboard?handler=Data&mode=${this.mode}&cumType=${this.cumType}`);
+                const query = new URLSearchParams({ mode: nextMode, cumType: nextCumType });
+                const res = await fetch(`/Api/HomeDashboard?handler=Data&${query}`, {
+                    signal: controller.signal
+                });
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 this.apply(await res.json());
                 this.updateChart();
+                return true;
             } catch (e) {
+                if (e.name === 'AbortError') return false;
                 console.error('戰情資料載入失敗', e);
-                Alpine.store('toast').show('戰情資料載入失敗');
+                this.errorMessage = '無法載入新的戰情資料，目前仍顯示前一次成功載入的內容。';
+                Alpine.store('toast').show('戰情資料載入失敗', 'error');
+                return false;
             } finally {
-                this.loading = false;
+                if (requestController === controller) this.loading = false;
             }
+        },
+
+        retry() {
+            return this.reload(this.lastRequest.mode, this.lastRequest.cumType);
+        },
+
+        modeLabel(mode = this.mode) { return mode === 'O' ? '接單' : '銷售'; },
+        cumTypeLabel(cumType = this.cumType) { return cumType === 'M' ? '月結累計' : '即時累計'; },
+        loadingMessage() {
+            return `正在載入${this.modeLabel(this.lastRequest.mode)}・${this.cumTypeLabel(this.lastRequest.cumType)}資料…`;
         },
 
         // ── 格式化 (百分比 ×100 四捨五入 0 位；可 > 100%) ──
         pct(rate) { return Math.round(rate * 100) + '%'; },
         yoyAbs(rate) { return Math.round(Math.abs(rate) * 100) + '%'; },
         money(v) { return Math.round(v).toLocaleString('en-US'); },
+        displayRate(value) { return value == null ? '—' : value + '%'; },
 
         hasTrend() { return this.trend.length > 0 && this.endMonth > 0; },
 
@@ -393,6 +562,15 @@ function dashboardPage() {
             return Array.from({ length: this.endMonth }, (_, i) => map[i + 1] ?? null);
         },
 
+        trendSummary() {
+            if (!this.hasTrend()) return '目前沒有可顯示的趨勢資料。';
+            const latest = this.blocks.map(block => {
+                const values = this.seriesFor(block.blockCode);
+                return `${block.blockName} ${this.displayRate(values[values.length - 1])}`;
+            }).join('、');
+            return `${this.reportYear} 年${this.modeLabel()}${this.cumTypeLabel()}，資料截至 ${this.endMonth} 月；最新累計達成率為${latest}。`;
+        },
+
         chartData() {
             return {
                 labels: this.monthLabels(),
@@ -402,7 +580,9 @@ function dashboardPage() {
                     borderColor: BLOCK_COLORS[b.blockCode] || '#005758',
                     backgroundColor: 'transparent',
                     tension: 0.3,
-                    pointRadius: 2,
+                    borderDash: (BLOCK_STYLES[b.blockCode] || BLOCK_STYLES.EXPORT).borderDash,
+                    pointStyle: (BLOCK_STYLES[b.blockCode] || BLOCK_STYLES.EXPORT).pointStyle,
+                    pointRadius: 3,
                     pointHoverRadius: 5,
                     borderWidth: 2,
                     spanGaps: true

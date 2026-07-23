@@ -20,11 +20,18 @@ document.addEventListener('alpine:init', () => {
     // ─── 全域 Toast Store ───
     Alpine.store('toast', {
         msg: '',
+        type: 'success',
         visible: false,
-        show(msg) {
+        timer: null,
+        show(msg, type = 'success') {
+            if (this.timer) clearTimeout(this.timer);
             this.msg = msg;
+            this.type = type;
             this.visible = true;
-            setTimeout(() => this.visible = false, 2500);
+            this.timer = setTimeout(() => {
+                this.visible = false;
+                this.timer = null;
+            }, type === 'error' ? 5000 : 2500);
         }
     });
 

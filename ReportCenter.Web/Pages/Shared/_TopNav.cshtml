@@ -13,7 +13,9 @@
 <nav class="h-14 bg-pri flex items-center px-3 md:px-5 gap-2 md:gap-3 text-white sticky top-0 z-50 shadow-[0_2px_8px_rgba(0,87,88,0.15)]"
      x-data="{ mobileSearch: false, companyOpen: false, selectedCompany: '@defaultCompany' }">
     <!-- Mobile hamburger -->
-    <button @@click="sidebarOpen = !sidebarOpen" class="lg:hidden p-1.5 rounded-md bg-white/10 border border-white/10 cursor-pointer">
+    <button type="button" :aria-label="sidebarOpen ? '關閉部門導覽' : '開啟部門導覽'" aria-controls="mobile-sidebar" :aria-expanded="sidebarOpen"
+            @@click="sidebarOpen = !sidebarOpen"
+            class="lg:hidden flex h-11 w-11 items-center justify-center rounded-md bg-white/10 border border-white/10 cursor-pointer">
         <i data-lucide="menu" class="w-5 h-5"></i>
     </button>
     <!-- Logo -->
@@ -51,21 +53,23 @@
     <button @@click="$store.search.toggle()"
             class="hidden sm:flex flex-1 max-w-[400px] bg-white/[0.08] rounded-lg px-3.5 h-9 items-center gap-2.5 border border-white/10 ml-2 cursor-pointer text-white">
         <i data-lucide="search" class="w-3.5 h-3.5 opacity-50"></i>
-        <span class="opacity-40 text-[13px]">搜尋報表</span>
-        <span class="ml-auto text-[10px] opacity-35 border border-white/20 rounded px-1.5 py-0.5">⌘K</span>
+        <span class="text-white/80 text-[13px]">搜尋報表</span>
+        <span class="ml-auto text-[10px] text-white/80 border border-white/30 rounded px-1.5 py-0.5">⌘K</span>
     </button>
     <div class="flex-1"></div>
     <!-- Right -->
     <div class="flex items-center gap-3 md:gap-4">
         <!-- Mobile search icon -->
-        <button @@click="$store.search.toggle()" class="sm:hidden cursor-pointer p-1 bg-transparent border-0 text-white">
+        <button type="button" aria-label="搜尋報表"
+                @@click="$store.search.toggle()"
+                class="sm:hidden flex h-11 w-11 items-center justify-center cursor-pointer bg-transparent border-0 text-white">
             <i data-lucide="search" class="w-[18px] h-[18px] opacity-80"></i>
         </button>
         <!-- User Info -->
         <div class="flex items-center gap-2 cursor-pointer">
             <div class="hidden md:flex flex-col leading-tight">
                 <span class="text-[12px] font-semibold">@user.Name</span>
-                <span class="text-[10px] opacity-60">@user.NickName</span>
+                <span class="text-[10px] text-white/80">@user.NickName</span>
             </div>
         </div>
     </div>
