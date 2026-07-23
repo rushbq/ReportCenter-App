@@ -14,6 +14,47 @@ window.catBadge = function (cat) {
     return palette[sum % palette.length];
 };
 
+// ─── 全站版面 Alpine 元件 ───
+window.appShell = function () {
+    const sidebarMedia = window.matchMedia('(max-width: 1023px)');
+
+    return {
+        sidebarOpen: false,
+        mobileViewport: sidebarMedia.matches,
+        sidebarReturnFocus: null,
+
+        init() {
+            sidebarMedia.addEventListener('change', (event) => {
+                this.mobileViewport = event.matches;
+                if (!event.matches) this.sidebarOpen = false;
+            });
+        },
+
+        toggleSidebar(trigger) {
+            if (this.sidebarOpen) {
+                this.closeSidebar();
+                return;
+            }
+
+            this.sidebarReturnFocus = trigger instanceof HTMLElement ? trigger : document.activeElement;
+            this.sidebarOpen = true;
+            this.$nextTick(() => {
+                this.$refs.mobileSidebar
+                    ?.querySelector('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])')
+                    ?.focus();
+            });
+        },
+
+        closeSidebar() {
+            if (!this.sidebarOpen) return;
+            this.sidebarOpen = false;
+            const returnFocus = this.sidebarReturnFocus;
+            this.sidebarReturnFocus = null;
+            this.$nextTick(() => returnFocus?.focus());
+        }
+    };
+};
+
 // ─── ReportCenter 全站共用 Alpine Store ───
 document.addEventListener('alpine:init', () => {
 
@@ -42,19 +83,44 @@ document.addEventListener('alpine:init', () => {
         results: [],
         // 搜尋索引由 Layout 注入
         index: [],
+        returnFocusTo: null,
 
-        toggle() {
+        toggle(trigger) {
             if (this.open) {
-                this.open = false;
-            } else {
-                this.open = true;
-                this.query = '';
-                this.results = [];
-                setTimeout(() => {
-                    const el = document.getElementById('globalSearchInput');
-                    if (el) el.focus();
-                }, 80);
+                this.close();
+                return;
             }
+
+            this.openDialog(trigger);
+        },
+
+        openDialog(trigger) {
+            const dialog = document.getElementById('globalSearchDialog');
+            if (!dialog) return;
+
+            this.returnFocusTo = trigger instanceof HTMLElement ? trigger : document.activeElement;
+            this.open = true;
+            this.query = '';
+            this.results = [];
+            if (!dialog.open) dialog.showModal();
+            requestAnimationFrame(() => document.getElementById('globalSearchInput')?.focus());
+        },
+
+        close() {
+            const dialog = document.getElementById('globalSearchDialog');
+            if (dialog?.open) {
+                dialog.close();
+                return;
+            }
+
+            this.open = false;
+        },
+
+        onDialogClosed() {
+            this.open = false;
+            const returnFocus = this.returnFocusTo;
+            this.returnFocusTo = null;
+            requestAnimationFrame(() => returnFocus?.focus());
         },
 
         search() {
@@ -71,7 +137,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         go(url, target, reportId) {
-            this.open = false;
+            this.close();
             if (reportId) window.trackReportClick(reportId, 'search');
             if (target === '_blank') {
                 // 外部報表：用動態 <a> 開新分頁
@@ -123,16 +189,6 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         e.stopPropagation();
         const store = Alpine.store('search');
-        store.open = true;
-        store.query = '';
-        store.results = [];
-        setTimeout(() => {
-            const el = document.getElementById('globalSearchInput');
-            if (el) el.focus();
-        }, 50);
-    }
-    if (e.key === 'Escape' && Alpine.store('search').open) {
-        e.preventDefault();
-        Alpine.store('search').open = false;
+        store.openDialog(document.activeElement);
     }
 });

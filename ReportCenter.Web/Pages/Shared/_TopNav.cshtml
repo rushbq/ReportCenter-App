@@ -14,7 +14,7 @@
      x-data="{ mobileSearch: false, companyOpen: false, selectedCompany: '@defaultCompany' }">
     <!-- Mobile hamburger -->
     <button type="button" :aria-label="sidebarOpen ? '關閉部門導覽' : '開啟部門導覽'" aria-controls="mobile-sidebar" :aria-expanded="sidebarOpen"
-            @@click="sidebarOpen = !sidebarOpen"
+            @@click="toggleSidebar($el)"
             class="lg:hidden flex h-11 w-11 items-center justify-center rounded-md bg-white/10 border border-white/10 cursor-pointer">
         <i data-lucide="menu" class="w-5 h-5"></i>
     </button>
@@ -49,8 +49,8 @@
             }
         </div>
     </div>
-    <!-- Search (desktop) — 點擊開啟全站搜尋 Modal -->
-    <button @@click="$store.search.toggle()"
+    <!-- Search (desktop) — 點擊開啟全站搜尋 Dialog -->
+    <button type="button" @@click="$store.search.toggle($el)"
             class="hidden sm:flex flex-1 max-w-[400px] bg-white/[0.08] rounded-lg px-3.5 h-9 items-center gap-2.5 border border-white/10 ml-2 cursor-pointer text-white">
         <i data-lucide="search" class="w-3.5 h-3.5 opacity-50"></i>
         <span class="text-white/80 text-[13px]">搜尋報表</span>
@@ -61,7 +61,7 @@
     <div class="flex items-center gap-3 md:gap-4">
         <!-- Mobile search icon -->
         <button type="button" aria-label="搜尋報表"
-                @@click="$store.search.toggle()"
+                @@click="$store.search.toggle($el)"
                 class="sm:hidden flex h-11 w-11 items-center justify-center cursor-pointer bg-transparent border-0 text-white">
             <i data-lucide="search" class="w-[18px] h-[18px] opacity-80"></i>
         </button>

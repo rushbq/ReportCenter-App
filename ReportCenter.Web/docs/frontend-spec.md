@@ -55,11 +55,11 @@ ReportCenter.Web 是一套企業內部報表中心系統的前端展示層，提
 
 | 套件 | 版本 | CDN URL |
 |------|------|---------|
-| Tailwind CSS | Latest | `https://cdn.tailwindcss.com` |
-| Alpine.js | 3.x | `https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js` |
-| Chart.js | 4 | `https://cdn.jsdelivr.net/npm/chart.js@4` |
-| Lucide Icons | Latest | `https://unpkg.com/lucide@latest` |
-| HTMX | 2.0.4 | `https://unpkg.com/htmx.org@2.0.4` |
+| Tailwind CSS | 3.4.17 | `https://cdn.tailwindcss.com/3.4.17` |
+| Alpine.js | 3.15.12 | `https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js` |
+| Chart.js | 4.5.1 | `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js` |
+| Lucide Icons | 1.25.0 | `https://unpkg.com/lucide@1.25.0/dist/umd/lucide.min.js` |
+| HTMX | 2.0.4 | `https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js` |
 | Noto Sans TC | 400-800 | `https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800` |
 
 ---
@@ -85,16 +85,14 @@ Tailwind `extend.colors` 自訂色彩：
 | `bdr` | `#e2e8ea` | 邊框色 |
 | `bdr-light` | `#eef2f3` | 淺邊框色 |
 
-### 4.2 Chart.js 色彩常數
+### 4.2 Chart.js 色彩 Token
 
-```javascript
-const C = {
-  pri:     '#005758',
-  acc:     '#00b4b6',
-  priH:    '#006d6e',
-  ter:     '#94aeb0',
-  borderL: '#eef2f3'
-};
+```css
+:root {
+  --chart-export: #005758;
+  --chart-tw: #c27600;
+  --chart-cn: #6366f1;
+}
 ```
 
 ### 4.3 字體與字級
@@ -517,10 +515,11 @@ x-data="{ expanded: '@currentDept' }"
 ### 8.1 Sidebar Toggle（手機版）
 
 ```
-_Layout.cshtml: x-data="{ sidebarOpen: false }"
-  └── _TopNav 漢堡按鈕: @@click="sidebarOpen = !sidebarOpen"
-  └── Overlay: x-show="sidebarOpen" @@click="sidebarOpen = false"
-  └── Sidebar 容器: :class 依 sidebarOpen 切換 translate-x
+_Layout.cshtml: x-data="appShell()"
+  └── _TopNav 漢堡按鈕: toggleSidebar($el)
+  └── Overlay: x-show="sidebarOpen" @@click="closeSidebar()"
+  └── Sidebar 關閉時於手機套用 inert / aria-hidden
+  └── 開啟後移入焦點，關閉後將焦點歸還觸發按鈕
 ```
 
 ### 8.2 Sidebar Accordion

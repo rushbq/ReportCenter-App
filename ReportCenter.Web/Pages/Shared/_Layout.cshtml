@@ -14,7 +14,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png" />
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -34,19 +34,24 @@
         }
     </script>
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@1.25.0/dist/umd/lucide.min.js"></script>
     <!-- Site JS (Alpine Store 初始化，須在 Alpine 之前載入) -->
     <script src="/js/site.js"></script>
     <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
     <!-- Noto Sans TC -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --chart-export: #005758;
+            --chart-tw: #c27600;
+            --chart-cn: #6366f1;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         [x-cloak] { display: none !important; }
@@ -75,14 +80,16 @@
     </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="bg-surface h-screen overflow-hidden flex flex-col" x-data="{ sidebarOpen: false }">
+<body class="bg-surface h-screen overflow-hidden flex flex-col"
+      x-data="appShell()"
+      @@keydown.escape.window="closeSidebar()">
     @Html.AntiForgeryToken()
     @await Html.PartialAsync("_TopNav")
 
     <div class="flex min-h-0 flex-1 relative">
         <!-- Mobile sidebar overlay -->
         <div x-show="sidebarOpen" x-cloak
-             @@click="sidebarOpen = false"
+             @@click="closeSidebar()"
              class="fixed inset-0 bg-black/40 z-30 lg:hidden"
              x-transition:enter="transition-opacity ease-out duration-200"
              x-transition:enter-start="opacity-0"
@@ -92,7 +99,10 @@
              x-transition:leave-end="opacity-0"></div>
 
         <!-- Sidebar: hidden on mobile, visible on lg+ -->
-        <div id="mobile-sidebar" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+        <div id="mobile-sidebar" x-ref="mobileSidebar"
+             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+             :inert="mobileViewport && !sidebarOpen"
+             :aria-hidden="mobileViewport && !sidebarOpen"
              class="fixed top-14 left-0 z-40 lg:relative lg:top-0 lg:translate-x-0 transition-transform duration-200 ease-in-out">
             @await Html.PartialAsync("_Sidebar")
         </div>
@@ -102,21 +112,29 @@
         </main>
     </div>
 
-    <!-- 全站搜尋 Modal -->
-    <div x-data x-show="$store.search.open" x-cloak
-         class="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-        <div class="absolute inset-0 bg-black/40" @@click="$store.search.open = false"></div>
-        <div class="relative bg-white rounded-xl shadow-2xl border border-bdr w-full max-w-[520px] mx-4"
-             x-transition:enter="transition ease-out duration-150"
-             x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100">
+    <!-- 全站搜尋 Dialog -->
+    <dialog id="globalSearchDialog"
+            aria-labelledby="global-search-title"
+            @@cancel.prevent="$store.search.close()"
+            @@close="$store.search.onDialogClosed()"
+            @@click.self="$store.search.close()"
+            @@keydown.escape.prevent.stop="$store.search.close()"
+            class="mx-auto mb-auto mt-[15vh] w-[calc(100%_-_2rem)] max-w-[520px] overflow-visible border-0 bg-transparent p-0 backdrop:bg-black/40">
+        <div class="relative w-full rounded-xl border border-bdr bg-white shadow-2xl">
+            <h2 id="global-search-title" class="sr-only">全站搜尋</h2>
             <div class="flex items-center gap-3 px-4 py-3 border-b border-bdr">
                 <i data-lucide="search" class="w-5 h-5 text-txt-ter shrink-0"></i>
-                <input id="globalSearchInput" type="text" placeholder="搜尋報表、儀表板…"
+                <label for="globalSearchInput" class="sr-only">搜尋報表</label>
+                <input id="globalSearchInput" type="text" placeholder="搜尋報表"
                        class="flex-1 bg-transparent border-0 outline-none text-[15px] text-txt placeholder:text-txt-ter"
                        x-model="$store.search.query"
                        @@input.debounce.200ms="$store.search.search()" />
-                <kbd class="text-[11px] text-txt-ter bg-surface border border-bdr rounded px-1.5 py-0.5">ESC</kbd>
+                <kbd class="hidden text-[11px] text-txt-ter bg-surface border border-bdr rounded px-1.5 py-0.5 sm:inline">ESC</kbd>
+                <button type="button" aria-label="關閉搜尋"
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-txt-ter hover:bg-surface hover:text-txt"
+                        @@click="$store.search.close()">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
             </div>
             <div class="max-h-[360px] overflow-y-auto">
                 <template x-if="$store.search.query && $store.search.results.length === 0">
@@ -128,22 +146,22 @@
                         <svg class="w-4 h-4 text-pri mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                         <div class="flex-1 min-w-0">
                             <div class="text-[13px] font-semibold text-txt truncate" x-text="r.name"></div>
-                            <div class="text-[11px] text-txt-sec truncate" x-text="r.desc"></div>
-                            <div class="flex items-center gap-2 mt-0.5 text-[10px]">
+                            <div class="text-[12px] text-txt-sec truncate" x-text="r.desc"></div>
+                            <div class="flex items-center gap-2 mt-0.5 text-[12px]">
                                 <span class="font-medium text-txt-sec" x-text="r.dept"></span>
-                                <span class="badge" :class="catBadge(r.cat)" x-text="r.cat" x-show="r.cat"></span>
+                                <span class="badge text-[11px]" :class="catBadge(r.cat)" x-text="r.cat" x-show="r.cat"></span>
                             </div>
                         </div>
                     </button>
                 </template>
             </div>
             <template x-if="!$store.search.query">
-                <div class="px-4 py-3 text-[12px] text-txt-ter border-t border-bdr-light">
+                <div class="px-4 py-3 text-[13px] text-txt-ter border-t border-bdr-light">
                     <span class="font-medium">提示：</span>輸入報表名稱、部門或分類來搜尋
                 </div>
             </template>
         </div>
-    </div>
+    </dialog>
 
     <!-- 全域 Toast -->
     <div x-data x-show="$store.toast.visible" x-cloak
