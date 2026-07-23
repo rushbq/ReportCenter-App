@@ -90,6 +90,8 @@ try
     builder.Services.AddHttpContextAccessor();
 
     // 設定 (appsettings.json)
+    builder.Services.Configure<SiteSettings>(
+        builder.Configuration.GetSection(SiteSettings.SectionName));
     builder.Services.Configure<ReportBaseUrlSettings>(
         builder.Configuration.GetSection(ReportBaseUrlSettings.SectionName));
     builder.Services.Configure<DepartmentDisplaySettings>(
