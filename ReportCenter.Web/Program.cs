@@ -146,6 +146,8 @@ try
         app.UseExceptionHandler("/Error");
     }
 
+    app.UseHttpsRedirection();
+
     // Serilog Request Logging — 自動記錄每筆 HTTP 請求
     app.UseSerilogRequestLogging(options =>
     {
