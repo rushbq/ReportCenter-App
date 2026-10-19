@@ -2,6 +2,8 @@
 
 企業報表中心 (Enterprise Report Center) - 台灣寶工營運數據視覺化儀表板
 
+> 給人閱讀的完整專案文件（功能邏輯、業務規則總表、資料庫、部署、已知問題）在 `docs/`。修改行為時請同步更新 `docs/03-業務規則總表.md`。
+
 ## 技術架構
 
 - **後端:** ASP.NET Core 10 Razor Pages (C#)
@@ -69,11 +71,12 @@ ReportCenter.Web/
 ├── logs/                           # Serilog File Sink 輸出 (gitignore)
 └── docs/
     ├── frontend-spec.md            # 前端技術規格文件
-    ├── db-ddl.sql                  # ReportCenter DB 完整 DDL
-    ├── migration-001-permission.sql # 權限表 Migration
-    ├── migration-002-usage-log.sql  # 使用記錄表 Migration
-    ├── shared-infra.Production.template.json        # 伺服器共用機密範本
-    └── reportWebApp-Site.Production.template.json   # 站台專用機密範本
+    └── 開發/
+        ├── db-ddl.sql                  # ReportCenter DB 完整 DDL (含權限表)
+        ├── migration-002-usage-log.sql # 使用記錄表 Migration
+        ├── usp_Rpt_Home_YtdTarget.sql  # 首頁戰情 SP (INSERT…EXEC 依欄位位置擷取底層 YTD SP，底層欄位異動須同步修改)
+        ├── shared-infra.Production.template.json        # 伺服器共用機密範本
+        └── reportWebApp-Site.Production.template.json   # 站台專用機密範本
 ```
 
 ## 路由
@@ -144,10 +147,11 @@ IUsageRepository (介面)             # 使用記錄資料存取層 (ReportCente
 
 | 環境變數 | 用途 | 範例路徑 |
 |----------|------|---------|
-| `SHARED_INFRA_PATH` | 伺服器各站台共用的機密設定 (如共用連線字串、Seq) | `D:\CompanySecrets\shared-infra.Production.json` |
-| `RC_CONFIG_PATH` | 本站台專用的機密設定 (如站台連線字串、AdminUsers) | `D:\CompanySecrets\reportWebApp-Site.Production.json` |
+| `SHARED_INFRA_PATH` | 伺服器各站台共用的機密設定 (如共用連線字串、Seq) | `C:\CompanySecrets\shared-infra.Production.json` |
+| `RC_CONFIG_PATH` | 本站台專用的機密設定 (如站台連線字串、AdminUsers) | `C:\CompanySecrets\reportWebApp-Site.Production.json` |
 
 首頁戰情資料源由 `Program.cs` 依環境註冊：Development 固定使用 Mock，Staging / Production 固定使用 SQL。
+`HomeDashboardService` 以 `IMemoryCache` 全站共用快取戰情結果：月結累計 (M) 快取到當天結束、即時累計 (R) 快取 5 分鐘（key 含日期）。
 
 ## Logging 架構
 
@@ -196,8 +200,8 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 | 檔案 | 用途 | 包含內容 |
 |------|------|---------|
-| `appsettings.json` | 共用 base 設定 | Serilog 基底等級、ReportBaseUrls、AdminUsers、DepartmentDisplay |
-| `appsettings.Development.json` | 開發環境 | MockWindowsAuth 模擬使用者、DetailedErrors |
+| `appsettings.json` | 共用 base 設定 | Site、Serilog 基底等級、ReportBaseUrls、WindowsAuthDebug(關)、DepartmentDisplay |
+| `appsettings.Development.json` | 開發環境 | MockWindowsAuth 模擬使用者、AdminUsers、WindowsAuthDebug(開)、DetailedErrors |
 | `appsettings.Staging.json` | 測試環境 | Seq 設定(空，由外部機密檔填入) |
 | `appsettings.Production.json` | 正式環境範本 | Seq 設定(空，由外部機密檔填入) |
 
@@ -220,10 +224,12 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 ## 公司切換機制
 
-- 使用 Cookie (`companyId`) 儲存選擇的公司
-- TopNav 切換時寫入 Cookie 並重新載入頁面
-- 後端透過 `IHttpContextAccessor` 讀取 Cookie 決定資料來源
-- 未來兩個公司別的報表權限將分開管理
+- 使用 Cookie (`companyId`) 儲存選擇的公司；TopNav 切換時寫入 Cookie 並重新載入頁面
+- **目前公司別只能透過 `IReportService.GetCurrentCompanyId()` 取得**：cookie 為合法公司才採用，
+  否則退回 `UserInfo.CompanyId`（依 PKSYS 所屬部門 `User_Dept.Area`：TW→`tw`、SH→`sh`，查無→`tw`）
+- **外部報表連結只能透過 `IReportService.BuildReportUrl()` 組出**（BaseUrl + ReportCode，`UseCompanyParam` 時附加 `dbs`），
+  由後端組好再交給前端，前端不可自行拼接網址或讀 cookie
+- 權限、收藏、釘選不分公司別
 
 ## Windows 驗證機制
 
@@ -248,15 +254,17 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 ### IIS 部署
 
-- `web.config` 已設定 `windowsAuthentication enabled="true"` 與 `anonymousAuthentication enabled="false"`
+- IIS 站台需「啟用 Windows 驗證、停用匿名驗證」——在 IIS 管理員設定，**不寫進 `web.config`**（`<security><authentication>` 預設鎖定，寫入會 HTTP 500.19）
 - `forwardWindowsAuthToken="true"` 確保 Windows 驗證 Token 傳遞至 ASP.NET Core
 - 部署前需在 IIS 伺服器安裝「Windows Authentication」功能
+- 非開發環境 `Program.cs` 設定 `FallbackPolicy = DefaultPolicy` (需通過驗證)，未驗證請求一律 401，不依賴 IIS 設定是否正確
 
 ### 使用者資訊解析流程
 
 1. **Development**: `DevWindowsAuthMiddleware` → Claims → `SqlReportService.GetCurrentUser()`
 2. **Production**: IIS Negotiate → Claims (僅 `ClaimTypes.Name`) → `SqlReportService.GetCurrentUser()`
-3. Production 環境僅提供 Windows 帳號名稱 (`DOMAIN\username`)，未來可透過 AD/DB 查詢補充 DisplayName、Department 等詳細資料
+3. Production 環境僅提供 Windows 帳號名稱 (`DOMAIN\username`)，姓名、部門、暱稱、預設公司由 PKSYS `User_Profile` / `User_Dept` 補齊
+4. 未通過驗證時 `GetCurrentUser()` 回傳空使用者 (Id = "")：非管理員、無任何權限。**不可退回固定的 Mock 使用者**
 
 ## 權限管理
 
@@ -283,12 +291,14 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 ### 權限檢查流程
 
-1. `SqlReportService.GetReports()` — 依 `GetAuthorizedReportIds()` 過濾報表列表
-2. Admin 頁面目前不限制存取
+1. `SqlReportService.GetReports()` — 依 `GetAuthorizedReportIds()` 過濾報表列表；**`AdminUsers` 中的管理員不過濾**，可看見所有啟用中報表
+2. 所有 `Pages/Admin/*` 繼承 `AdminPageModel`，對每個 handler (GET/POST/AJAX) 檢查 `AdminUsers`：GET 顯示權限不足、POST 回 403 JSON。新增管理頁務必繼承它
+3. 新增收藏 / 釘選前檢查報表存在、啟用且使用者有權限 (`SqlReportService.CanAccessReport`)；取消一律允許
+4. `AdminUsers` 不在 `appsettings.json`：開發放 `appsettings.Development.json`，正式放 `RC_CONFIG_PATH` 外部機密檔
 
 ## 資料庫結構 (DDL)
 
-完整 DDL 定義於 `docs/db-ddl.sql`，Migration 腳本依序編號於 `docs/migration-*.sql`。
+完整 DDL 定義於 `ReportCenter.Web/docs/開發/db-ddl.sql`，Migration 腳本依序編號於 `ReportCenter.Web/docs/開發/migration-*.sql`。
 
 ### ReportCenter 資料庫
 
@@ -346,9 +356,8 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 
 ### 公司別解析
 
-`UsageService.ResolveCompanyId()` **必須與 `_TopNav` 的顯示邏輯一致**：cookie 有效才採用，
-否則退回 `user.CompanyId`。`companyId` cookie 只在使用者主動切換公司時才寫入，
-直接讀 cookie 會讓沒切換過的使用者記錄全成空值。
+`UsageService.TrackClick()` 使用 `IReportService.GetCurrentCompanyId()`，與頂欄顯示、報表連結同一套判定。
+`companyId` cookie 只在使用者主動切換公司時才寫入，**不可直接讀 cookie**，否則沒切換過的使用者會記成空值。
 
 ### 統計期間
 
@@ -389,7 +398,7 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 ### 資料模型
 
 - `ReportCatalogItem` — 報表清冊主表 (對應 DB `ReportCatalog`)
-- `DeptAssignment` — 部門指派 (對應 DB `ReportDepartment`)
+- `DeptAssignment` — 部門指派 (對應 DB `ReportDepartment`)；`DeptName` 在 DB 是快照，`CatalogService` 讀取時以 PKSYS 目前名稱覆寫 (查無才用快照)
 - `Dependencies` — 相依物件清單 (對應 DB `ReportDependency`)
 - `AdminStats` — 管理總覽 KPI ViewModel，含 `DeptUsagesTW` / `DeptUsagesSH` (依區域分開)
 - `DeptUsage` — 部門 → 報表對照
@@ -414,6 +423,9 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 | `CatalogService` | `GetCatalogDepartments()` | `allowedDeptIds` HashSet |
 
 新增任何取得部門的方法時，務必加入相同的過濾邏輯。
+
+**DeptID 必須為數字**（`ReportDepartment.DeptID` 為 INT）：`DepartmentDisplay` 以 `ValidateOnStart` 驗證，非數字會啟動失敗；
+`SqlReportService.GetReports` 遇非數字代碼記 Warning 並回傳空清單。
 若需新增/移除顯示的部門，修改 `appsettings.json` 的 `DepartmentDisplay` 區段即可。
 
 ## 匯出功能
