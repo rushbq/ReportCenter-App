@@ -110,8 +110,9 @@ public class CatalogModel : AdminPageModel
         item.Departments = ParseDepartments(deptIds);
         item.Dependencies = ParseDependencies(dependencies);
 
-        _catalogSvc.SaveCatalogItem(item);
-        return RedirectToPage(new { msg = "saved" });
+        var saved = _catalogSvc.SaveCatalogItem(item);
+        // focus：前端據此捲動並標亮剛儲存的那一列 (新增時才知道新 ID)
+        return RedirectToPage(new { msg = "saved", focus = saved.ReportID });
     }
 
     /// <summary>刪除報表目錄項目</summary>
@@ -121,11 +122,19 @@ public class CatalogModel : AdminPageModel
         return RedirectToPage(new { msg = "deleted" });
     }
 
-    /// <summary>切換報表啟停用狀態</summary>
+    /// <summary>切換報表啟停用狀態 (AJAX)；回傳切換後狀態與更新日期供前端就地更新該列</summary>
     public IActionResult OnPostToggle(int reportId)
     {
-        _catalogSvc.ToggleCatalogItem(reportId);
-        return RedirectToPage(new { msg = "toggled" });
+        if (!_catalogSvc.ToggleCatalogItem(reportId))
+            return new JsonResult(new { success = false, message = "找不到此報表" });
+
+        var item = _catalogSvc.GetCatalogItem(reportId)!;
+        return new JsonResult(new
+        {
+            success = true,
+            isActive = item.IsActive,
+            displayDate = (item.ModifyDate ?? item.CreateDate).ToString("yyyy/MM/dd")
+        });
     }
 
     // ─── 私有解析方法 ───

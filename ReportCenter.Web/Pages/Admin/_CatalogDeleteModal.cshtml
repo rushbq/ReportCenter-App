@@ -1,7 +1,8 @@
 @* 刪除確認 Modal — 由 Catalog.cshtml 引入，共用 Alpine catalogPage() scope *@
 
 <!-- 刪除確認 Modal -->
-<div x-show="deleteOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center"
+@* z 高於編輯視窗：刪除入口在編輯視窗內，確認框疊在其上 *@
+<div x-show="deleteOpen" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center"
      x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0"
      x-transition:enter-end="opacity-100">
     <div class="absolute inset-0 bg-black/40" @@click="deleteOpen = false"></div>
@@ -12,6 +13,7 @@
             </div>
             <h3 class="text-[15px] font-bold text-txt mb-1">確認刪除</h3>
             <p class="text-[13px] text-txt-sec">確定要刪除「<span class="font-medium text-txt" x-text="deleteItem?.reportName"></span>」嗎？此操作無法復原。</p>
+            <p class="mt-2 text-[12px] text-txt-ter">權限、收藏、釘選與使用記錄會一併清除；只是不再使用的話，建議改為停用。</p>
         </div>
         <div class="flex gap-2 mt-5">
             <button @@click="deleteOpen = false"

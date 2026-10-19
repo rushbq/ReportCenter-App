@@ -7,7 +7,7 @@
      x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
 
     <!-- 背景遮罩 -->
-    <div class="absolute inset-0 bg-black/40" @@click="modalOpen = false"></div>
+    <div class="absolute inset-0 bg-black/40" @@click="closeModal()"></div>
 
     <!-- Modal 面板 -->
     <div class="relative w-full max-w-[820px] mx-4 bg-white rounded-xl shadow-2xl max-h-[90vh] flex flex-col"
@@ -16,7 +16,7 @@
         <div class="shrink-0 border-b border-bdr">
             <div class="flex items-center justify-between px-6 pt-4 pb-0">
                 <h3 class="text-[16px] font-bold text-txt" x-text="isEdit ? '編輯報表' : '新增報表'"></h3>
-                <button @@click="modalOpen = false" class="p-1 rounded-lg hover:bg-surface border-0 bg-transparent cursor-pointer text-txt-sec hover:text-txt transition-colors">
+                <button @@click="closeModal()" title="關閉 (Esc)" class="p-1 rounded-lg hover:bg-surface border-0 bg-transparent cursor-pointer text-txt-sec hover:text-txt transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -56,8 +56,10 @@
                 <div class="grid grid-cols-[1fr_auto] gap-4 items-end">
                     <div>
                         <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">報表名稱 <span class="text-bad">*</span></label>
-                        <input type="text" x-model="form.reportName"
-                               class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors"
+                        <input type="text" x-model="form.reportName" x-ref="reportNameInput"
+                               @@input="errors.reportName = ''"
+                               :class="errors.reportName ? 'border-bad bg-bad/5' : 'border-bdr'"
+                               class="w-full px-3 py-2 rounded-lg border text-[13px] outline-none focus:border-pri transition-colors"
                                placeholder="輸入報表名稱">
                     </div>
                     <div class="flex items-center gap-2.5 pb-0.5">
@@ -69,6 +71,7 @@
                         </button>
                         <span class="text-[11px] shrink-0" :class="form.isActive ? 'text-ok' : 'text-bad'" x-text="form.isActive ? '啟用' : '停用'"></span>
                     </div>
+                    <p x-show="errors.reportName" class="col-span-2 -mt-3 text-[11px] text-bad" x-text="errors.reportName"></p>
                 </div>
 
                 <!-- 雙欄：工具類型 + 報表資料夾 -->
@@ -97,14 +100,21 @@
                 <div>
                     <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">
                         <span x-text="form.reportTool === 'SmartQuery' ? 'SmartQuery 路徑' : 'SSRS 路徑'"></span>
+                        <span class="text-bad">*</span>
                     </label>
-                    <div class="flex items-center gap-0 mb-0">
-                        <span class="inline-flex items-center px-3 py-2 rounded-l-lg border border-r-0 border-bdr bg-surface text-[11px] text-txt-ter font-mono whitespace-nowrap"
-                              x-text="form.reportTool === 'SmartQuery' ? baseUrls.smartQuery : baseUrls.ssrs"></span>
-                        <input type="text" x-model="form.reportCode"
-                               class="flex-1 px-3 py-2 rounded-r-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors font-mono"
+                    <div class="flex items-stretch gap-0 mb-0">
+                        @* 前綴過長時截斷 (滑過看完整網址)，避免擠壓輸入框 *@
+                        <span class="flex items-center min-w-0 max-w-[45%] px-3 py-2 rounded-l-lg border border-r-0 border-bdr bg-surface text-[11px] text-txt-ter font-mono"
+                              :title="form.reportTool === 'SmartQuery' ? baseUrls.smartQuery : baseUrls.ssrs">
+                            <span class="truncate" x-text="form.reportTool === 'SmartQuery' ? baseUrls.smartQuery : baseUrls.ssrs"></span>
+                        </span>
+                        <input type="text" x-model="form.reportCode" x-ref="reportCodeInput"
+                               @@input="errors.reportCode = ''"
+                               :class="errors.reportCode ? 'border-bad bg-bad/5' : 'border-bdr'"
+                               class="flex-1 min-w-0 px-3 py-2 rounded-r-lg border text-[13px] outline-none focus:border-pri transition-colors font-mono"
                                :placeholder="form.reportTool === 'SmartQuery' ? 'GUID 路徑' : '報表路徑'">
                     </div>
+                    <p x-show="errors.reportCode" class="mt-1 text-[11px] text-bad" x-text="errors.reportCode"></p>
                 </div>
 
                 <!-- 雙欄：資料來源 + 分類 -->
@@ -119,7 +129,7 @@
                         <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">報表分類</label>
                         <select x-model="form.categoryID"
                                 class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-white">
-                            <option :value="null">未分類</option>
+                            <option value="">未分類</option>
                             <template x-for="cat in filteredCategories" :key="cat.categoryID">
                                 <option :value="cat.categoryID" x-text="cat.categoryName" :selected="form.categoryID == cat.categoryID"></option>
                             </template>
@@ -248,18 +258,26 @@
         </div>
 
         <!-- Footer -->
-        <div class="flex items-center justify-between px-6 py-4 border-t border-bdr shrink-0">
-            <div class="text-[11px] text-txt-ter" x-show="isEdit">
-                ID: <span x-text="form.reportID"></span>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-3 px-6 py-4 border-t border-bdr shrink-0">
+            @* 刪除是低頻且不可復原的操作，只放在編輯視窗，不在每一列常駐 *@
+            <button type="button" x-show="isEdit" @@click="confirmDelete(editItem)"
+                    class="inline-flex items-center gap-1.5 -ml-2 px-2 py-2 rounded-lg text-[12px] text-bad hover:bg-bad/10 cursor-pointer border-0 bg-transparent transition-colors">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>刪除報表
+            </button>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-txt-ter">
+                <span x-show="isEdit" class="tabular-nums">ID <span x-text="form.reportID"></span> · 更新於 <span x-text="editItem?.displayDate"></span></span>
+                <span x-show="isDirty" class="inline-flex items-center gap-1 text-amber-700">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>有未儲存的變更
+                </span>
             </div>
             <div class="flex items-center gap-2 ml-auto">
-                <button @@click="modalOpen = false"
+                <button @@click="closeModal()"
                         class="px-4 py-2 rounded-lg border border-bdr text-[13px] text-txt-sec hover:bg-surface cursor-pointer bg-white transition-colors">
                     取消
                 </button>
-                <button @@click="save()"
-                        class="px-5 py-2 rounded-lg bg-pri text-white text-[13px] font-medium border-0 cursor-pointer hover:bg-pri-hover transition-colors">
-                    <span x-text="isEdit ? '儲存變更' : '新增報表'"></span>
+                <button @@click="save()" :disabled="saving" title="Ctrl + S"
+                        class="px-5 py-2 rounded-lg bg-pri text-white text-[13px] font-medium border-0 cursor-pointer hover:bg-pri-hover transition-colors disabled:opacity-60 disabled:cursor-wait">
+                    <span x-text="saving ? '儲存中…' : (isEdit ? '儲存變更' : '新增報表')"></span>
                 </button>
             </div>
         </div>

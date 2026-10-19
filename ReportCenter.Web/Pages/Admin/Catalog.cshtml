@@ -70,7 +70,7 @@
 }
 
 <div class="page-container"
-     x-data="catalogPage()" x-init="init()">
+     x-data="catalogPage()" x-init="init()" @@keydown.window="onKey($event)">
 
     <!-- 麵包屑 -->
     <div class="flex items-center gap-1.5 text-[12px] text-txt-ter mb-4">
@@ -94,173 +94,213 @@
         </button>
     </div>
 
-    <!-- 篩選列 -->
-    <div class="sticky top-14 z-40 bg-white rounded-xl border border-bdr shadow-sm px-4 py-3 mb-4 flex flex-wrap items-center gap-3">
+    <!-- 篩選列 (小螢幕不黏頂，避免佔掉三分之一畫面) -->
+    <div class="md:sticky md:top-14 z-30 bg-white rounded-xl border border-bdr shadow-sm px-4 py-3 mb-4 flex flex-wrap items-center gap-x-3 gap-y-2.5">
         <!-- 搜尋 -->
-        <div class="relative flex-1 min-w-[180px] max-w-[300px]">
+        <div class="relative w-full sm:w-auto sm:flex-1 sm:min-w-[180px] sm:max-w-[300px]">
             <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-txt-ter"></i>
-            <input type="text" x-model.debounce.200ms="search" placeholder="搜尋報表名稱、來源..."
-                   class="w-full pl-9 pr-3 py-1.5 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-surface">
+            <input type="search" x-model.debounce.200ms="search" placeholder="搜尋報表名稱、來源、資料夾" aria-label="搜尋報表"
+                   class="w-full pl-9 pr-3 py-2 sm:py-1.5 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors bg-surface">
         </div>
 
-        <!-- 工具類型 chips -->
-        <div class="flex gap-1.5">
-            <button @@click="toolFilter = ''"
-                    :class="toolFilter === '' ? 'bg-pri text-white border-pri' : 'bg-white text-txt-sec border-bdr hover:border-pri/40'"
-                    class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">全部</button>
-            <button @@click="toolFilter = 'SmartQuery'"
+        <!-- 工具類型 -->
+        <div class="flex gap-1.5" role="group" aria-label="工具類型">
+            <button type="button" @@click="toolFilter = ''" :aria-pressed="toolFilter === ''"
+                    :class="toolFilter === '' ? 'bg-pri-light text-pri border-pri/30' : 'bg-white text-txt-sec border-bdr hover:border-pri/40'"
+                    class="px-3 py-1.5 md:py-1 rounded-full text-[12px] md:text-[11px] font-medium border cursor-pointer transition-colors">全部類型</button>
+            <button type="button" @@click="toolFilter = 'SmartQuery'" :aria-pressed="toolFilter === 'SmartQuery'"
                     :class="toolFilter === 'SmartQuery' ? 'bg-amber-600 text-white border-amber-600' : 'bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-400'"
-                    class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">SmartQuery</button>
-            <button @@click="toolFilter = 'SSRS'"
+                    class="px-3 py-1.5 md:py-1 rounded-full text-[12px] md:text-[11px] font-medium border cursor-pointer transition-colors">SmartQuery</button>
+            <button type="button" @@click="toolFilter = 'SSRS'" :aria-pressed="toolFilter === 'SSRS'"
                     :class="toolFilter === 'SSRS' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:border-indigo-400'"
-                    class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">SSRS</button>
+                    class="px-3 py-1.5 md:py-1 rounded-full text-[12px] md:text-[11px] font-medium border cursor-pointer transition-colors">SSRS</button>
         </div>
 
-        <!-- 分隔線 -->
-        <div class="w-px h-6 bg-bdr"></div>
+        <div class="hidden sm:block w-px h-6 bg-bdr"></div>
 
-        <!-- 狀態 chips -->
-        <div class="flex gap-1.5">
-            <button @@click="activeFilter = ''"
-                    :class="activeFilter === '' ? 'bg-pri/10 text-pri border-pri/20' : 'bg-white text-txt-sec border-bdr hover:border-pri/40'"
-                    class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">全部</button>
-            <button @@click="activeFilter = 'true'"
+        <!-- 狀態 -->
+        <div class="flex gap-1.5" role="group" aria-label="啟用狀態">
+            <button type="button" @@click="activeFilter = ''" :aria-pressed="activeFilter === ''"
+                    :class="activeFilter === '' ? 'bg-pri-light text-pri border-pri/30' : 'bg-white text-txt-sec border-bdr hover:border-pri/40'"
+                    class="px-3 py-1.5 md:py-1 rounded-full text-[12px] md:text-[11px] font-medium border cursor-pointer transition-colors">全部狀態</button>
+            <button type="button" @@click="activeFilter = 'true'" :aria-pressed="activeFilter === 'true'"
                     :class="activeFilter === 'true' ? 'bg-ok/10 text-ok border-ok/30' : 'bg-white text-txt-sec border-bdr hover:border-ok/40'"
-                    class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">啟用</button>
-            <button @@click="activeFilter = 'false'"
+                    class="px-3 py-1.5 md:py-1 rounded-full text-[12px] md:text-[11px] font-medium border cursor-pointer transition-colors">啟用</button>
+            <button type="button" @@click="activeFilter = 'false'" :aria-pressed="activeFilter === 'false'"
                     :class="activeFilter === 'false' ? 'bg-bad/10 text-bad border-bad/30' : 'bg-white text-txt-sec border-bdr hover:border-bad/40'"
-                    class="px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors">停用</button>
+                    class="px-3 py-1.5 md:py-1 rounded-full text-[12px] md:text-[11px] font-medium border cursor-pointer transition-colors">停用</button>
         </div>
 
-        <!-- 分隔線 -->
-        <div class="w-px h-6 bg-bdr"></div>
+        <div class="hidden sm:block w-px h-6 bg-bdr"></div>
 
-        <!-- 報表資料夾篩選 -->
-        <select x-model="pathFilter"
-                class="px-3 py-1 rounded-lg border border-bdr text-[11px] outline-none focus:border-pri transition-colors bg-white text-txt-sec">
+        <!-- 報表資料夾 -->
+        <select x-model="pathFilter" aria-label="報表資料夾"
+                class="px-3 py-1.5 md:py-1 rounded-lg border border-bdr text-[12px] md:text-[11px] outline-none focus:border-pri transition-colors bg-white text-txt-sec">
             <option value="">全部資料夾</option>
             <template x-for="p in allPaths" :key="p">
                 <option :value="p" x-text="p"></option>
             </template>
         </select>
 
-        <!-- 報表數 -->
-        <div class="ml-auto text-[11px] text-txt-ter">
-            共 <span class="font-semibold text-txt" x-text="filtered.length"></span> 份報表
+        <!-- 筆數 + 清除 -->
+        <div class="ml-auto flex items-center gap-3 text-[11px] text-txt-ter">
+            <button type="button" x-show="hasFilter" x-cloak @@click="clearFilters()"
+                    class="text-pri hover:underline bg-transparent border-0 cursor-pointer p-0 text-[11px]">清除篩選</button>
+            <span>共 <span class="font-semibold text-txt tabular-nums" x-text="filtered.length"></span> 份報表</span>
         </div>
     </div>
 
-    <!-- 資料表格 -->
+    <!-- 清單：md 以上表格、以下卡片。列內圖示一律 inline SVG — x-for 重建的節點不會再跑 lucide.createIcons() -->
     <div class="bg-white rounded-xl border border-bdr shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-[13px]">
-                <thead>
-                    <tr class="bg-surface text-txt-sec text-[11px] border-b border-bdr">
-                        <th class="px-4 py-3 text-left font-semibold w-[46px]">#</th>
-                        <th class="px-3 py-3 text-left font-semibold">報表名稱</th>
-                        <th class="px-3 py-3 text-left font-semibold w-[112px]">工具類型</th>
-                        <th class="px-3 py-3 text-left font-semibold w-[74px]">狀態</th>
-                        <th class="px-3 py-3 text-left font-semibold hidden md:table-cell">部門</th>
-                        <th class="px-3 py-3 text-left font-semibold hidden lg:table-cell w-[100px]">分類</th>
-                        <th class="px-3 py-3 text-right font-semibold w-[104px] hidden lg:table-cell">近 30 日使用</th>
-                        <th class="px-3 py-3 text-right font-semibold w-[104px] hidden sm:table-cell">更新日期</th>
-                        <th class="px-4 py-3 text-right font-semibold w-[112px]">操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <template x-for="(item, idx) in filtered" :key="item.reportID">
-                        <tr class="[&>td]:align-middle transition-colors hover:bg-pri/5"
-                            :class="idx % 2 === 1 ? 'bg-surface/40' : 'bg-white'">
-                            <td class="px-4 py-3.5 text-[11px] text-txt-ter tabular-nums" x-text="item.reportID"></td>
-                            <td class="px-3 py-3.5">
-                                <button @@click="openEdit(item)" class="font-semibold text-txt hover:text-pri cursor-pointer border-0 bg-transparent p-0 text-left text-[13px] transition-colors" x-text="item.reportName"></button>
-                                <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-txt-ter max-w-[320px]" x-show="item.reportPath || item.sourceName">
-                                    <span x-show="item.reportPath" class="inline-flex items-center gap-1 shrink-0 truncate max-w-[130px]">
-                                        <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-                                        <span class="truncate" x-text="item.reportPath"></span>
-                                    </span>
-                                    <span x-show="item.reportPath && item.sourceName" class="text-bdr shrink-0">·</span>
-                                    <span x-show="item.sourceName" class="inline-flex items-center gap-1 min-w-0">
-                                        <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-                                        <span class="font-mono truncate" x-text="item.sourceName"></span>
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="px-3 py-3.5">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border"
+
+        <!-- 表格 (md+) -->
+        <table class="hidden md:table w-full text-[13px]">
+            <thead>
+                <tr class="bg-surface text-txt-sec text-[11px] border-b border-bdr">
+                    <th class="px-4 py-3 text-left font-semibold">報表</th>
+                    <th class="px-3 py-3 text-left font-semibold w-[28%]">部門選單</th>
+                    <th class="px-3 py-3 text-left font-semibold hidden xl:table-cell w-[96px]">分類</th>
+                    <th class="px-3 py-3 text-right font-semibold hidden lg:table-cell w-[96px]" title="近 30 日點擊次數；滑過數字可看最後使用日">近 30 日</th>
+                    <th class="px-3 py-3 text-left font-semibold w-[96px]">狀態</th>
+                    <th class="px-3 py-3 w-[52px]"><span class="sr-only">編輯</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="(item, idx) in filtered" :key="item.reportID">
+                    <tr class="border-b border-bdr-light last:border-0 [&>td]:align-middle transition-colors duration-700 hover:bg-pri/5"
+                        :id="'row-' + item.reportID"
+                        :class="item.reportID === highlightId ? 'bg-amber-100' : 'bg-white'">
+                        <td class="px-4 py-3">
+                            <button type="button" @@click="openEdit(item)"
+                                    class="font-semibold hover:text-pri cursor-pointer border-0 bg-transparent p-0 text-left text-[13px] transition-colors"
+                                    :class="item.isActive ? 'text-txt' : 'text-txt-ter'" x-text="item.reportName"></button>
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[11px] text-txt-ter">
+                                <span class="inline-flex items-center px-1.5 rounded text-[10px] font-medium border leading-[16px]"
                                       :class="toolClasses(item.reportTool)" x-text="item.reportTool"></span>
-                            </td>
-                            <td class="px-3 py-3.5">
-                                <template x-if="item.isActive">
-                                    <span class="inline-flex items-center gap-1 text-[11px] text-ok whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-ok"></span>啟用</span>
-                                </template>
-                                <template x-if="!item.isActive">
-                                    <span class="inline-flex items-center gap-1 text-[11px] text-bad whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-bad"></span>停用</span>
-                                </template>
-                            </td>
-                            <td class="px-3 py-3.5 hidden md:table-cell">
-                                <div class="flex flex-wrap gap-1">
-                                    <template x-for="(d, di) in item.departments.slice(0, 3)" :key="di">
-                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-white text-txt-sec border border-bdr" x-text="d.deptName"></span>
-                                    </template>
-                                    <button x-show="item.departments.length > 3" type="button"
+                                <span x-show="item.reportPath" class="inline-flex items-center gap-1 min-w-0">
+                                    <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                                    <span class="truncate" x-text="item.reportPath"></span>
+                                </span>
+                                <span x-show="item.sourceName" class="inline-flex items-center gap-1 min-w-0">
+                                    <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+                                    <span class="font-mono truncate max-w-[220px]" x-text="item.sourceName"></span>
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-3 py-3 text-[12px] text-txt-sec">
+                            <template x-if="item.departments.length > 0">
+                                <span>
+                                    <span x-text="deptPreview(item)"></span><button type="button" x-show="item.departments.length > 2"
                                             @@click.stop="showDepts(item)"
-                                            class="text-[10px] px-1.5 py-0.5 rounded bg-pri/10 text-pri font-medium border-0 cursor-pointer hover:bg-pri/20 transition-colors"
-                                            x-text="'+' + (item.departments.length - 3)"></button>
-                                    <span x-show="item.departments.length === 0" class="inline-flex items-center gap-1 text-[10px] text-bad whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-bad"></span>未指派</span>
-                                </div>
-                            </td>
-                            <td class="px-3 py-3.5 hidden lg:table-cell">
-                                <span x-show="item.categoryName" class="text-[10px] px-1.5 py-0.5 rounded-full font-medium" :class="catBadge(item.categoryName)" x-text="item.categoryName"></span>
-                                <span x-show="!item.categoryName" class="text-[10px] text-txt-ter">-</span>
-                            </td>
-                            <td class="px-3 py-3.5 text-right hidden lg:table-cell">
-                                <a :href="'/Admin/Usage?reportId=' + item.reportID"
-                                   :title="item.usageClicks > 0
-                                       ? '近 30 日 ' + item.usageClicks + ' 次，最後使用 ' + item.usageLastUsed + ' — 點擊查看明細'
-                                       : '近 30 日無使用記錄 — 點擊查看明細'"
-                                   class="inline-flex flex-col items-end gap-0.5 no-underline group">
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-semibold tabular-nums transition-colors"
-                                          :class="item.usageClicks > 0
-                                              ? 'bg-pri/10 text-pri group-hover:bg-pri/20'
-                                              : (item.isActive ? 'bg-bad/10 text-bad group-hover:bg-bad/20' : 'bg-surface text-txt-ter')"
-                                          x-text="item.usageClicks"></span>
-                                    <span class="text-[10px] text-txt-ter tabular-nums whitespace-nowrap"
-                                          x-text="item.usageLastUsed || '—'"></span>
-                                </a>
-                            </td>
-                            <td class="px-3 py-3.5 text-right text-[11px] text-txt-sec tabular-nums whitespace-nowrap hidden sm:table-cell" x-text="item.displayDate"></td>
-                            <td class="px-4 py-3.5">
-                                <div class="flex items-center justify-end gap-1">
-                                    <button @@click="openEdit(item)" title="編輯"
-                                            class="p-1.5 rounded-lg hover:bg-pri-light text-txt-sec hover:text-pri cursor-pointer border-0 bg-transparent transition-colors">
-                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                    </button>
-                                    <button @@click.stop="confirmToggle(item)" :title="item.isActive ? '點擊停用' : '點擊啟用'"
-                                            class="p-1.5 rounded-lg hover:bg-surface cursor-pointer border-0 bg-transparent transition-colors"
-                                            :class="item.isActive ? 'text-ok' : 'text-txt-ter'">
-                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <rect width="20" height="12" x="2" y="6" rx="6" ry="6"/>
-                                            <circle :cx="item.isActive ? 16 : 8" cy="12" r="2" fill="currentColor"/>
-                                        </svg>
-                                    </button>
-                                    <button @@click="confirmDelete(item)" title="刪除"
-                                            class="p-1.5 rounded-lg hover:bg-bad/10 text-txt-sec hover:text-bad cursor-pointer border-0 bg-transparent transition-colors">
-                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
+                                            class="ml-1 text-pri hover:underline bg-transparent border-0 cursor-pointer p-0 text-[12px] whitespace-nowrap"
+                                            x-text="'等 ' + item.departments.length + ' 個'"></button>
+                                </span>
+                            </template>
+                            <span x-show="item.departments.length === 0" class="inline-flex items-center gap-1 text-bad whitespace-nowrap">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                未指派
+                            </span>
+                        </td>
+                        <td class="px-3 py-3 hidden xl:table-cell">
+                            <span x-show="item.categoryName" class="text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap" :class="catBadge(item.categoryName)" x-text="item.categoryName"></span>
+                            <span x-show="!item.categoryName" class="text-[11px] text-txt-ter">未分類</span>
+                        </td>
+                        <td class="px-3 py-3 text-right hidden lg:table-cell">
+                            <a x-show="item.usageClicks > 0" :href="'/Admin/Usage?reportId=' + item.reportID"
+                               :title="'最後使用 ' + item.usageLastUsed + '，點擊查看明細'"
+                               class="text-[12px] font-semibold text-pri tabular-nums no-underline hover:underline"
+                               x-text="item.usageClicks + ' 次'"></a>
+                            <span x-show="item.usageClicks === 0" class="text-[11px]"
+                                  :class="item.isActive ? 'text-bad' : 'text-txt-ter'">未使用</span>
+                        </td>
+                        <td class="px-3 py-3">
+                            <button type="button" role="switch" :aria-checked="item.isActive"
+                                    :aria-label="(item.isActive ? '停用' : '啟用') + '「' + item.reportName + '」'"
+                                    @@click.stop="confirmToggle(item)"
+                                    class="inline-flex items-center gap-2 -mx-1.5 px-1.5 py-1.5 rounded-lg border-0 bg-transparent cursor-pointer hover:bg-surface transition-colors">
+                                <span class="relative shrink-0 w-8 h-[18px] rounded-full transition-colors" :class="item.isActive ? 'bg-ok' : 'bg-gray-300'">
+                                    <span class="absolute top-[2px] left-[2px] w-[14px] h-[14px] bg-white rounded-full shadow-sm transition-transform"
+                                          :class="item.isActive ? 'translate-x-[14px]' : ''"></span>
+                                </span>
+                                <span class="text-[12px] font-medium" :class="item.isActive ? 'text-ok' : 'text-txt-ter'" x-text="item.isActive ? '啟用' : '停用'"></span>
+                            </button>
+                        </td>
+                        <td class="px-3 py-3 text-right">
+                            <button type="button" @@click="openEdit(item)" title="編輯" :aria-label="'編輯「' + item.reportName + '」'"
+                                    class="inline-flex items-center justify-center w-9 h-9 rounded-lg hover:bg-pri-light text-txt-sec hover:text-pri cursor-pointer border-0 bg-transparent transition-colors">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                            </button>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <!-- 卡片 (< md) -->
+        <ul class="md:hidden divide-y divide-bdr-light">
+            <template x-for="item in filtered" :key="item.reportID">
+                <li class="px-4 py-3.5 transition-colors duration-700"
+                    :id="'card-' + item.reportID"
+                    :class="item.reportID === highlightId ? 'bg-amber-100' : 'bg-white'">
+                    <div class="flex items-start gap-2">
+                        <button type="button" @@click="openEdit(item)"
+                                class="flex-1 min-w-0 text-left border-0 bg-transparent p-0 cursor-pointer">
+                            <span class="block font-semibold text-[14px] leading-snug" :class="item.isActive ? 'text-txt' : 'text-txt-ter'" x-text="item.reportName"></span>
+                            <span class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[11px] text-txt-ter">
+                                <span class="inline-flex items-center px-1.5 rounded text-[10px] font-medium border leading-[16px]"
+                                      :class="toolClasses(item.reportTool)" x-text="item.reportTool"></span>
+                                <span x-show="item.reportPath" x-text="item.reportPath"></span>
+                                <span x-show="item.sourceName" class="font-mono break-all" x-text="item.sourceName"></span>
+                            </span>
+                        </button>
+                        <button type="button" @@click="openEdit(item)" :aria-label="'編輯「' + item.reportName + '」'"
+                                class="shrink-0 -mr-2 -mt-1.5 inline-flex items-center justify-center w-11 h-11 rounded-lg text-txt-sec active:bg-pri-light cursor-pointer border-0 bg-transparent">
+                            <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="mt-2 text-[12px] text-txt-sec">
+                        <template x-if="item.departments.length > 0">
+                            <span>
+                                <span x-text="deptPreview(item)"></span><button type="button" x-show="item.departments.length > 2"
+                                        @@click="showDepts(item)"
+                                        class="ml-1 text-pri bg-transparent border-0 cursor-pointer p-0 text-[12px]"
+                                        x-text="'等 ' + item.departments.length + ' 個'"></button>
+                            </span>
+                        </template>
+                        <span x-show="item.departments.length === 0" class="inline-flex items-center gap-1 text-bad">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                            未指派部門選單
+                        </span>
+                    </div>
+
+                    <div class="mt-1.5 flex items-center justify-between gap-3">
+                        <button type="button" role="switch" :aria-checked="item.isActive"
+                                :aria-label="(item.isActive ? '停用' : '啟用') + '「' + item.reportName + '」'"
+                                @@click="confirmToggle(item)"
+                                class="inline-flex items-center gap-2.5 -ml-1 px-1 min-h-[44px] rounded-lg border-0 bg-transparent cursor-pointer">
+                            <span class="relative shrink-0 w-10 h-[22px] rounded-full transition-colors" :class="item.isActive ? 'bg-ok' : 'bg-gray-300'">
+                                <span class="absolute top-[2px] left-[2px] w-[18px] h-[18px] bg-white rounded-full shadow-sm transition-transform"
+                                      :class="item.isActive ? 'translate-x-[18px]' : ''"></span>
+                            </span>
+                            <span class="text-[13px] font-medium" :class="item.isActive ? 'text-ok' : 'text-txt-ter'" x-text="item.isActive ? '啟用' : '停用'"></span>
+                        </button>
+                        <a x-show="item.usageClicks > 0" :href="'/Admin/Usage?reportId=' + item.reportID"
+                           class="inline-flex items-center min-h-[44px] text-[12px] text-pri tabular-nums no-underline"
+                           x-text="'近 30 日 ' + item.usageClicks + ' 次'"></a>
+                        <span x-show="item.usageClicks === 0" class="text-[12px]"
+                              :class="item.isActive ? 'text-bad' : 'text-txt-ter'">近 30 日未使用</span>
+                    </div>
+                </li>
+            </template>
+        </ul>
 
         <!-- 空白狀態 -->
-        <div x-show="filtered.length === 0" class="py-16 text-center">
+        <div x-show="filtered.length === 0" class="py-16 px-4 text-center">
             <i data-lucide="file-x" class="w-10 h-10 text-txt-ter mx-auto mb-3"></i>
-            <div class="text-[14px] text-txt-sec">尚無符合條件的報表</div>
-            <div class="text-[12px] text-txt-ter mt-1">請調整篩選條件或新增報表</div>
+            <div class="text-[14px] text-txt-sec">沒有符合條件的報表</div>
+            <button type="button" x-show="hasFilter" @@click="clearFilters()"
+                    class="mt-3 px-4 py-2 rounded-lg border border-bdr bg-white text-[13px] text-pri cursor-pointer hover:border-pri/40 transition-colors">清除篩選</button>
         </div>
     </div>
 
@@ -285,16 +325,21 @@
                 <p class="text-[13px] text-txt-sec">
                     確定要<span x-text="toggleItem?.isActive ? '停用' : '啟用'"></span>「<span class="font-medium text-txt" x-text="toggleItem?.reportName"></span>」嗎？
                     <span x-show="toggleItem?.isActive" class="block mt-1 text-txt-ter text-[12px]">停用後使用者將無法在前台看到此報表。</span>
+                    <span x-show="toggleItem?.isActive" class="block mt-1 text-[12px] tabular-nums"
+                          :class="toggleItem?.usageClicks > 0 ? 'text-amber-700' : 'text-txt-ter'"
+                          x-text="toggleItem?.usageClicks > 0
+                              ? '近 30 日仍有 ' + toggleItem.usageClicks + ' 次使用，最後使用 ' + toggleItem.usageLastUsed
+                              : '近 30 日無人使用'"></span>
                     <span x-show="!toggleItem?.isActive" class="block mt-1 text-txt-ter text-[12px]">啟用後此報表將顯示於前台。</span>
                 </p>
             </div>
             <div class="flex gap-2 mt-5">
                 <button @@click="toggleOpen = false"
                         class="flex-1 px-4 py-2 rounded-lg border border-bdr text-[13px] text-txt-sec hover:bg-surface cursor-pointer bg-white transition-colors">取消</button>
-                <button @@click="doToggle()"
-                        class="flex-1 px-4 py-2 rounded-lg text-white text-[13px] font-medium border-0 cursor-pointer transition-colors"
+                <button @@click="doToggle()" :disabled="toggling"
+                        class="flex-1 px-4 py-2 rounded-lg text-white text-[13px] font-medium border-0 cursor-pointer transition-colors disabled:opacity-60 disabled:cursor-wait"
                         :class="toggleItem?.isActive ? 'bg-bad hover:bg-red-600' : 'bg-ok hover:bg-emerald-600'">
-                    <span x-text="toggleItem?.isActive ? '停用' : '啟用'"></span>
+                    <span x-text="toggling ? '處理中…' : (toggleItem?.isActive ? '停用' : '啟用')"></span>
                 </button>
             </div>
         </div>
@@ -351,14 +396,15 @@
         @Html.AntiForgeryToken()
         <input type="hidden" name="reportId" x-ref="deleteId">
     </form>
-    <form x-ref="toggleForm" method="post" asp-page-handler="Toggle" class="hidden">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="reportId" x-ref="toggleId">
-    </form>
 </div>
 
 @section Scripts {
 <script>
+// 篩選欄位 ↔ 網址參數名稱 (刻意不用 tool/active/search，那三個會觸發 OnGet 的伺服器端過濾)
+const CATALOG_FILTER_KEYS = { search: 'q', toolFilter: 'type', activeFilter: 'status', pathFilter: 'folder' };
+// 儲存 / 刪除會整頁重載，送出前把篩選與捲動位置暫存於此，重載後還原
+const CATALOG_RETURN_KEY = 'rc_catalog_return';
+
 function catalogPage() {
     return {
         // 篩選
@@ -382,11 +428,18 @@ function catalogPage() {
         modalOpen: false,
         modalTab: 'basic',
         isEdit: false,
+        editItem: null,
         form: {},
         selectedDepts: [],
         deps: [],
         depInput: '',
         depSugOpen: false,
+        snapshot: '',
+        errors: {},
+        saving: false,
+
+        // 剛操作過的列 (短暫標亮)
+        highlightId: null,
 
         // 刪除
         deleteOpen: false,
@@ -395,6 +448,7 @@ function catalogPage() {
         // 停用/啟用確認
         toggleOpen: false,
         toggleItem: null,
+        toggling: false,
 
         // 部門明細
         deptModalOpen: false,
@@ -416,8 +470,25 @@ function catalogPage() {
             });
         },
 
+        get hasFilter() {
+            return Object.keys(CATALOG_FILTER_KEYS).some(k => this[k]);
+        },
+
+        clearFilters() {
+            Object.keys(CATALOG_FILTER_KEYS).forEach(k => this[k] = '');
+        },
+
+        // 部門欄只列前兩個名稱，其餘以「等 N 個」連到明細，避免整排標籤擠成一團
+        deptPreview(item) {
+            return item.departments.slice(0, 2).map(d => d.deptName).join('、');
+        },
+
         get filteredCategories() {
             return this.allCategories.filter(c => c.isActive);
+        },
+
+        get isDirty() {
+            return this.modalOpen && this.formState() !== this.snapshot;
         },
 
         get depSuggestions() {
@@ -444,8 +515,30 @@ function catalogPage() {
             const msg = params.get('msg');
             if (msg === 'saved') Alpine.store('toast').show('報表已儲存');
             if (msg === 'deleted') Alpine.store('toast').show('報表已刪除');
-            if (msg === 'toggled') Alpine.store('toast').show('狀態已更新');
             if (msg === 'invalid') Alpine.store('toast').show('儲存失敗：報表名稱、報表代碼為必填，工具類型須為 SmartQuery 或 SSRS', 'error');
+
+            // 篩選條件：操作後重載取暫存，其餘 (含重新整理) 取網址
+            const ret = msg ? this.popReturnState() : null;
+            this.applyFilterQuery(ret ? ret.query : window.location.search);
+            this.syncUrl(); // 同時清掉 msg / focus / edit 參數
+            Object.keys(CATALOG_FILTER_KEYS).forEach(k => this.$watch(k, () => this.syncUrl()));
+
+            // 回到操作前的位置：剛儲存的列置中並標亮；刪除則還原捲動位置
+            const focusId = parseInt(params.get('focus'));
+            if (msg) {
+                this.$nextTick(() => {
+                    // 表格列與手機卡片只有一個可見，挑可見的那個捲動
+                    const row = focusId && ['row-', 'card-']
+                        .map(p => document.getElementById(p + focusId))
+                        .find(el => el && el.offsetParent !== null);
+                    if (row) {
+                        row.scrollIntoView({ block: 'center' });
+                        this.flashRow(focusId);
+                    } else if (ret) {
+                        window.scrollTo(0, ret.scrollY || 0);
+                    }
+                });
+            }
 
             // 檢查是否有 edit 參數
             const editId = params.get('edit');
@@ -453,11 +546,47 @@ function catalogPage() {
                 const item = this.items.find(i => i.reportID === parseInt(editId));
                 if (item) this.$nextTick(() => this.openEdit(item));
             }
+        },
 
-            // 清除 URL 參數
-            if (msg || editId) {
-                window.history.replaceState({}, '', window.location.pathname);
+        filterQuery() {
+            const p = new URLSearchParams();
+            for (const [field, key] of Object.entries(CATALOG_FILTER_KEYS)) {
+                if (this[field]) p.set(key, this[field]);
             }
+            return p.toString();
+        },
+
+        applyFilterQuery(qs) {
+            const p = new URLSearchParams(qs);
+            for (const [field, key] of Object.entries(CATALOG_FILTER_KEYS)) {
+                this[field] = p.get(key) || '';
+            }
+        },
+
+        syncUrl() {
+            const qs = this.filterQuery();
+            window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+        },
+
+        saveReturnState() {
+            try {
+                sessionStorage.setItem(CATALOG_RETURN_KEY,
+                    JSON.stringify({ query: this.filterQuery(), scrollY: window.scrollY }));
+            } catch { /* 無痕或停用儲存時略過，僅失去還原 */ }
+        },
+
+        popReturnState() {
+            try {
+                const raw = sessionStorage.getItem(CATALOG_RETURN_KEY);
+                sessionStorage.removeItem(CATALOG_RETURN_KEY);
+                return raw ? JSON.parse(raw) : null;
+            } catch { return null; }
+        },
+
+        flashRow(id) {
+            this.highlightId = id;
+            clearTimeout(this._flashTimer);
+            this._flashTimer = setTimeout(() => this.highlightId = null, 2500);
         },
 
         resetForm() {
@@ -474,8 +603,7 @@ function catalogPage() {
         openCreate() {
             this.resetForm();
             this.isEdit = false;
-            this.modalTab = 'basic';
-            this.modalOpen = true;
+            this.showModal();
         },
 
         openEdit(item) {
@@ -495,8 +623,48 @@ function catalogPage() {
             this.deps = [...(item.dependencies || [])];
             this.depInput = '';
             this.isEdit = true;
+            this.editItem = item;
+            this.showModal();
+        },
+
+        showModal() {
+            this.errors = {};
+            this.saving = false;
             this.modalTab = 'basic';
+            this.snapshot = this.formState();
             this.modalOpen = true;
+        },
+
+        // 比對用：正規化後序列化，避免 select 回傳字串 / 勾選順序不同被誤判為變更
+        formState() {
+            const f = this.form;
+            return JSON.stringify({
+                ...f,
+                reportPath: f.reportPath || '',
+                sourceName: f.sourceName || '',
+                categoryID: f.categoryID ? String(f.categoryID) : '',
+                depts: [...this.selectedDepts].sort(),
+                deps: this.deps
+            });
+        },
+
+        closeModal() {
+            if (this.isDirty && !confirm('有未儲存的變更，確定要放棄嗎？')) return;
+            this.modalOpen = false;
+        },
+
+        // Esc 由最上層的視窗開始關；刪除確認可能疊在編輯視窗之上
+        onKey(e) {
+            if (e.key === 'Escape') {
+                if (this.deleteOpen) this.deleteOpen = false;
+                else if (this.toggleOpen) this.toggleOpen = false;
+                else if (this.deptModalOpen) this.deptModalOpen = false;
+                else if (this.modalOpen) this.closeModal();
+            } else if (this.modalOpen && !this.deleteOpen
+                       && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                this.save();
+            }
         },
 
         toggleDept(deptId) {
@@ -523,14 +691,22 @@ function catalogPage() {
         },
 
         save() {
-            if (!this.form.reportName.trim()) {
-                Alpine.store('toast').show('請輸入報表名稱');
+            if (this.saving) return;
+            const errors = {};
+            if (!this.form.reportName.trim()) errors.reportName = '請輸入報表名稱';
+            if (!this.form.reportCode.trim()) errors.reportCode = '請輸入報表代碼';
+            this.errors = errors;
+
+            // 必填都在「基本設定」：切回該分頁並聚焦第一個錯誤欄位
+            const firstError = Object.keys(errors)[0];
+            if (firstError) {
+                this.modalTab = 'basic';
+                this.$nextTick(() => this.$refs[firstError + 'Input']?.focus());
                 return;
             }
-            if (!this.form.reportCode.trim()) {
-                Alpine.store('toast').show('請輸入報表代碼');
-                return;
-            }
+
+            this.saving = true;
+            this.saveReturnState();
             this.$refs.saveForm.submit();
         },
 
@@ -539,9 +715,33 @@ function catalogPage() {
             this.toggleOpen = true;
         },
 
-        doToggle() {
-            this.$refs.toggleId.value = this.toggleItem.reportID;
-            this.$refs.toggleForm.submit();
+        async doToggle() {
+            if (this.toggling) return;
+            const item = this.toggleItem;
+            this.toggling = true;
+            try {
+                const form = new FormData();
+                form.append('reportId', item.reportID);
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                if (token) form.append('__RequestVerificationToken', token);
+
+                const res = await fetch('/Admin/Catalog?handler=Toggle', { method: 'POST', body: form });
+                const data = await res.json();
+                if (!data.success) {
+                    Alpine.store('toast').show(data.message || '狀態更新失敗', 'error');
+                    return;
+                }
+
+                item.isActive = data.isActive;
+                item.displayDate = data.displayDate;
+                this.toggleOpen = false;
+                this.flashRow(item.reportID);
+                Alpine.store('toast').show((data.isActive ? '已啟用「' : '已停用「') + item.reportName + '」');
+            } catch (e) {
+                Alpine.store('toast').show('狀態更新失敗，請重新整理後再試', 'error');
+            } finally {
+                this.toggling = false;
+            }
         },
 
         showDepts(item) {
@@ -556,6 +756,7 @@ function catalogPage() {
 
         doDelete() {
             this.$refs.deleteId.value = this.deleteItem.reportID;
+            this.saveReturnState();
             this.$refs.deleteForm.submit();
         },
 

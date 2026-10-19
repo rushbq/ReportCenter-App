@@ -407,8 +407,9 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 ### 管理功能
 
 - **總覽頁 (`/Admin`)**: KPI 卡片、部門使用矩陣 (台灣/上海雙欄)、孤立報表警示、冷門報表警示 (預覽 6 筆，完整清單在 `/Admin/Usage`)
-- **目錄管理 (`/Admin/Catalog`)**: 搜尋篩選 (工具類型/啟停狀態/資料夾)、新增/編輯 Modal (Tab 分頁: 基本設定、部門指派、進階設定)、啟停切換、刪除確認、
-  「近 30 日使用」欄 (點擊數 badge + 最後使用日；啟用中 0 次顯示警示色，數字連結下鑽至 `/Admin/Usage?reportId=`)
+- **目錄管理 (`/Admin/Catalog`)**: 搜尋篩選 (工具類型/啟停狀態/資料夾；同步網址、儲存/刪除重載後還原並標亮該列)、新增/編輯 Modal (Tab 分頁: 基本設定、部門指派、進階設定；未儲存變更關閉前確認、Ctrl+S 儲存)、啟停切換 (列上狀態開關，AJAX 就地更新)、刪除 (只在編輯視窗內)、
+  「近 30 日」欄 (N 次 / 未使用；啟用中 0 次顯示警示色，數字連結下鑽至 `/Admin/Usage?reportId=`)、< 768px 改卡片清單。
+  列內圖示一律 inline SVG（`x-for` 重建的列不會再跑 `lucide.createIcons()`，用 `data-lucide` 篩選後圖示會消失）
 - **使用分析 (`/Admin/Usage`)**: 分析總覽 Tab (KPI、30 日趨勢圖、熱門 Top 10 可切 30/90 日、冷門清單)、明細查詢 Tab (篩選 + 伺服器端分頁)
 
 ### 部門過濾規則
