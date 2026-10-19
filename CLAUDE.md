@@ -48,7 +48,8 @@ ReportCenter.Web/
 │   │   ├── Index.cshtml(.cs)       # 管理總覽 (KPI、部門矩陣、孤立報表、冷門報表)
 │   │   ├── Catalog.cshtml(.cs)     # 報表目錄管理 (CRUD、篩選、編輯 Modal)
 │   │   ├── Usage.cshtml(.cs)       # 使用分析 (分析總覽 / 明細查詢 兩 Tab)
-│   │   └── Permission.cshtml(.cs)  # 權限管理 (批次指派、個人權限)
+│   │   ├── Permission.cshtml(.cs)  # 權限管理 (批次指派、個人權限)
+│   │   └── Help.cshtml(.cs)        # 管理者使用手冊 (截圖在 wwwroot/images/help/)
 │   ├── Api/
 │   │   ├── Favorite.cshtml(.cs)    # 收藏切換 API
 │   │   ├── Pin.cshtml(.cs)         # 釘選 API
@@ -89,6 +90,7 @@ ReportCenter.Web/
 | `/Admin/Catalog` | Admin/Catalog | 報表目錄管理 (CRUD) |
 | `/Admin/Usage` | Admin/Usage | 使用分析 (分析總覽 / 明細查詢 兩 Tab) |
 | `/Admin/Permission` | Admin/Permission | 權限管理 (批次指派、個人權限) |
+| `/Admin/Help` | Admin/Help | 管理者使用手冊 (靜態說明 + 截圖；管理頁 UI 改版時需同步更新) |
 
 ## 資料架構 (Service Layer)
 

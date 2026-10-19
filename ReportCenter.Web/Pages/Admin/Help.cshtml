@@ -1,0 +1,431 @@
+@page
+@model ReportCenter.Web.Pages.Admin.HelpModel
+
+@if (Model.AccessDenied)
+{
+    <partial name="_AccessDenied" />
+    return;
+}
+
+@{
+    // 截圖 + 編號說明。圖檔在 wwwroot/images/help/，圖上的橘色編號與 notes 順序一一對應
+    void Shot(string file, string alt, params string[] notes)
+    {
+        <figure class="my-5 rounded-xl border border-bdr bg-white overflow-hidden shadow-sm">
+            <a href="/images/help/@(file).webp" target="_blank" rel="noopener" class="block bg-surface" title="點擊開新視窗看大圖">
+                <img src="/images/help/@(file).webp" alt="@alt" loading="lazy" width="1600" height="956" class="block w-full h-auto" />
+            </a>
+            <figcaption class="px-4 py-3.5 border-t border-bdr-light">
+                <ol class="space-y-2 list-none">
+                    @for (var i = 0; i < notes.Length; i++)
+                    {
+                        <li class="flex gap-2.5 text-[13px] text-txt leading-relaxed">
+                            <span class="shrink-0 w-[22px] h-[22px] rounded-full bg-[#e8590c] text-white text-[12px] font-bold flex items-center justify-center mt-px">@(i + 1)</span>
+                            <span>@notes[i]</span>
+                        </li>
+                    }
+                </ol>
+                <div class="text-[11px] text-txt-ter mt-2.5">點圖片可開新視窗看大圖</div>
+            </figcaption>
+        </figure>
+    }
+}
+
+<div class="page-container">
+
+    <!-- 麵包屑 -->
+    <div class="flex items-center gap-1.5 text-[12px] text-txt-ter mb-4">
+        <a href="/" class="hover:text-pri no-underline text-txt-ter">首頁</a>
+        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        <a href="/Admin" class="hover:text-pri no-underline text-txt-ter">系統管理</a>
+        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        <span class="text-txt font-medium">使用手冊</span>
+    </div>
+
+    <div class="max-w-[920px]">
+
+        <!-- Header -->
+        <div class="mb-5">
+            <h1 class="text-[20px] md:text-[22px] font-bold text-txt">管理者使用手冊</h1>
+            <div class="text-[13px] text-txt-sec mt-1">報表上架、開權限、看使用情形，照著步驟做就好。最後更新：2026/10/19</div>
+        </div>
+
+        <!-- 目錄 -->
+        <nav aria-label="手冊目錄" class="flex flex-wrap gap-2 mb-6">
+            @foreach (var (href, label) in new[] {
+                ("#concept", "最重要的觀念"), ("#tasks", "我想要…"), ("#overview", "管理總覽"),
+                ("#catalog", "報表目錄管理"), ("#permission", "權限管理"), ("#usage", "使用分析"),
+                ("#faq", "常見問題"), ("#glossary", "名詞解釋") })
+            {
+                <a href="@href" class="px-3 py-1.5 rounded-full border border-bdr bg-white text-[12px] text-txt-sec no-underline hover:border-pri/40 hover:text-pri transition-colors">@label</a>
+            }
+        </nav>
+
+        <!-- ═══ 最重要的觀念 ═══ -->
+        <section id="concept" class="card mb-6 scroll-mt-4">
+            <h2 class="text-[17px] font-bold text-txt mb-1">最重要的觀念：同仁要「看得到」一張報表，三個條件缺一不可</h2>
+            <p class="text-[13px] text-txt-sec mb-4">同仁反映「看不到報表」時，九成是其中一個條件沒設定。</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="rounded-xl border border-bdr p-4 bg-surface">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="w-7 h-7 rounded-full bg-pri text-white text-[14px] font-bold flex items-center justify-center">1</span>
+                        <span class="text-[14px] font-semibold text-txt">報表是「啟用」</span>
+                    </div>
+                    <p class="text-[12px] text-txt-sec leading-relaxed">在「報表目錄管理」清單的<b class="text-txt">狀態</b>開關。停用的報表誰都看不到。</p>
+                </div>
+                <div class="rounded-xl border border-bdr p-4 bg-surface">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="w-7 h-7 rounded-full bg-pri text-white text-[14px] font-bold flex items-center justify-center">2</span>
+                        <span class="text-[14px] font-semibold text-txt">有設定「部門選單」</span>
+                    </div>
+                    <p class="text-[12px] text-txt-sec leading-relaxed">決定報表出現在左側<b class="text-txt">哪個部門底下</b>。沒設定的報表沒有地方顯示，誰都看不到。</p>
+                </div>
+                <div class="rounded-xl border border-bdr p-4 bg-surface">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="w-7 h-7 rounded-full bg-pri text-white text-[14px] font-bold flex items-center justify-center">3</span>
+                        <span class="text-[14px] font-semibold text-txt">有授權給「這個人」</span>
+                    </div>
+                    <p class="text-[12px] text-txt-sec leading-relaxed">在「權限管理」設定。權限是<b class="text-txt">一個人一個人</b>給的，報表放在某部門底下，不代表該部門的人就看得到。</p>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-2 mt-4 px-3.5 py-3 rounded-lg bg-amber-50 border border-amber-200">
+                <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                <p class="text-[12px] text-amber-800 leading-relaxed">
+                    管理員不受第 3 點限制，可以看到所有啟用中的報表。所以「我看得到、同事看不到」時，通常是第 3 點還沒設定。
+                </p>
+            </div>
+        </section>
+
+        <!-- ═══ 我想要… ═══ -->
+        <section id="tasks" class="mb-8 scroll-mt-4">
+            <h2 class="text-[17px] font-bold text-txt mb-3">我想要…</h2>
+            <div class="space-y-3">
+
+                <details class="card !p-0 group" open>
+                    <summary class="flex items-center gap-2.5 px-5 py-4 cursor-pointer list-none select-none">
+                        <i data-lucide="file-plus" class="w-5 h-5 text-pri shrink-0"></i>
+                        <span class="text-[15px] font-semibold text-txt flex-1">上架一張新報表</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <ol class="px-5 pb-5 pl-10 space-y-1.5 text-[13px] text-txt leading-relaxed list-decimal">
+                        <li>左側選單點「系統管理 → 報表目錄管理」，再按右上角「管理報表目錄」。</li>
+                        <li>按右上角「<b>＋ 新增報表</b>」。</li>
+                        <li>填寫「報表名稱」，選「工具類型」（SmartQuery 或 SSRS），貼上報表的「路徑」。<a href="#catalog-edit" class="text-pri">各欄位說明</a></li>
+                        <li>切到上方「<b>部門選單設定</b>」頁籤，勾選報表要放在哪些部門底下。</li>
+                        <li>按「<b>儲存變更</b>」（或按鍵盤 <kbd class="px-1.5 py-0.5 rounded border border-bdr bg-surface text-[11px]">Ctrl</kbd> + <kbd class="px-1.5 py-0.5 rounded border border-bdr bg-surface text-[11px]">S</kbd>）。</li>
+                        <li>到「<b>權限管理</b>」把這張報表開給需要的同仁。<span class="text-bad font-medium">少了這一步，一般同仁看不到。</span></li>
+                    </ol>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-4 cursor-pointer list-none select-none">
+                        <i data-lucide="users" class="w-5 h-5 text-pri shrink-0"></i>
+                        <span class="text-[15px] font-semibold text-txt flex-1">把報表開給同仁（一次給多人）</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <ol class="px-5 pb-5 pl-10 space-y-1.5 text-[13px] text-txt leading-relaxed list-decimal">
+                        <li>左側「系統管理 → 權限管理」，選「<b>功能 → 多人</b>」。</li>
+                        <li>左邊「報表清單」勾選報表（可以勾好幾張）。</li>
+                        <li>右邊「人員清單」勾選同仁。勾部門前面的方框，等於勾選該部門<b>目前</b>所有人。</li>
+                        <li>確認下方「指派 N 報表 × N 使用者」的數字沒錯，按「<b>確認指派</b>」。</li>
+                    </ol>
+                    <p class="px-5 pb-5 text-[12px] text-txt-sec">已經有權限的人不會重複加，也不會出錯，放心按。<a href="#permission" class="text-pri">看截圖說明</a></p>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-4 cursor-pointer list-none select-none">
+                        <i data-lucide="user-check" class="w-5 h-5 text-pri shrink-0"></i>
+                        <span class="text-[15px] font-semibold text-txt flex-1">查看或調整某一個人的權限</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <ol class="px-5 pb-5 pl-10 space-y-1.5 text-[13px] text-txt leading-relaxed list-decimal">
+                        <li>「權限管理」選「<b>單一人 → 功能</b>」。</li>
+                        <li>輸入員工編號或姓名，點選搜尋結果中的人。</li>
+                        <li>右邊列出他目前所有的報表權限。要加報表按「<b>＋ 新增權限</b>」；要拿掉某張報表，按那一列最右邊的「<b>×</b>」，確認後立即生效。</li>
+                    </ol>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-4 cursor-pointer list-none select-none">
+                        <i data-lucide="archive" class="w-5 h-5 text-pri shrink-0"></i>
+                        <span class="text-[15px] font-semibold text-txt flex-1">報表不再使用，要下架</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <ol class="px-5 pb-4 pl-10 space-y-1.5 text-[13px] text-txt leading-relaxed list-decimal">
+                        <li>「報表目錄管理」清單找到這張報表。</li>
+                        <li>點「狀態」欄的開關，切成「<b>停用</b>」。確認視窗會顯示最近 30 天還有多少人在用，可以作為參考。</li>
+                        <li>按確認。報表會立刻從所有同仁的畫面消失。</li>
+                    </ol>
+                    <div class="mx-5 mb-5 flex items-start gap-2 px-3.5 py-3 rounded-lg bg-red-50 border border-red-200">
+                        <i data-lucide="triangle-alert" class="w-4 h-4 text-bad shrink-0 mt-0.5"></i>
+                        <p class="text-[12px] text-red-800 leading-relaxed">
+                            <b>請用「停用」，不要用「刪除」。</b>停用後權限、收藏、使用記錄都會保留，重新啟用就恢復原狀。
+                            刪除（在編輯視窗左下角）會把這些資料一起<b>永久清除，無法復原</b>，只適合用在「建錯的報表」。
+                        </p>
+                    </div>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-4 cursor-pointer list-none select-none">
+                        <i data-lucide="search-x" class="w-5 h-5 text-pri shrink-0"></i>
+                        <span class="text-[15px] font-semibold text-txt flex-1">找出沒人在用的報表</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <ol class="px-5 pb-5 pl-10 space-y-1.5 text-[13px] text-txt leading-relaxed list-decimal">
+                        <li>「管理總覽」頁下方的「<b>冷門報表</b>」區塊：啟用中、但最近 90 天沒人點過的報表。</li>
+                        <li>完整清單在「使用分析」頁。</li>
+                        <li>跟負責部門確認不需要後，用「停用」下架。</li>
+                    </ol>
+                    <p class="px-5 pb-5 text-[12px] text-txt-sec">注意：只有「從報表中心點開」才會被記錄。同仁如果是用瀏覽器書籤直接開 SmartQuery，不會算進次數，下架前最好先問一聲。</p>
+                </details>
+
+                <a href="#faq-cannot-see" class="card !py-4 flex items-center gap-2.5 no-underline hover:border-pri/40 transition-colors">
+                    <i data-lucide="circle-help" class="w-5 h-5 text-pri shrink-0"></i>
+                    <span class="text-[15px] font-semibold text-txt flex-1">同仁說看不到報表 → 看檢查清單</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4 text-txt-ter"></i>
+                </a>
+            </div>
+        </section>
+
+        <!-- ═══ 管理總覽 ═══ -->
+        <section id="overview" class="mb-8 scroll-mt-4">
+            <h2 class="text-[17px] font-bold text-txt mb-1">管理總覽</h2>
+            <p class="text-[13px] text-txt-sec">點左側「系統管理 → 報表目錄管理」會先來到這裡，一眼看出哪裡需要處理。</p>
+            @{
+                Shot("01-overview", "管理總覽頁上半部",
+                    "左側「系統管理」區塊：只有管理員看得到這一區。",
+                    "報表總數：下面小字是啟用、停用各幾份。",
+                    "部門使用矩陣：每個部門底下放了哪些報表（只算啟用中的），點部門名稱可以展開。",
+                    "管理報表目錄：進入報表清單，新增或修改報表。");
+                Shot("02-overview-alerts", "管理總覽頁下半部的警示區塊",
+                    "未指派部門的報表：還沒設定部門選單，所以任何同仁都看不到。點右邊「指派部門」直接去設定。",
+                    "冷門報表：啟用中，但最近 90 天沒有人點過，可以考慮停用。點「查看記錄」看過去的使用情形。");
+            }
+        </section>
+
+        <!-- ═══ 報表目錄管理 ═══ -->
+        <section id="catalog" class="mb-8 scroll-mt-4">
+            <h2 class="text-[17px] font-bold text-txt mb-1">報表目錄管理</h2>
+            <p class="text-[13px] text-txt-sec">所有報表（包含停用的）都在這份清單裡。新增、修改、停用都在這裡做。</p>
+            @{
+                Shot("03-catalog", "報表目錄管理清單",
+                    "新增報表。",
+                    "搜尋與篩選：可以用報表名稱、資料來源、資料夾搜尋；旁邊的按鈕可以只看 SmartQuery / SSRS、只看啟用 / 停用。",
+                    "近 30 日：最近 30 天被點開幾次。紅字「未使用」代表啟用中卻沒人用。點次數可以看是誰在用。",
+                    "狀態：開關直接切換啟用 / 停用，會先跳出確認視窗。",
+                    "編輯：點鉛筆開啟編輯視窗。");
+            }
+
+            <h3 id="catalog-edit" class="text-[15px] font-semibold text-txt mt-6 mb-1 scroll-mt-4">編輯視窗：基本設定</h3>
+            @{
+                Shot("04-edit-basic", "編輯報表視窗的基本設定頁籤",
+                    "報表名稱（必填）：同仁在畫面上看到的名稱。右邊的開關是啟用 / 停用。",
+                    "工具類型：SmartQuery 或 SSRS。選錯的話，報表會開不起來。",
+                    "路徑（必填）：灰色前半段是系統固定的網址，只要填後半段。SmartQuery 的路徑是一串英數代碼，從 SmartQuery 報表網址「page=」後面複製過來。",
+                    "帶公司別參數：同一張報表要依「台灣寶工 / 上海寶工」顯示不同公司資料時才打開。打開後，系統會依同仁在畫面最上方選的公司自動切換。",
+                    "部門選單設定：切到這個頁籤，設定報表放在哪些部門底下。");
+            }
+
+            <div class="card !p-0 overflow-x-auto mb-6">
+                <table class="w-full text-[13px] min-w-[560px]">
+                    <thead>
+                        <tr class="bg-surface text-txt-sec text-left">
+                            <th class="px-4 py-2.5 font-medium w-[150px]">其他欄位</th>
+                            <th class="px-4 py-2.5 font-medium">用途</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-bdr-light">
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">報表目錄</td><td class="px-4 py-2.5 text-txt-sec">報表屬於哪個資料夾（例如「20-外業報表」），方便在清單上篩選整理。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">資料來源</td><td class="px-4 py-2.5 text-txt-sec">報表背後抓資料的程式名稱，給資訊部追蹤用。不確定可以不填。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">報表分類</td><td class="px-4 py-2.5 text-txt-sec">部門頁上方的分類頁籤（例如「目標達成」「產品銷售」「客戶銷售」）。分類項目由資訊部維護。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">報表描述</td><td class="px-4 py-2.5 text-txt-sec">顯示在部門頁的報表卡片上。建議寫一句「這張報表看什麼」，同仁比較好找。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="text-[15px] font-semibold text-txt mt-6 mb-1">編輯視窗：部門選單設定</h3>
+            @{
+                Shot("05-edit-dept", "編輯報表視窗的部門選單設定頁籤",
+                    "黃色提醒的意思：這裡只決定報表「放在左側哪個部門底下」。「誰能看」要另外到權限管理設定。",
+                    "改完按「儲存變更」，或按鍵盤 Ctrl + S。改了東西沒儲存就關閉視窗，系統會提醒你。");
+            }
+        </section>
+
+        <!-- ═══ 權限管理 ═══ -->
+        <section id="permission" class="mb-8 scroll-mt-4">
+            <h2 class="text-[17px] font-bold text-txt mb-1">權限管理</h2>
+            <p class="text-[13px] text-txt-sec">權限是「一個人對一張報表」。有兩種操作方式，結果一樣，看哪種順手。</p>
+
+            <h3 class="text-[15px] font-semibold text-txt mt-5 mb-1">方式一：功能 → 多人（一次開給很多人）</h3>
+            @{
+                Shot("06-perm-batch", "權限管理的功能對多人模式",
+                    "選「功能 → 多人」。",
+                    "報表清單：點分類名稱展開，勾選報表。勾分類前面的方框，等於整個分類全選。上方可以搜尋報表名稱。",
+                    "人員清單：依「台灣 / 上海 → 部門 → 人員」展開勾選。勾部門前面的方框，等於該部門目前所有人。上方可以搜尋員編或姓名。",
+                    "確認指派：左邊會顯示「指派 N 報表 × N 使用者 = N 筆權限」，數字沒問題再按。");
+            }
+
+            <h3 class="text-[15px] font-semibold text-txt mt-6 mb-1">方式二：單一人 → 功能（查一個人有哪些權限）</h3>
+            @{
+                Shot("07-perm-single", "權限管理的單一人對功能模式",
+                    "選「單一人 → 功能」。",
+                    "輸入員工編號或姓名，點選搜尋結果中的人。",
+                    "新增權限：從清單勾選報表，加給這個人。",
+                    "移除權限：按 ×，確認後立即生效。");
+            }
+        </section>
+
+        <!-- ═══ 使用分析 ═══ -->
+        <section id="usage" class="mb-8 scroll-mt-4">
+            <h2 class="text-[17px] font-bold text-txt mb-1">使用分析</h2>
+            <p class="text-[13px] text-txt-sec">看哪些報表常用、哪些沒人用，以及誰在什麼時候開了哪張報表。</p>
+            @{
+                Shot("08-usage", "使用分析的分析總覽頁籤",
+                    "四個數字：近 30 日總點擊、活躍使用者（有開過報表的人數）、使用中報表（有被用的 / 啟用總數）、冷門報表數。",
+                    "每日點擊趨勢：最近 30 天每天被點開幾次。",
+                    "熱門報表 Top 10：右上角可以切換看近 30 日或近 90 日。");
+                Shot("09-usage-logs", "使用分析的明細查詢頁籤",
+                    "報表：選一張報表，或「全部報表」。已停用的報表也查得到。",
+                    "使用者：輸入員工編號或姓名。",
+                    "起始日 / 結束日：結束日當天也會算進去。",
+                    "按「查詢」。結果每頁 20 筆，最新的在最前面。「來源」是同仁從哪裡點開的：部門頁、釘選（首頁快速存取）、收藏、搜尋。");
+            }
+            <div class="card">
+                <div class="text-[14px] font-semibold text-txt mb-2">看數字前要知道的事</div>
+                <ul class="space-y-1.5 text-[13px] text-txt-sec leading-relaxed list-disc pl-5">
+                    <li>同一個人 30 秒內重複點同一張報表，只算一次（避免手滑連點灌數字）。</li>
+                    <li>「近 30 日」包含今天，往回算 30 天。</li>
+                    <li>只記錄從報表中心點開的次數；用書籤直接開 SmartQuery / SSRS 的不會算到。</li>
+                    <li>記錄偶爾會有少量漏掉，適合看趨勢、決定報表去留，不適合當稽核證據。</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ═══ 常見問題 ═══ -->
+        <section id="faq" class="mb-8 scroll-mt-4">
+            <h2 class="text-[17px] font-bold text-txt mb-3">常見問題</h2>
+            <div class="space-y-2.5">
+
+                <details id="faq-cannot-see" class="card !p-0 group scroll-mt-4">
+                    <summary class="flex items-center gap-2.5 px-5 py-3.5 cursor-pointer list-none select-none">
+                        <span class="text-pri font-bold text-[14px]">Q</span>
+                        <span class="text-[14px] font-semibold text-txt flex-1">同仁說看不到某張報表，怎麼查？</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-5 pb-5 text-[13px] text-txt leading-relaxed">
+                        <p class="mb-2">依序檢查，哪一步不對就修哪一步：</p>
+                        <ol class="space-y-1.5 list-decimal pl-5">
+                            <li>「報表目錄管理」搜尋這張報表，狀態是不是「<b>啟用</b>」？</li>
+                            <li>「部門選單」欄有沒有部門？如果是「未指派」，點編輯 → 部門選單設定。</li>
+                            <li>「權限管理 → 單一人 → 功能」搜尋這位同仁，清單裡有沒有這張報表？沒有就按「新增權限」。</li>
+                            <li>同仁畫面最上方選的公司對不對？左側部門依公司分開：上海部門底下的報表，要切到「上海寶工」才看得到。</li>
+                            <li>以上都沒問題，請同仁按 <kbd class="px-1.5 py-0.5 rounded border border-bdr bg-surface text-[11px]">F5</kbd> 重新整理頁面。還是不行，再聯絡資訊部。</li>
+                        </ol>
+                    </div>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-3.5 cursor-pointer list-none select-none">
+                        <span class="text-pri font-bold text-[14px]">Q</span>
+                        <span class="text-[14px] font-semibold text-txt flex-1">為什麼我看得到，同事卻看不到？</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <p class="px-5 pb-5 text-[13px] text-txt leading-relaxed">管理員不需要授權就能看到所有啟用中的報表，一般同仁要一張一張授權。請到「權限管理」幫同事加上這張報表。</p>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-3.5 cursor-pointer list-none select-none">
+                        <span class="text-pri font-bold text-[14px]">Q</span>
+                        <span class="text-[14px] font-semibold text-txt flex-1">報表打開後是另一間公司的資料？</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <p class="px-5 pb-5 text-[13px] text-txt leading-relaxed">先確認同仁畫面最上方選的公司。如果這張報表應該依公司切換資料，請到編輯視窗打開「帶公司別參數」。</p>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-3.5 cursor-pointer list-none select-none">
+                        <span class="text-pri font-bold text-[14px]">Q</span>
+                        <span class="text-[14px] font-semibold text-txt flex-1">報表點開出現錯誤或一片空白？</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <p class="px-5 pb-5 text-[13px] text-txt leading-relaxed">先打開這張報表的編輯視窗，確認「工具類型」和「路徑」有沒有填錯。都正確的話，可能是 SmartQuery / SSRS 本身的問題，請聯絡資訊部。</p>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-3.5 cursor-pointer list-none select-none">
+                        <span class="text-pri font-bold text-[14px]">Q</span>
+                        <span class="text-[14px] font-semibold text-txt flex-1">新進同仁、調部門、離職，權限會自動處理嗎？</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <ul class="px-5 pb-5 pl-10 space-y-1.5 text-[13px] text-txt leading-relaxed list-disc">
+                        <li><b>新進同仁</b>：不會自動有權限。之前「勾部門」指派時他還不在，需要另外幫他指派。</li>
+                        <li><b>調部門</b>：權限跟著人走，不跟著部門，所以權限不會變。需要的話請手動增減。</li>
+                        <li><b>離職</b>：離職人員不會出現在人員清單裡；使用明細中，他過去的記錄會只顯示員工編號。</li>
+                    </ul>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-3.5 cursor-pointer list-none select-none">
+                        <span class="text-pri font-bold text-[14px]">Q</span>
+                        <span class="text-[14px] font-semibold text-txt flex-1">刪掉的報表可以救回來嗎？</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <p class="px-5 pb-5 text-[13px] text-txt leading-relaxed">不行。刪除會連同權限、收藏、使用記錄一起清除。不確定的話一律用「停用」，之後隨時可以重新啟用。</p>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-3.5 cursor-pointer list-none select-none">
+                        <span class="text-pri font-bold text-[14px]">Q</span>
+                        <span class="text-[14px] font-semibold text-txt flex-1">部門改名了，要不要改報表設定？</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <p class="px-5 pb-5 text-[13px] text-txt leading-relaxed">不用。系統會自動顯示人事系統裡最新的部門名稱。</p>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-3.5 cursor-pointer list-none select-none">
+                        <span class="text-pri font-bold text-[14px]">Q</span>
+                        <span class="text-[14px] font-semibold text-txt flex-1">首頁「年度目標戰情」的數字好像沒更新？</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <p class="px-5 pb-5 text-[13px] text-txt leading-relaxed">「即時累計」最多會晚 5 分鐘；「月結累計」統計到上個月底，一天更新一次。數字有疑問請聯絡資訊部。</p>
+                </details>
+
+                <details class="card !p-0 group">
+                    <summary class="flex items-center gap-2.5 px-5 py-3.5 cursor-pointer list-none select-none">
+                        <span class="text-pri font-bold text-[14px]">Q</span>
+                        <span class="text-[14px] font-semibold text-txt flex-1">哪些事情要找資訊部？</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-ter transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <ul class="px-5 pb-5 pl-10 space-y-1.5 text-[13px] text-txt leading-relaxed list-disc">
+                        <li>左側選單要新增或拿掉某個部門</li>
+                        <li>新增或修改報表分類（目標達成、產品銷售…）</li>
+                        <li>新增或移除管理員</li>
+                        <li>報表內容、數字本身有問題</li>
+                    </ul>
+                </details>
+            </div>
+        </section>
+
+        <!-- ═══ 名詞解釋 ═══ -->
+        <section id="glossary" class="mb-4 scroll-mt-4">
+            <h2 class="text-[17px] font-bold text-txt mb-3">名詞解釋</h2>
+            <div class="card !p-0 overflow-x-auto">
+                <table class="w-full text-[13px] min-w-[560px]">
+                    <tbody class="divide-y divide-bdr-light">
+                        <tr><td class="px-4 py-2.5 font-medium text-txt w-[150px]">SmartQuery</td><td class="px-4 py-2.5 text-txt-sec">公司大部分報表所在的查詢系統，網址開頭是 pksq.prokits.com.tw。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">SSRS</td><td class="px-4 py-2.5 text-txt-sec">另一套報表系統，網址開頭是 report.prokits.com.tw。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">啟用 / 停用</td><td class="px-4 py-2.5 text-txt-sec">報表上架 / 下架。停用不會刪除任何資料。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">部門選單</td><td class="px-4 py-2.5 text-txt-sec">報表放在左側哪個部門底下。跟「誰能看」無關。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">權限</td><td class="px-4 py-2.5 text-txt-sec">某個人可以看某張報表。沒有權限就看不到。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">未指派部門的報表</td><td class="px-4 py-2.5 text-txt-sec">還沒設定部門選單的報表，任何同仁都看不到。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">冷門報表</td><td class="px-4 py-2.5 text-txt-sec">啟用中，但最近 90 天沒人點開過的報表。</td></tr>
+                        <tr><td class="px-4 py-2.5 font-medium text-txt">帶公司別參數</td><td class="px-4 py-2.5 text-txt-sec">讓同一張報表依同仁選的公司（台灣 / 上海）顯示對應資料。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>

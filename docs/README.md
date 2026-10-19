@@ -37,6 +37,7 @@ ReportCenter（瀏覽器標題「報表中心入口網站」）是**台灣寶工
 | `/Admin/Catalog` | 報表目錄 CRUD、啟停用 | 管理員 |
 | `/Admin/Usage` | 使用分析（總覽 / 明細查詢） | 管理員 |
 | `/Admin/Permission` | 權限管理（批次授權 / 個人權限） | 管理員 |
+| `/Admin/Help` | 管理者使用手冊（操作步驟與截圖） | 管理員 |
 | `/_diag/windows-auth` | Windows 驗證診斷頁（設定開啟才存在） | 部署除錯用 |
 
 ## 技術概要
