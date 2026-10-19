@@ -34,9 +34,11 @@ public class MockHomeDashboardRepository : IHomeDashboardRepository
     {
         var year = reportYear ?? DateTime.Today.Year;
 
-        // 截止月 M：月結 = 當月 − 1；即時 = 當月 (與交付文件 2.3 一致)
-        var endMonth = cumulativeType == "R" ? DateTime.Today.Month : DateTime.Today.Month - 1;
-        if (endMonth < 0) endMonth = 0;
+        // 截止月 M (與 usp_Rpt_Home_YtdTarget 一致)：過去年度 = 12、未來年度 = 0；
+        // 當年度 月結 = 當月 − 1、即時 = 當月
+        var endMonth = year < DateTime.Today.Year ? 12
+            : year > DateTime.Today.Year ? 0
+            : cumulativeType == "R" ? DateTime.Today.Month : DateTime.Today.Month - 1;
 
         // 即時累計比月結多算一個月，累計金額依相同步調外推 (月結為基準)
         var baseMonth = DateTime.Today.Month - 1;

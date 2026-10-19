@@ -58,6 +58,7 @@ GO
     - 截止月 M 由系統日期推算；月結累計 M = 當月 - 1、即時累計 M = 當月。
       → 邊界：若系統為 1 月且選月結累計，M = 0，代表上月尚未結算，
         三區塊累計金額與走勢皆回 0（符合「上月未結算」語意）。
+      → 指定非當年度時：過去年度 M = 12（全年）、未來年度 M = 0。
     - 業務區塊與幣別（規格書第 6.1 / 7.2 節）：
         外銷 = SH_EXPORT-A + TW_EXPORT-A          → _USD
         台灣 = TW_DOMESTIC-A + TW_DOMESTIC-B      → _NTD
@@ -96,6 +97,9 @@ GO
 異動紀錄：
   2026-07-23, Clyde
     初版建立（依「YTD 年度目標戰情首頁」規格書）
+  2026-10-19, Clyde
+    截止月 M 依 @ReportYear 判斷：過去年度取 12、未來年度取 0
+    （原本一律以系統當月推算，查詢過去年度會少算月份；首頁固定傳 NULL 不受影響）
 ================================================================
 */
 CREATE PROCEDURE [dbo].[usp_Rpt_Home_YtdTarget]
@@ -128,10 +132,14 @@ BEGIN
     IF @ReportYear IS NULL
         SET @ReportYear = YEAR(GETDATE());
 
-    -- 截止月 M：月結 = 當月 - 1、即時 = 當月
+    -- 截止月 M：
+    --   過去年度 → 12（全年已結束，月結 / 即時相同）
+    --   未來年度 → 0（尚無實績）
+    --   當年度   → 月結 = 當月 - 1、即時 = 當月
     DECLARE @EndMonth INT;
-    SET @EndMonth = CASE WHEN @CumulativeType = 'M'
-                         THEN MONTH(GETDATE()) - 1
+    SET @EndMonth = CASE WHEN @ReportYear < YEAR(GETDATE()) THEN 12
+                         WHEN @ReportYear > YEAR(GETDATE()) THEN 0
+                         WHEN @CumulativeType = 'M'          THEN MONTH(GETDATE()) - 1
                          ELSE MONTH(GETDATE())
                     END;
 
