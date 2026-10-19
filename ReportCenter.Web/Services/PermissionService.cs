@@ -56,12 +56,19 @@ public class PermissionService : IPermissionService
     public List<DeptWithUsers> GetDeptUserTree()
     {
         var allDepts = _pksysRepo.GetCatalogDepartments();
+
+        // 一次取回全部在職人員再依部門分組 (原本逐部門查詢為 N+1)。
+        // SearchUsers 已依 DeptID、Account_Name 排序，GroupBy 保留原順序；
+        // 比對規則比照 SQL `=`：忽略大小寫與尾端空白。
+        var usersByDept = _pksysRepo.SearchUsers()
+            .GroupBy(u => (u.DeptID ?? "").TrimEnd(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
         var result = new List<DeptWithUsers>();
 
         foreach (var dept in allDepts)
         {
-            var users = _pksysRepo.GetUsersByDepartment(dept.DeptID);
-            if (users.Count == 0) continue;
+            if (!usersByDept.TryGetValue(dept.DeptID.TrimEnd(), out var users)) continue;
 
             result.Add(new DeptWithUsers
             {

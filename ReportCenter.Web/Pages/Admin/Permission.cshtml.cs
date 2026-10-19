@@ -89,10 +89,12 @@ public class PermissionModel : AdminPageModel
         return new JsonResult(new { success = true, inserted });
     }
 
+    // 去重：確保 total = 人數 × 報表數 與 Repository 實際處理的組合一致
     private static List<string> ParseCsv(string? csv)
-        => string.IsNullOrEmpty(csv) ? [] : csv.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+        => string.IsNullOrEmpty(csv) ? [] : csv.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
     private static List<int> ParseIntCsv(string? csv)
         => string.IsNullOrEmpty(csv) ? [] : csv.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Where(s => int.TryParse(s, out _)).Select(int.Parse).ToList();
+            .Where(s => int.TryParse(s, out _)).Select(int.Parse).Distinct().ToList();
 }

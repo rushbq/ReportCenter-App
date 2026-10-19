@@ -105,18 +105,4 @@ public class SqlPksysRepository : IPksysRepository
             WHERE p.Display = 'Y' AND p.Account_Name = @AccountName
             """, new { AccountName = accountName });
     }
-
-    public List<UserProfileItem> GetUsersByDepartment(string deptId)
-    {
-        using var conn = OpenConn();
-        return conn.Query<UserProfileItem>(
-            """
-            SELECT p.Account_Name AS AccountName, p.Display_Name AS DisplayName,
-                   p.DeptID, ISNULL(d.DeptName, '') AS DeptName
-            FROM User_Profile p
-            LEFT JOIN User_Dept d ON p.DeptID = d.DeptID
-            WHERE p.Display = 'Y' AND p.DeptID = @DeptID
-            ORDER BY p.Account_Name
-            """, new { DeptID = deptId }).ToList();
-    }
 }

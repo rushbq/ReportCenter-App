@@ -19,6 +19,4 @@ public interface IPksysRepository
     /// <summary>取得單一使用者</summary>
     UserProfileItem? GetUser(string accountName);
 
-    /// <summary>取得某部門所有使用者</summary>
-    List<UserProfileItem> GetUsersByDepartment(string deptId);
 }
