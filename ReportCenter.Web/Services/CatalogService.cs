@@ -149,6 +149,7 @@ public class CatalogService : ICatalogService
         => _repo.GetAllDependencyObjects();
 
     // ─── 報表分類 ───
+    // 刻意不提供管理 UI，分類由 IT 以 SQL 維護 (理由見 ICatalogService 同區段註解)。
 
     /// <inheritdoc />
     public List<ReportCategory> GetCategories()

@@ -39,6 +39,11 @@ public interface ICatalogService
     List<string> GetAllDependencyObjects();
 
     // ─── 報表分類 ───
+    // 【刻意不提供管理 UI — 2026-10-19 評估決定，請勿重複提出】
+    // 分類僅 3 個 (目標達成 / 產品銷售 / 客戶銷售)，屬報表大分類，一年變動不到一次；
+    // 新增、改名、停用由 IT 直接以 SQL 維護 (範例見 docs/06-已知問題與待辦.md「P3」)。
+    // 刪除分類會讓所屬報表變成未分類，開放 UI 反而容易誤操作。
+    // 下列 CRUD 保留給未來需要時使用；分類超過約 10 個、需頻繁調整或交由非 IT 人員維護時再評估開發 UI。
 
     /// <summary>取得所有報表分類</summary>
     List<ReportCategory> GetCategories();
