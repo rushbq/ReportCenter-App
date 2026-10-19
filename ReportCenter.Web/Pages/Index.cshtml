@@ -425,11 +425,8 @@ function indexPage() {
                     // 找到並加入 pinnedReports 顯示
                     const item = this.allReports.find(r => r.reportId === reportId);
                     if (item && !this.pinnedReports.some(p => p.ReportID === reportId)) {
-                        const baseUrls = { smartQuery: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SmartQueryBaseUrl, jsonOpts)), ssrs: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SsrsBaseUrl, jsonOpts)) };
-                        const href = item.reportTool === 'SSRS'
-                            ? baseUrls.ssrs + item.reportCode
-                            : baseUrls.smartQuery + item.reportCode;
-                        this.pinnedReports.push({ ReportID: reportId, Name: item.name, Cat: item.cat, ReportTool: item.reportTool, href, target: '_blank', dept: item.dept });
+                        // href 由後端組好 (含 dbs 公司別參數)，前端不再自行拼接
+                        this.pinnedReports.push({ ReportID: reportId, Name: item.name, Cat: item.cat, ReportTool: item.reportTool, href: item.href, target: '_blank', dept: item.dept });
                     }
                     Alpine.store('toast').show('已釘選');
                 } else {

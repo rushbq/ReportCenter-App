@@ -1,25 +1,18 @@
-@using Microsoft.Extensions.Options
 @using ReportCenter.Web.Models
-@using ReportCenter.Web.Models.Settings
 @using ReportCenter.Web.Services
 @inject IReportService ReportService
 @inject IPermissionService PermissionService
-@inject IOptions<ReportBaseUrlSettings> BaseUrlOptions
 @{
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
     var currentDept = Context.Request.Query["dept"].ToString();
     var departments = ReportService.GetDepartments();
     var favorites = ReportService.GetUserFavorites();
-    var baseUrls = BaseUrlOptions.Value;
     var totalCount = departments.Sum(d => d.Count);
 
     // 手機版側欄用：使用者與公司切換（桌面由頂欄呈現）
     var sidebarUser = ReportService.GetCurrentUser();
     var sidebarCompanies = ReportService.GetCompanies();
-    var sidebarCookieCompanyId = Context.Request.Cookies["companyId"];
-    var sidebarActiveCompanyId = !string.IsNullOrEmpty(sidebarCookieCompanyId) && sidebarCompanies.Any(c => c.Id == sidebarCookieCompanyId)
-        ? sidebarCookieCompanyId
-        : sidebarUser.CompanyId;
+    var sidebarActiveCompanyId = ReportService.GetCurrentCompanyId();
     var sidebarActiveCompanyName = sidebarCompanies.FirstOrDefault(c => c.Id == sidebarActiveCompanyId)?.ShortName ?? "台灣寶工";
 
     // 取收藏報表的詳細資訊供顯示（含完整連結）
@@ -31,10 +24,7 @@
         var reports = ReportService.GetReports(dept.Id);
         foreach (var r in reports.Where(r => favorites.Contains(r.ReportID) && seenFavIds.Add(r.ReportID)))
         {
-            var href = r.ReportTool == "SSRS"
-                ? baseUrls.SSRS + r.ReportCode
-                : baseUrls.SmartQuery + r.ReportCode;
-            favReports.Add(new { deptId = dept.Id, dept = dept.Label, name = r.Name, reportId = r.ReportID, href, target = "_blank", useCompanyParam = r.UseCompanyParam });
+            favReports.Add(new { deptId = dept.Id, dept = dept.Label, name = r.Name, reportId = r.ReportID, href = ReportService.BuildReportUrl(r), target = "_blank" });
         }
     }
 
@@ -172,7 +162,7 @@
                     <div class="text-[11px] text-txt-ter py-2 px-2.5">尚無收藏報表</div>
                 </template>
                 <template x-for="f in favList" :key="f.reportId">
-                    <a :href="getFavHref(f)" :target="f.target"
+                    <a :href="f.href" :target="f.target"
                        :data-report-id="f.reportId" data-report-source="favorite"
                        class="flex items-center gap-1.5 text-[11px] text-txt-sec px-2.5 py-[5px] rounded-[5px] no-underline hover:bg-pri-light hover:text-pri truncate">
                         <svg class="w-3 h-3 text-star fill-star shrink-0" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -197,13 +187,6 @@ function sidebarQuick() {
     return {
         favList: @Html.Raw(favReportsJson),
         showFavPanel: false,
-
-        getFavHref(f) {
-            if (!f.useCompanyParam) return f.href;
-            const companyId = document.cookie.split('; ').find(c => c.startsWith('companyId='))?.split('=')[1] || '';
-            const sep = f.href.includes('?') ? '&' : '?';
-            return f.href + sep + 'dbs=' + encodeURIComponent(companyId);
-        },
 
         init() {
             // 監聽收藏變更事件，動態更新 sidebar 收藏清單

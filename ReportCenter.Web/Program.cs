@@ -88,14 +88,20 @@ try
     // ── 服務註冊 ─────────────────────────────────────────────
     builder.Services.AddRazorPages();
     builder.Services.AddHttpContextAccessor();
+    builder.Services.AddMemoryCache();   // 首頁戰情快取 (HomeDashboardService)
 
     // 設定 (appsettings.json)
     builder.Services.Configure<SiteSettings>(
         builder.Configuration.GetSection(SiteSettings.SectionName));
     builder.Services.Configure<ReportBaseUrlSettings>(
         builder.Configuration.GetSection(ReportBaseUrlSettings.SectionName));
-    builder.Services.Configure<DepartmentDisplaySettings>(
-        builder.Configuration.GetSection(DepartmentDisplaySettings.SectionName));
+    // DeptID 必須為數字：ReportDepartment.DeptID 為 INT，非數字代碼會無法對應任何報表。
+    // 啟動時即驗證 (ValidateOnStart)，設定錯誤直接啟動失敗並寫入 Fatal log，不讓問題靜默發生。
+    builder.Services.AddOptions<DepartmentDisplaySettings>()
+        .Bind(builder.Configuration.GetSection(DepartmentDisplaySettings.SectionName))
+        .Validate(s => s.Regions.Values.SelectMany(r => r.Depts).All(d => int.TryParse(d.DeptID, out _)),
+            "DepartmentDisplay 設定中的 DeptID 必須為數字 (ReportDepartment.DeptID 為 INT)")
+        .ValidateOnStart();
     builder.Services.Configure<WindowsAuthDebugSettings>(
         builder.Configuration.GetSection(WindowsAuthDebugSettings.SectionName));
 
@@ -109,7 +115,10 @@ try
     {
         builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
             .AddNegotiate();
-        builder.Services.AddAuthorization();
+        // 全站預設須通過 Windows 驗證 — 不依賴 IIS 是否關閉匿名驗證，
+        // 避免匿名請求進入頁面 (Fail-closed)
+        builder.Services.AddAuthorization(options =>
+            options.FallbackPolicy = options.DefaultPolicy);
     }
 
     // 三層式架構 DI 註冊

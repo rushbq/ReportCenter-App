@@ -12,7 +12,12 @@ public class PinModel : PageModel
 
     public IActionResult OnPostToggle(int reportId)
     {
-        _svc.TogglePin(reportId);
+        if (!_svc.TogglePin(reportId))
+            return new JsonResult(new { success = false, message = "找不到報表或無存取權限" })
+            {
+                StatusCode = StatusCodes.Status403Forbidden
+            };
+
         var pins = _svc.GetUserPins();
         var isPinned = pins.Any(p => p.ReportID == reportId);
         return new JsonResult(new { success = true, isPinned, count = pins.Count });

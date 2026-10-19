@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Options;
 using ReportCenter.Web.Models;
-using ReportCenter.Web.Models.Settings;
 using ReportCenter.Web.Services;
 
 namespace ReportCenter.Web.Pages;
@@ -10,20 +8,19 @@ namespace ReportCenter.Web.Pages;
 public class DepartmentModel : PageModel
 {
     private readonly IReportService _svc;
-    private readonly ReportBaseUrlSettings _baseUrls;
 
-    public DepartmentModel(IReportService svc, IOptions<ReportBaseUrlSettings> baseUrls)
+    public DepartmentModel(IReportService svc)
     {
         _svc = svc;
-        _baseUrls = baseUrls.Value;
     }
 
     public string DeptId { get; set; } = "";
     public Department Dept { get; set; } = null!;
     public List<Report> Reports { get; set; } = [];
     public List<int> FavoriteIds { get; set; } = [];
-    public string SmartQueryBaseUrl => _baseUrls.SmartQuery;
-    public string SsrsBaseUrl => _baseUrls.SSRS;
+
+    /// <summary>ReportID → 外部報表完整連結 (含 dbs 公司別參數)</summary>
+    public Dictionary<int, string> ReportUrls { get; set; } = [];
 
     public IActionResult OnGet(string dept)
     {
@@ -44,6 +41,7 @@ public class DepartmentModel : PageModel
 
         Dept = matched;
         Reports = _svc.GetReports(DeptId);
+        ReportUrls = Reports.ToDictionary(r => r.ReportID, _svc.BuildReportUrl);
         FavoriteIds = _svc.GetUserFavorites();
         return Page();
     }

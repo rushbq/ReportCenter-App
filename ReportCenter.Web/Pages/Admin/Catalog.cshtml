@@ -445,6 +445,7 @@ function catalogPage() {
             if (msg === 'saved') Alpine.store('toast').show('報表已儲存');
             if (msg === 'deleted') Alpine.store('toast').show('報表已刪除');
             if (msg === 'toggled') Alpine.store('toast').show('狀態已更新');
+            if (msg === 'invalid') Alpine.store('toast').show('儲存失敗：報表名稱、報表代碼為必填，工具類型須為 SmartQuery 或 SSRS', 'error');
 
             // 檢查是否有 edit 參數
             const editId = params.get('edit');
@@ -524,6 +525,10 @@ function catalogPage() {
         save() {
             if (!this.form.reportName.trim()) {
                 Alpine.store('toast').show('請輸入報表名稱');
+                return;
+            }
+            if (!this.form.reportCode.trim()) {
+                Alpine.store('toast').show('請輸入報表代碼');
                 return;
             }
             this.$refs.saveForm.submit();

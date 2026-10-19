@@ -74,14 +74,6 @@ public class Report
     public bool UseCompanyParam { get; set; }              // 是否帶公司別參數 (dbs)
 }
 
-public class QuickAccess
-{
-    public string Dept { get; set; } = "";
-    public string DeptId { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string Tag { get; set; } = "";
-}
-
 public class MaterialRow
 {
     public string Material { get; set; } = "";
@@ -203,6 +195,7 @@ public class UserProfileItem
     public string DeptID { get; set; } = "";
     public string DeptName { get; set; } = "";       // 從 User_Dept JOIN
     public string NickName { get; set; } = "";       // User_Profile.NickName
+    public string Area { get; set; } = "";           // User_Dept.Area (TW / SH)，決定預設公司別
 }
 
 /// <summary>使用者報表權限</summary>

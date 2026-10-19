@@ -15,6 +15,8 @@ public class SqlReportService : IReportService
     private const string CurrentUserCacheKey = "__CurrentUser";
     private const string CurrentUserDebugCacheKey = "__CurrentUserDebug";
     private const string AuthorizedIdsCacheKey = "__AuthorizedReportIds";
+    private const string DepartmentsCacheKey = "__Departments";
+    private const string ReportsCacheKeyPrefix = "__Reports_";
 
     private readonly MockReportService _mock = new();
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -60,14 +62,14 @@ public class SqlReportService : IReportService
             return userInfo;
         }
 
-        var debugInfo = GetCurrentUserDebugInfo();
-        if (!debugInfo.IsAuthenticated)
-            return _mock.GetCurrentUser();
+        // 未通過驗證時 ResolvedUser 為空使用者 (Id = "")：不具管理員身分、也沒有任何報表權限。
+        // 不可退回固定的 Mock 使用者，否則匿名請求會繼承該使用者 (可能是管理員) 的權限。
+        var resolvedUser = GetCurrentUserDebugInfo().ResolvedUser;
 
         if (httpContext != null)
-            httpContext.Items[CurrentUserCacheKey] = debugInfo.ResolvedUser;
+            httpContext.Items[CurrentUserCacheKey] = resolvedUser;
 
-        return debugInfo.ResolvedUser;
+        return resolvedUser;
     }
 
     /// <summary>
@@ -143,6 +145,7 @@ public class SqlReportService : IReportService
                     DeptId = ResolveDepartmentId(departmentIdClaim, pksysUser),
                     DeptName = ResolveDepartmentName(departmentClaim, pksysUser),
                     NickName = pksysUser?.NickName ?? "",
+                    CompanyId = ResolveCompanyId(pksysUser),
                 }
                 : new UserInfo(),
             ResolvedFields = BuildResolvedFields(
@@ -153,7 +156,8 @@ public class SqlReportService : IReportService
                 departmentClaim,
                 departmentIdClaim,
                 pksysUser,
-                pksysLookupError),
+                pksysLookupError,
+                ResolveCompanyId(pksysUser)),
             Claims = principal?.Claims
                 .Select(c => new AuthClaimInfo
                 {
@@ -204,6 +208,11 @@ public class SqlReportService : IReportService
             ? departmentClaim
             : pksysUser?.DeptName ?? "";
 
+    /// <summary>使用者預設公司別：依 PKSYS 所屬部門的 Area (TW / SH) 對應公司，查無時退回台灣寶工</summary>
+    private string ResolveCompanyId(UserProfileItem? pksysUser)
+        => GetCompanies().Find(c => string.Equals(c.Region, pksysUser?.Area, StringComparison.OrdinalIgnoreCase))?.Id
+           ?? "tw";
+
     private static List<ResolvedUserField> BuildResolvedFields(
         bool isAuthenticated,
         string normalizedAccountName,
@@ -212,7 +221,8 @@ public class SqlReportService : IReportService
         string departmentClaim,
         string departmentIdClaim,
         UserProfileItem? pksysUser,
-        string pksysLookupError)
+        string pksysLookupError,
+        string companyId)
     {
         if (!isAuthenticated)
         {
@@ -281,25 +291,52 @@ public class SqlReportService : IReportService
                         ? $"PKSYS: User_Dept.DeptName{pksysSourceSuffix}"
                         : "未取得"
             },
+            new()
+            {
+                Label = "UserInfo.CompanyId",
+                Value = companyId,
+                Source = !string.IsNullOrWhiteSpace(pksysUser?.Area)
+                    ? $"PKSYS: User_Dept.Area = {pksysUser.Area}{pksysSourceSuffix}"
+                    : "未取得 Area，預設台灣寶工 (tw)"
+            },
         ];
     }
 
     public List<Company> GetCompanies() => _mock.GetCompanies();
 
+    /// <inheritdoc />
+    /// <remarks>companyId cookie 只在使用者主動切換公司時才寫入，沒有 cookie 時必須退回使用者預設公司。</remarks>
+    public string GetCurrentCompanyId()
+    {
+        var cookieCompanyId = _httpContextAccessor.HttpContext?.Request.Cookies["companyId"];
+        return !string.IsNullOrEmpty(cookieCompanyId) && GetCompanies().Any(c => c.Id == cookieCompanyId)
+            ? cookieCompanyId
+            : GetCurrentUser().CompanyId;
+    }
+
+    /// <inheritdoc />
+    public string BuildReportUrl(Report report)
+    {
+        var url = (report.ReportTool == "SSRS" ? _baseUrls.SSRS : _baseUrls.SmartQuery) + report.ReportCode;
+        if (!report.UseCompanyParam) return url;
+
+        var sep = url.Contains('?') ? '&' : '?';
+        return $"{url}{sep}dbs={Uri.EscapeDataString(GetCurrentCompanyId())}";
+    }
+
     // ─── 部門（真實資料） ───
 
-    public List<Department> GetDepartments()
+    /// <remarks>
+    /// 側欄、搜尋索引、頁面本身在同一請求會重複呼叫，故以 HttpContext.Items 做每請求快取；
+    /// 公司別與權限在單一請求內不會改變，快取安全。
+    /// </remarks>
+    public List<Department> GetDepartments() => GetOrAddRequestCache(DepartmentsCacheKey, () =>
     {
         var region = GetCurrentRegion().ToUpper();
         if (!_deptDisplay.Regions.TryGetValue(region, out var config))
             return [];
 
         var allDepts = _pksysRepo.GetCatalogDepartments(region);
-
-        // 取得使用者已授權的 ReportID，用於計算權限過濾後的數量
-        // 管理員 (authorizedSet == null) 繞過權限過濾，可看見所有已啟用的報表
-        var authorizedSet = GetAuthorizedReportIdSet();
-
         var result = new List<Department>();
 
         foreach (var entry in config.Depts)
@@ -307,15 +344,11 @@ public class SqlReportService : IReportService
             var dept = allDepts.Find(d => d.DeptID == entry.DeptID);
             if (dept == null) continue;
 
-            var deptIdInt = int.TryParse(entry.DeptID, out var id) ? id : 0;
-
-            var deptReports = _repo.GetActiveReportsByDepartment(deptIdInt);
-            var permittedReports = (authorizedSet == null
-                ? deptReports
-                : deptReports.Where(r => authorizedSet.Contains(r.ReportID)).ToList());
+            // GetReports 已套用權限過濾 (管理員不過濾)，數量與分類皆以使用者看得到的報表計算
+            var permittedReports = GetReports(entry.DeptID);
             var categories = permittedReports
-                .Where(r => !string.IsNullOrEmpty(r.CategoryName))
-                .Select(r => r.CategoryName)
+                .Where(r => !string.IsNullOrEmpty(r.Cat))
+                .Select(r => r.Cat)
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();
@@ -331,16 +364,22 @@ public class SqlReportService : IReportService
         }
 
         return result;
-    }
+    });
 
     public Department? GetDepartment(string deptId)
         => GetDepartments().Find(d => d.Id == deptId);
 
     // ─── 報表（真實資料） ───
 
-    public List<Report> GetReports(string deptId)
+    public List<Report> GetReports(string deptId) => GetOrAddRequestCache(ReportsCacheKeyPrefix + deptId, () =>
     {
-        var deptIdInt = int.TryParse(deptId, out var id) ? id : 0;
+        // ReportDepartment.DeptID 為 INT；非數字代碼不可能有報表，記錄警告後回傳空清單
+        if (!int.TryParse(deptId, out var deptIdInt))
+        {
+            _logger.LogWarning("部門代碼非數字，無法對應報表。DeptID={DeptID}", deptId);
+            return [];
+        }
+
         var items = _repo.GetActiveReportsByDepartment(deptIdInt);
 
         // 依使用者權限過濾 (預設無權限策略)；管理員 (null) 繞過此過濾
@@ -349,14 +388,10 @@ public class SqlReportService : IReportService
             items = items.Where(i => authorizedSet.Contains(i.ReportID)).ToList();
 
         return items.Select(ToReport).ToList();
-    }
+    });
 
     public Report? GetReport(string deptId, string reportName)
         => GetReports(deptId).Find(r => r.Name == reportName);
-
-    // ─── 快速存取（由釘選功能取代） ───
-
-    public List<QuickAccess> GetQuickAccessItems() => [];
 
     // ─── 明細資料（維持 Mock） ───
 
@@ -396,14 +431,20 @@ public class SqlReportService : IReportService
             : favorites.Where(id => authorizedSet.Contains(id)).ToList();
     }
 
-    public void ToggleFavorite(int reportId)
+    public bool ToggleFavorite(int reportId)
     {
         var userId = GetCurrentUser().Id;
+        if (string.IsNullOrEmpty(userId)) return false;
+
         var favorites = _repo.GetUserFavorites(userId);
         if (favorites.Contains(reportId))
-            _repo.RemoveFavorite(userId, reportId);
-        else
+            _repo.RemoveFavorite(userId, reportId);   // 取消一律允許 (即使已失去權限)
+        else if (CanAccessReport(reportId))
             _repo.AddFavorite(userId, reportId);
+        else
+            return false;
+
+        return true;
     }
 
     // ─── 釘選 ───
@@ -421,14 +462,20 @@ public class SqlReportService : IReportService
         return items.Select(ToReport).ToList();
     }
 
-    public void TogglePin(int reportId)
+    public bool TogglePin(int reportId)
     {
         var userId = GetCurrentUser().Id;
+        if (string.IsNullOrEmpty(userId)) return false;
+
         var pins = _repo.GetUserPins(userId);
         if (pins.Any(p => p.ReportID == reportId))
-            _repo.RemovePin(userId, reportId);
-        else
+            _repo.RemovePin(userId, reportId);        // 取消一律允許 (即使已失去權限)
+        else if (CanAccessReport(reportId))
             _repo.AddPin(userId, reportId);
+        else
+            return false;
+
+        return true;
     }
 
     // ─── 輔助方法 ───
@@ -454,12 +501,35 @@ public class SqlReportService : IReportService
         return set;
     }
 
+    /// <summary>
+    /// 使用者是否可存取指定報表 (新增收藏/釘選前檢查)：報表須存在且啟用；
+    /// 一般使用者另須有授權，管理員則不需授權。
+    /// </summary>
+    private bool CanAccessReport(int reportId)
+    {
+        if (_repo.GetCatalogItem(reportId) is not { IsActive: true }) return false;
+
+        var authorizedSet = GetAuthorizedReportIdSet();
+        return authorizedSet == null || authorizedSet.Contains(reportId);
+    }
+
+    /// <summary>每請求快取：同一請求內重複呼叫只查一次 DB (無 HttpContext 時直接計算)</summary>
+    private T GetOrAddRequestCache<T>(string key, Func<T> factory)
+    {
+        var items = _httpContextAccessor.HttpContext?.Items;
+        if (items != null && items.TryGetValue(key, out var cached) && cached is T value)
+            return value;
+
+        var result = factory();
+        if (items != null)
+            items[key] = result;
+        return result;
+    }
+
     private string GetCurrentRegion()
     {
-        var cookieCompanyId = _httpContextAccessor.HttpContext?.Request.Cookies["companyId"];
-        var companies = GetCompanies();
-        var company = companies.Find(c => c.Id == cookieCompanyId) ?? companies.FirstOrDefault();
-        return company?.Region ?? "TW";
+        var companyId = GetCurrentCompanyId();
+        return GetCompanies().Find(c => c.Id == companyId)?.Region ?? "TW";
     }
 
     private static Report ToReport(ReportCatalogItem item) => new()

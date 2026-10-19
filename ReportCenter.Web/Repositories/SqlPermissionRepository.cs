@@ -39,21 +39,6 @@ public class SqlPermissionRepository : IPermissionRepository
             """, new { EmployeeId = employeeId }).ToList();
     }
 
-    public List<UserReportPermission> GetPermissionsByReport(int reportId)
-    {
-        using var conn = OpenConn();
-        return conn.Query<UserReportPermission>(
-            """
-            SELECT p.PermissionID, p.EmployeeId, p.ReportID, p.GrantedBy, p.GrantedDate,
-                   c.ReportName, ISNULL(cat.CategoryName, '') AS CategoryName, c.ReportTool
-            FROM UserReportPermission p
-            INNER JOIN ReportCatalog c ON p.ReportID = c.ReportID
-            LEFT JOIN ReportCategory cat ON c.CategoryID = cat.CategoryID
-            WHERE p.ReportID = @ReportID
-            ORDER BY p.EmployeeId
-            """, new { ReportID = reportId }).ToList();
-    }
-
     public int GrantPermissions(List<string> employeeIds, List<int> reportIds, string grantedBy)
     {
         using var conn = OpenConn();
@@ -98,14 +83,6 @@ public class SqlPermissionRepository : IPermissionRepository
             "DELETE FROM UserReportPermission WHERE EmployeeId = @EmployeeId AND ReportID = @ReportID",
             new { EmployeeId = employeeId, ReportID = reportId });
         return affected > 0;
-    }
-
-    public bool HasPermission(string employeeId, int reportId)
-    {
-        using var conn = OpenConn();
-        return conn.QuerySingleOrDefault<int>(
-            "SELECT COUNT(1) FROM UserReportPermission WHERE EmployeeId = @EmployeeId AND ReportID = @ReportID",
-            new { EmployeeId = employeeId, ReportID = reportId }) > 0;
     }
 
     public List<int> GetAuthorizedReportIds(string employeeId)

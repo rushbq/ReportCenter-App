@@ -25,6 +25,9 @@ public class CatalogModel : AdminPageModel
         _usageSvc = usageSvc;
     }
 
+    /// <summary>目錄管理可建立的報表工具類型 (Internal 已停止開發)</summary>
+    private static readonly HashSet<string> AllowedReportTools = ["SmartQuery", "SSRS"];
+
     // ─── 頁面資料屬性 ───
 
     /// <summary>報表清冊清單 (可依篩選條件過濾)</summary>
@@ -88,12 +91,17 @@ public class CatalogModel : AdminPageModel
         string reportCode, string sourceName, bool isActive, string? remarks,
         bool useCompanyParam, string? deptIds, string? dependencies, int? categoryId)
     {
+        // 後端驗證 (不可只依賴前端)：名稱、代碼必填，工具類型限目錄可建立的類型
+        if (string.IsNullOrWhiteSpace(reportName) || string.IsNullOrWhiteSpace(reportCode)
+            || !AllowedReportTools.Contains(reportTool ?? ""))
+            return RedirectToPage(new { msg = "invalid" });
+
         var item = reportId > 0 ? _catalogSvc.GetCatalogItem(reportId) ?? new() : new();
         item.ReportID = reportId;
-        item.ReportName = reportName ?? "";
-        item.ReportTool = reportTool ?? "SmartQuery";
+        item.ReportName = reportName.Trim();
+        item.ReportTool = reportTool!;
         item.ReportPath = reportPath ?? "";
-        item.ReportCode = reportCode ?? "";
+        item.ReportCode = reportCode.Trim();
         item.SourceName = sourceName ?? "";
         item.IsActive = isActive;
         item.Remarks = remarks ?? "";

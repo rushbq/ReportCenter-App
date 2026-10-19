@@ -33,7 +33,7 @@ public class CatalogService : ICatalogService
 
     /// <inheritdoc />
     public List<ReportCatalogItem> GetCatalogItems(string? toolFilter = null, bool? isActive = null, string? search = null)
-        => _repo.GetCatalogItems(toolFilter, isActive, search);
+        => ApplyCurrentDeptNames(_repo.GetCatalogItems(toolFilter, isActive, search));
 
     /// <inheritdoc />
     public ReportCatalogItem? GetCatalogItem(int reportId)
@@ -62,7 +62,7 @@ public class CatalogService : ICatalogService
     /// <inheritdoc />
     public AdminStats GetAdminStats()
     {
-        var items = _repo.GetCatalogItems();
+        var items = ApplyCurrentDeptNames(_repo.GetCatalogItems());
 
         var stats = new AdminStats
         {
@@ -115,6 +115,31 @@ public class CatalogService : ICatalogService
         return deptMap
             .Select(kv => new DeptUsage { DeptName = kv.Value.DeptName, Reports = kv.Value.Reports })
             .ToList();
+    }
+
+    /// <summary>
+    /// 以 PKSYS 目前的部門名稱覆寫部門指派的顯示名稱。
+    /// ReportDepartment.DeptName 是儲存當下的快照，PKSYS 改名後不會自動更新；
+    /// PKSYS 查無此部門 (已裁撤或不顯示) 時保留快照，讓歷史指派仍可辨識。
+    /// </summary>
+    private List<ReportCatalogItem> ApplyCurrentDeptNames(List<ReportCatalogItem> items)
+    {
+        if (items.Count == 0) return items;
+
+        var currentNames = new Dictionary<int, string>();
+        foreach (var dept in _pksysRepo.GetCatalogDepartments())
+        {
+            if (int.TryParse(dept.DeptID, out var deptId))
+                currentNames[deptId] = dept.DeptName;
+        }
+
+        foreach (var assignment in items.SelectMany(i => i.Departments))
+        {
+            if (currentNames.TryGetValue(assignment.DeptID, out var name))
+                assignment.DeptName = name;
+        }
+
+        return items;
     }
 
     // ─── 相依物件 ───

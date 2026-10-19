@@ -1,13 +1,9 @@
 @using ReportCenter.Web.Services
 @inject IReportService ReportService
-@inject IHttpContextAccessor HttpContextAccessor
 @{
     var user = ReportService.GetCurrentUser();
     var companies = ReportService.GetCompanies();
-    var cookieCompanyId = HttpContextAccessor.HttpContext?.Request.Cookies["companyId"];
-    var activeCompanyId = !string.IsNullOrEmpty(cookieCompanyId) && companies.Any(c => c.Id == cookieCompanyId)
-        ? cookieCompanyId
-        : user.CompanyId;
+    var activeCompanyId = ReportService.GetCurrentCompanyId();
     var defaultCompany = companies.FirstOrDefault(c => c.Id == activeCompanyId)?.ShortName ?? "台灣寶工";
 }
 <nav class="h-14 bg-pri flex items-center px-3 md:px-5 gap-2 md:gap-3 text-white sticky top-0 z-50 shadow-[0_2px_8px_rgba(0,87,88,0.15)]"

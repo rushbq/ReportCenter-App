@@ -8,8 +8,8 @@
     var reportsJson = System.Text.Json.JsonSerializer.Serialize(
         Model.Reports.Select(r => new {
             reportId = r.ReportID, name = r.Name, desc = r.Desc, cat = r.Cat,
-            updated = r.Updated, reportTool = r.ReportTool, reportCode = r.ReportCode,
-            useCompanyParam = r.UseCompanyParam
+            updated = r.Updated, reportTool = r.ReportTool,
+            href = Model.ReportUrls[r.ReportID]
         }), jsonOpts
     );
     var favoriteIdsJson = System.Text.Json.JsonSerializer.Serialize(Model.FavoriteIds, jsonOpts);
@@ -152,7 +152,6 @@ function deptPage() {
         reports: [],
         favoriteIds: [],
         catColors: {},
-        baseUrls: { smartQuery: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SmartQueryBaseUrl)), ssrs: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SsrsBaseUrl)) },
 
         init() {
             this.reports = @Html.Raw(reportsJson);
@@ -172,15 +171,8 @@ function deptPage() {
         },
 
         getReportHref(r) {
-            let url = r.reportTool === 'SSRS'
-                ? this.baseUrls.ssrs + r.reportCode
-                : this.baseUrls.smartQuery + r.reportCode;
-            if (r.useCompanyParam) {
-                const companyId = document.cookie.split('; ').find(c => c.startsWith('companyId='))?.split('=')[1] || '';
-                const sep = url.includes('?') ? '&' : '?';
-                url += sep + 'dbs=' + encodeURIComponent(companyId);
-            }
-            return url;
+            // 連結由後端 IReportService.BuildReportUrl 組好 (含 dbs 公司別參數)
+            return r.href;
         },
 
         isFav(reportId) {

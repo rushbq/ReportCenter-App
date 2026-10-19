@@ -13,6 +13,9 @@ public interface IPksysRepository
     /// <summary>搜尋使用者 (模糊比對 Account_Name / Display_Name)</summary>
     List<UserProfileItem> SearchUsers(string? keyword = null, string? deptId = null);
 
+    /// <summary>依員工編號清單批次取得使用者 (僅在職者)</summary>
+    List<UserProfileItem> GetUsersByAccounts(IEnumerable<string> accountNames);
+
     /// <summary>取得單一使用者</summary>
     UserProfileItem? GetUser(string accountName);
 

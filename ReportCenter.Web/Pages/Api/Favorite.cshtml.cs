@@ -12,7 +12,12 @@ public class FavoriteModel : PageModel
 
     public IActionResult OnPostToggle(int reportId)
     {
-        _svc.ToggleFavorite(reportId);
+        if (!_svc.ToggleFavorite(reportId))
+            return new JsonResult(new { success = false, message = "找不到報表或無存取權限" })
+            {
+                StatusCode = StatusCodes.Status403Forbidden
+            };
+
         var favorites = _svc.GetUserFavorites();
         var isFav = favorites.Contains(reportId);
         return new JsonResult(new { success = true, isFavorite = isFav, count = favorites.Count });

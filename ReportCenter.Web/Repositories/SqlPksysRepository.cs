@@ -76,6 +76,22 @@ public class SqlPksysRepository : IPksysRepository
         return conn.Query<UserProfileItem>(sql, parameters).ToList();
     }
 
+    public List<UserProfileItem> GetUsersByAccounts(IEnumerable<string> accountNames)
+    {
+        var accounts = accountNames.Distinct().ToList();
+        if (accounts.Count == 0) return [];
+
+        using var conn = OpenConn();
+        return conn.Query<UserProfileItem>(
+            """
+            SELECT p.Account_Name AS AccountName, p.Display_Name AS DisplayName,
+                   p.DeptID, ISNULL(d.DeptName, '') AS DeptName
+            FROM User_Profile p
+            LEFT JOIN User_Dept d ON p.DeptID = d.DeptID
+            WHERE p.Display = 'Y' AND p.Account_Name IN @Accounts
+            """, new { Accounts = accounts }).ToList();
+    }
+
     public UserProfileItem? GetUser(string accountName)
     {
         using var conn = OpenConn();
@@ -83,7 +99,7 @@ public class SqlPksysRepository : IPksysRepository
             """
             SELECT p.Account_Name AS AccountName, p.Display_Name AS DisplayName,
                    p.DeptID, ISNULL(d.DeptName, '') AS DeptName,
-                   p.NickName AS NickName
+                   p.NickName AS NickName, ISNULL(d.Area, '') AS Area
             FROM User_Profile p
             LEFT JOIN User_Dept d ON p.DeptID = d.DeptID
             WHERE p.Display = 'Y' AND p.Account_Name = @AccountName

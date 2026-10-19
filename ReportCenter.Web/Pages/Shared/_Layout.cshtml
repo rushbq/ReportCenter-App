@@ -3,7 +3,6 @@
 @using ReportCenter.Web.Models.Settings
 @using ReportCenter.Web.Services
 @inject IReportService ReportService
-@inject IOptions<ReportBaseUrlSettings> BaseUrlOptions
 @inject IOptions<SiteSettings> SiteOptions
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -186,16 +185,13 @@
     <!-- 搜尋索引注入 -->
     @{
         var jsonOpts = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-        var layoutBaseUrls = BaseUrlOptions.Value;
         var allDepts = ReportService.GetDepartments();
         var searchIndex = new List<object>();
         foreach (var dept in allDepts)
         {
             foreach (var report in ReportService.GetReports(dept.Id))
             {
-                var url = report.ReportTool == "SSRS"
-                    ? layoutBaseUrls.SSRS + report.ReportCode
-                    : layoutBaseUrls.SmartQuery + report.ReportCode;
+                var url = ReportService.BuildReportUrl(report);
                 searchIndex.Add(new { reportId = report.ReportID, name = report.Name, desc = report.Desc, dept = dept.Label, deptId = dept.Id, cat = report.Cat, reportTool = report.ReportTool, url, target = "_blank" });
             }
         }

@@ -17,9 +17,6 @@ public interface IPermissionService
     /// <summary>撤銷單一權限</summary>
     bool RevokePermission(string employeeId, int reportId);
 
-    /// <summary>檢查使用者是否有該報表權限</summary>
-    bool HasPermission(string employeeId, int reportId);
-
     /// <summary>取得使用者所有已授權的 ReportID</summary>
     List<int> GetAuthorizedReportIds(string employeeId);
 

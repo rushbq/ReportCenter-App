@@ -23,18 +23,15 @@ public class UsageService : IUsageService
     private readonly IUsageRepository _repo;
     private readonly IPksysRepository _pksys;
     private readonly IReportService _reportSvc;
-    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public UsageService(
         IUsageRepository repo,
         IPksysRepository pksys,
-        IReportService reportSvc,
-        IHttpContextAccessor httpContextAccessor)
+        IReportService reportSvc)
     {
         _repo = repo;
         _pksys = pksys;
         _reportSvc = reportSvc;
-        _httpContextAccessor = httpContextAccessor;
     }
 
     public bool TrackClick(int reportId, string? source)
@@ -46,19 +43,8 @@ public class UsageService : IUsageService
 
         var safeSource = source != null && ValidSources.Contains(source) ? source : "";
 
-        return _repo.TryInsert(reportId, user.Id, ResolveCompanyId(user), safeSource, DedupeSeconds);
-    }
-
-    /// <summary>
-    /// 解析點擊當下的公司別。與 _TopNav 的顯示邏輯一致：cookie 有效才採用，
-    /// 否則退回使用者預設公司 — 沒切換過公司的使用者並無 cookie，直接讀 cookie 會全部記成空值。
-    /// </summary>
-    private string ResolveCompanyId(UserInfo user)
-    {
-        var cookieCompanyId = _httpContextAccessor.HttpContext?.Request.Cookies["companyId"];
-        return !string.IsNullOrEmpty(cookieCompanyId) && _reportSvc.GetCompanies().Any(c => c.Id == cookieCompanyId)
-            ? cookieCompanyId
-            : user.CompanyId;
+        // 公司別與頂欄顯示、報表連結共用同一套判定 (IReportService.GetCurrentCompanyId)
+        return _repo.TryInsert(reportId, user.Id, _reportSvc.GetCurrentCompanyId(), safeSource, DedupeSeconds);
     }
 
     public UsageOverview GetOverview()
@@ -118,8 +104,10 @@ public class UsageService : IUsageService
     {
         if (items.Count == 0) return;
 
-        var userMap = _pksys.SearchUsers()
-            .ToDictionary(u => u.AccountName, u => u);
+        // 只查本頁出現的員編 (每頁最多 100 筆)，不再載入全部在職人員
+        var userMap = _pksys.GetUsersByAccounts(items.Select(i => i.EmployeeId))
+            .GroupBy(u => u.AccountName)
+            .ToDictionary(g => g.Key, g => g.First());
 
         foreach (var item in items)
         {

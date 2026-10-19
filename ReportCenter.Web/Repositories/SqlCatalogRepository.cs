@@ -288,34 +288,6 @@ public class SqlCatalogRepository : ICatalogRepository
         return items;
     }
 
-    public List<string> GetCategoriesByDepartment(int deptId)
-    {
-        using var conn = OpenConn();
-
-        return conn.Query<string>(
-            """
-            SELECT DISTINCT cat.CategoryName
-            FROM ReportCatalog c
-            INNER JOIN ReportDepartment rd ON c.ReportID = rd.ReportID
-            INNER JOIN ReportCategory cat ON c.CategoryID = cat.CategoryID
-            WHERE c.IsActive = 1 AND rd.DeptID = @DeptID AND cat.CategoryName IS NOT NULL
-            ORDER BY cat.CategoryName
-            """, new { DeptID = deptId }).ToList();
-    }
-
-    public int GetActiveReportCountByDepartment(int deptId)
-    {
-        using var conn = OpenConn();
-
-        return conn.QuerySingle<int>(
-            """
-            SELECT COUNT(DISTINCT c.ReportID)
-            FROM ReportCatalog c
-            INNER JOIN ReportDepartment rd ON c.ReportID = rd.ReportID
-            WHERE c.IsActive = 1 AND rd.DeptID = @DeptID
-            """, new { DeptID = deptId });
-    }
-
     // ═══════════════════════════════════════════
     //  使用者收藏
     // ═══════════════════════════════════════════

@@ -21,6 +21,10 @@ public class MockReportService : IReportService
         new() { Id = "sh", Name = "上海寶工工具有限公司", ShortName = "上海寶工", Region = "SH" },
     ];
 
+    public string GetCurrentCompanyId() => "tw";
+
+    public string BuildReportUrl(Report report) => report.ReportCode;
+
     // ─── 部門 ───
 
     private static readonly List<Department> _departments =
@@ -95,20 +99,6 @@ public class MockReportService : IReportService
 
     public Report? GetReport(string deptId, string reportName) =>
         GetReports(deptId).Find(r => r.Name == reportName);
-
-    // ─── 快速存取 ───
-
-    public List<QuickAccess> GetQuickAccessItems() =>
-    [
-        new() { Dept = "採購部", DeptId = "procurement", Name = "月度採購成本分析", Tag = "成本" },
-        new() { Dept = "業務部", DeptId = "sales", Name = "客戶銷售排名", Tag = "銷售" },
-        new() { Dept = "財務部", DeptId = "finance", Name = "應收帳款帳齡表", Tag = "財務" },
-        new() { Dept = "業務部", DeptId = "sales", Name = "區域營收分佈", Tag = "銷售" },
-        new() { Dept = "採購部", DeptId = "procurement", Name = "供應商績效評比", Tag = "供應商" },
-        new() { Dept = "人資部", DeptId = "hr", Name = "人員出勤統計", Tag = "人資" },
-        new() { Dept = "資訊部", DeptId = "it", Name = "系統可用性報告", Tag = "IT" },
-        new() { Dept = "財務部", DeptId = "finance", Name = "預算執行率追蹤", Tag = "財務" },
-    ];
 
     // ─── 明細資料 ───
 
@@ -236,8 +226,8 @@ public class MockReportService : IReportService
     // ─── 收藏/釘選 (Mock 空實作) ───
 
     public List<int> GetUserFavorites() => [];
-    public void ToggleFavorite(int reportId) { }
+    public bool ToggleFavorite(int reportId) => true;
     public List<Report> GetUserPins() => [];
-    public void TogglePin(int reportId) { }
+    public bool TogglePin(int reportId) => true;
 
 }

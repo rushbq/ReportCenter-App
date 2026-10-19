@@ -47,10 +47,6 @@ public class PermissionService : IPermissionService
         => _permRepo.RevokePermission(employeeId, reportId);
 
     /// <inheritdoc />
-    public bool HasPermission(string employeeId, int reportId)
-        => _permRepo.HasPermission(employeeId, reportId);
-
-    /// <inheritdoc />
     public List<int> GetAuthorizedReportIds(string employeeId)
         => _permRepo.GetAuthorizedReportIds(employeeId);
 
@@ -113,9 +109,11 @@ public class PermissionService : IPermissionService
             });
         }
 
-        // 未分類的報表
+        // 未分類的報表：沒有分類，或所屬分類已停用 / 不存在 —
+        // 否則這些報表不會出現在任何節點，管理員將無法對它們授權
+        var activeCategoryIds = categories.Select(c => c.CategoryID).ToHashSet();
         var uncategorized = items
-            .Where(i => i.CategoryID == null || i.CategoryID == 0)
+            .Where(i => i.CategoryID is not { } catId || !activeCategoryIds.Contains(catId))
             .Select(i => new ReportTreeItem
             {
                 ReportID = i.ReportID,

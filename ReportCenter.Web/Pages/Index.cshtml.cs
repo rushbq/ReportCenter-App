@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Options;
 using ReportCenter.Web.Models;
-using ReportCenter.Web.Models.Settings;
 using ReportCenter.Web.Services;
 
 namespace ReportCenter.Web.Pages;
@@ -13,13 +11,11 @@ public class IndexModel : PageModel
 {
     private readonly IReportService _svc;
     private readonly IHomeDashboardService _dashSvc;
-    private readonly ReportBaseUrlSettings _baseUrls;
 
-    public IndexModel(IReportService svc, IHomeDashboardService dashSvc, IOptions<ReportBaseUrlSettings> baseUrls)
+    public IndexModel(IReportService svc, IHomeDashboardService dashSvc)
     {
         _svc = svc;
         _dashSvc = dashSvc;
-        _baseUrls = baseUrls.Value;
     }
 
     public List<object> AllReports { get; set; } = [];
@@ -30,9 +26,6 @@ public class IndexModel : PageModel
 
     /// <summary>首頁年度目標戰情初始資料 (預設：銷售 + 即時累計)，切換由前端 fetch 更新。</summary>
     public HomeYtdDashboard Dashboard { get; set; } = new();
-
-    public string SmartQueryBaseUrl => _baseUrls.SmartQuery;
-    public string SsrsBaseUrl => _baseUrls.SSRS;
 
     public void OnGet()
     {
@@ -53,7 +46,7 @@ public class IndexModel : PageModel
                     deptId = dept.Id,
                     cat = report.Cat,
                     reportTool = report.ReportTool,
-                    reportCode = report.ReportCode
+                    href = _svc.BuildReportUrl(report)
                 });
             }
         }
@@ -73,15 +66,10 @@ public class IndexModel : PageModel
                 pinned.Name,
                 pinned.Cat,
                 pinned.ReportTool,
-                href = BuildReportHref(pinned),
+                href = _svc.BuildReportUrl(pinned),
                 target = "_blank",
                 dept = reportInfo.Department
             });
         }
     }
-
-    private string BuildReportHref(Report report) =>
-        report.ReportTool == "SSRS"
-            ? _baseUrls.SSRS + report.ReportCode
-            : _baseUrls.SmartQuery + report.ReportCode;
 }
