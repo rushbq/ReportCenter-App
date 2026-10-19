@@ -398,6 +398,7 @@ Request Logging (`UseSerilogRequestLogging`) 額外附帶：`TraceId`、`UserNam
 ### 資料模型
 
 - `ReportCatalogItem` — 報表清冊主表 (對應 DB `ReportCatalog`)
+- `ReportCategory` — 報表分類。**刻意不提供管理 UI**（僅 3 個、極少變動，由 IT 以 SQL 維護；理由見 `ICatalogService` 註解與 `docs/06` P3），請勿重複提出
 - `DeptAssignment` — 部門指派 (對應 DB `ReportDepartment`)；`DeptName` 在 DB 是快照，`CatalogService` 讀取時以 PKSYS 目前名稱覆寫 (查無才用快照)
 - `Dependencies` — 相依物件清單 (對應 DB `ReportDependency`)
 - `AdminStats` — 管理總覽 KPI ViewModel，含 `DeptUsagesTW` / `DeptUsagesSH` (依區域分開)
