@@ -25,6 +25,7 @@
         remarks = i.Remarks,
         useCompanyParam = i.UseCompanyParam,
         categoryID = i.CategoryID,
+        sortOrder = i.SortOrder,
         categoryName = i.CategoryName,
         departments = i.Departments.Select(d => new { deptID = d.DeptID, deptName = d.DeptName }),
         dependencies = i.Dependencies,
@@ -160,6 +161,7 @@
                     <th class="px-4 py-3 text-left font-semibold">報表</th>
                     <th class="px-3 py-3 text-left font-semibold w-[28%]">部門選單</th>
                     <th class="px-3 py-3 text-left font-semibold hidden xl:table-cell w-[96px]">分類</th>
+                    <th class="px-3 py-3 text-right font-semibold hidden xl:table-cell w-[64px]" title="自訂排序：數字小的排前面，相同時依報表名稱">排序</th>
                     <th class="px-3 py-3 text-right font-semibold hidden lg:table-cell w-[96px]" title="近 30 日點擊次數；滑過數字可看最後使用日">近 30 日</th>
                     <th class="px-3 py-3 text-left font-semibold w-[96px]">狀態</th>
                     <th class="px-3 py-3 w-[52px]"><span class="sr-only">編輯</span></th>
@@ -205,6 +207,9 @@
                             <span x-show="item.categoryName" class="text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap" :class="catBadge(item.categoryName)" x-text="item.categoryName"></span>
                             <span x-show="!item.categoryName" class="text-[11px] text-txt-ter">未分類</span>
                         </td>
+                        <td class="px-3 py-3 text-right hidden xl:table-cell text-[12px] tabular-nums"
+                            :class="item.sortOrder === 999 ? 'text-txt-ter' : 'text-txt font-semibold'"
+                            x-text="item.sortOrder"></td>
                         <td class="px-3 py-3 text-right hidden lg:table-cell">
                             <a x-show="item.usageClicks > 0" :href="'/Admin/Usage?reportId=' + item.reportID"
                                :title="'最後使用 ' + item.usageLastUsed + '，點擊查看明細'"
@@ -389,6 +394,7 @@
         <input type="hidden" name="remarks" x-bind:value="form.remarks">
         <input type="hidden" name="useCompanyParam" x-bind:value="form.useCompanyParam">
         <input type="hidden" name="categoryId" x-bind:value="form.categoryID || ''">
+        <input type="hidden" name="sortOrder" x-bind:value="form.sortOrder">
         <input type="hidden" name="deptIds" x-bind:value="deptIdsString()">
         <input type="hidden" name="dependencies" x-bind:value="deps.join(',')">
     </form>
@@ -593,7 +599,7 @@ function catalogPage() {
             this.form = {
                 reportID: 0, reportName: '', reportTool: 'SmartQuery',
                 reportPath: '', reportCode: '', sourceName: '',
-                isActive: true, remarks: '', useCompanyParam: false, categoryID: null
+                isActive: true, remarks: '', useCompanyParam: false, categoryID: null, sortOrder: 999
             };
             this.selectedDepts = [];
             this.deps = [];
@@ -617,7 +623,8 @@ function catalogPage() {
                 isActive: item.isActive,
                 remarks: item.remarks || '',
                 useCompanyParam: item.useCompanyParam || false,
-                categoryID: item.categoryID || null
+                categoryID: item.categoryID || null,
+                sortOrder: item.sortOrder ?? 999
             };
             this.selectedDepts = item.departments.map(d => String(d.deptID)).filter(Boolean);
             this.deps = [...(item.dependencies || [])];
@@ -643,6 +650,7 @@ function catalogPage() {
                 reportPath: f.reportPath || '',
                 sourceName: f.sourceName || '',
                 categoryID: f.categoryID ? String(f.categoryID) : '',
+                sortOrder: String(f.sortOrder ?? ''),
                 depts: [...this.selectedDepts].sort(),
                 deps: this.deps
             });

@@ -89,7 +89,7 @@ public class CatalogModel : AdminPageModel
     public IActionResult OnPostSave(
         int reportId, string reportName, string reportTool, string reportPath,
         string reportCode, string sourceName, bool isActive, string? remarks,
-        bool useCompanyParam, string? deptIds, string? dependencies, int? categoryId)
+        bool useCompanyParam, string? deptIds, string? dependencies, int? categoryId, int? sortOrder)
     {
         // 後端驗證 (不可只依賴前端)：名稱、代碼必填，工具類型限目錄可建立的類型
         if (string.IsNullOrWhiteSpace(reportName) || string.IsNullOrWhiteSpace(reportCode)
@@ -107,6 +107,7 @@ public class CatalogModel : AdminPageModel
         item.Remarks = remarks ?? "";
         item.UseCompanyParam = useCompanyParam;
         item.CategoryID = categoryId;
+        item.SortOrder = NormalizeSortOrder(sortOrder);
         item.Departments = ParseDepartments(deptIds);
         item.Dependencies = ParseDependencies(dependencies);
 
@@ -156,6 +157,10 @@ public class CatalogModel : AdminPageModel
         }
         return result;
     }
+
+    /// <summary>自訂排序：未填時給預設 999，並限制在 0~9999</summary>
+    private static int NormalizeSortOrder(int? sortOrder)
+        => Math.Clamp(sortOrder ?? 999, 0, 9999);
 
     /// <summary>
     /// 解析前端傳入的相依物件字串。

@@ -387,7 +387,7 @@ public class SqlReportService : IReportService
         if (authorizedSet != null)
             items = items.Where(i => authorizedSet.Contains(i.ReportID)).ToList();
 
-        return items.Select(ToReport).ToList();
+        return ReportDisplayOrder.Sort(items).Select(ToReport).ToList();
     });
 
     public Report? GetReport(string deptId, string reportName)
@@ -429,6 +429,33 @@ public class SqlReportService : IReportService
         return authorizedSet == null
             ? favorites
             : favorites.Where(id => authorizedSet.Contains(id)).ToList();
+    }
+
+    /// <inheritdoc />
+    /// <remarks>只列出目前公司側欄部門中看得到的報表；同一報表指派給多個部門時歸在第一個部門。</remarks>
+    public List<FavoriteReport> GetFavoriteReports()
+    {
+        var favoriteSet = GetUserFavorites().ToHashSet();
+        var result = new List<FavoriteReport>();
+        if (favoriteSet.Count == 0) return result;
+
+        var seen = new HashSet<int>();
+        foreach (var dept in GetDepartments())
+        {
+            foreach (var report in GetReports(dept.Id))
+            {
+                if (!favoriteSet.Contains(report.ReportID) || !seen.Add(report.ReportID)) continue;
+                result.Add(new FavoriteReport
+                {
+                    Report = report,
+                    DeptId = dept.Id,
+                    DeptLabel = dept.Label,
+                    Href = BuildReportUrl(report),
+                });
+            }
+        }
+
+        return result;
     }
 
     public bool ToggleFavorite(int reportId)
@@ -544,5 +571,6 @@ public class SqlReportService : IReportService
         ReportTool = item.ReportTool,
         ReportCode = item.ReportCode,
         UseCompanyParam = item.UseCompanyParam,
+        SortOrder = item.SortOrder,
     };
 }

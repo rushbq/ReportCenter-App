@@ -223,8 +223,8 @@ function deptPage() {
         get filtered() {
             let list = this.baseFiltered();
             if (this.tab !== 'all') list = list.filter(r => r.cat === this.tab);
-            // 固定依更新日期新到舊 (updated 為 yyyy/MM/dd 零填格式，可直接字串排序)
-            return [...list].sort((a, b) => b.updated.localeCompare(a.updated));
+            // 順序沿用後端 (自訂排序 → 報表名稱，見 ReportDisplayOrder)，前端不再另行排序
+            return list;
         },
 
         tabCount(cat) {

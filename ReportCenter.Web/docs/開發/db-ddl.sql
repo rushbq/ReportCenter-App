@@ -44,6 +44,7 @@ BEGIN
         Remarks         NVARCHAR(MAX)  NOT NULL DEFAULT '',            -- 報表描述
         UseCompanyParam BIT            NOT NULL DEFAULT 0,             -- 是否帶公司別參數 (dbs)
         CategoryID      INT            NULL,
+        SortOrder       INT            NOT NULL CONSTRAINT DF_ReportCatalog_SortOrder DEFAULT 999,  -- 自訂排序 (小的在前)，見 migration-003
 
         CONSTRAINT FK_Catalog_Category FOREIGN KEY (CategoryID)
             REFERENCES ReportCategory(CategoryID) ON DELETE SET NULL

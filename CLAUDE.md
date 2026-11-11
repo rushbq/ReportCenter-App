@@ -40,7 +40,7 @@ Development 環境首頁戰情固定用 Mock Repository、身分由 `DevWindowsA
 - `<script>` 區塊內的中文字串須透過 `@Html.Raw(JsonSerializer.Serialize(..., jsonOpts))` 注入，避免 Razor HTML 編碼產生亂碼
 - JSON 序列化統一使用 `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` 避免中文被轉義為 `\uXXXX`
 - 動態圖示（如收藏星號）、`x-for` 重建的列內圖示一律 inline SVG（搭配 Alpine `:class`）。`lucide.createIcons()` 不會對重建的列再跑，用 `data-lucide` 篩選後圖示會消失
-- 管理頁 UI 改版時，同步更新 `/Admin/Help` 管理者使用手冊（截圖在 `wwwroot/images/help/`）
+- 管理頁 UI 改版時，同步更新 `/Admin/Help` 管理者使用手冊（截圖在 `wwwroot/images/help/`，用 `python tools/help-screenshots.py` 重拍，見 `docs/05` §1.6）
 
 ## 身分、權限與公司別
 

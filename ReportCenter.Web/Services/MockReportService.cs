@@ -226,6 +226,7 @@ public class MockReportService : IReportService
     // ─── 收藏/釘選 (Mock 空實作) ───
 
     public List<int> GetUserFavorites() => [];
+    public List<FavoriteReport> GetFavoriteReports() => [];
     public bool ToggleFavorite(int reportId) => true;
     public List<Report> GetUserPins() => [];
     public bool TogglePin(int reportId) => true;

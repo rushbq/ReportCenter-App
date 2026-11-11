@@ -117,8 +117,8 @@
                     <p x-show="errors.reportCode" class="mt-1 text-[11px] text-bad" x-text="errors.reportCode"></p>
                 </div>
 
-                <!-- 雙欄：資料來源 + 分類 -->
-                <div class="grid grid-cols-2 gap-3">
+                <!-- 三欄：資料來源 + 分類 + 自訂排序 -->
+                <div class="grid grid-cols-[1fr_1fr_110px] gap-3">
                     <div>
                         <label class="block text-[12px] font-semibold text-txt-sec mb-1.5">資料來源 (SP/函數)</label>
                         <input type="text" x-model="form.sourceName"
@@ -135,6 +135,15 @@
                             </template>
                         </select>
                     </div>
+                    <div>
+                        <label for="catalog-sort-order" class="block text-[12px] font-semibold text-txt-sec mb-1.5">自訂排序</label>
+                        <input id="catalog-sort-order" type="number" min="0" max="9999" step="1" x-model.number="form.sortOrder"
+                               aria-describedby="catalog-sort-order-hint"
+                               class="w-full px-3 py-2 rounded-lg border border-bdr text-[13px] outline-none focus:border-pri transition-colors tabular-nums">
+                    </div>
+                    <p id="catalog-sort-order-hint" class="col-span-3 -mt-2 text-[11px] text-txt-ter">
+                        自訂排序：數字小的排前面（預設 999），相同時依報表名稱排序；套用於部門報表頁、我的收藏與部門使用矩陣。
+                    </p>
                 </div>
 
                 <!-- 公司別參數 -->

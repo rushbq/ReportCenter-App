@@ -113,7 +113,7 @@ public class CatalogService : ICatalogService
         }
 
         return deptMap
-            .Select(kv => new DeptUsage { DeptName = kv.Value.DeptName, Reports = kv.Value.Reports })
+            .Select(kv => new DeptUsage { DeptName = kv.Value.DeptName, Reports = ReportDisplayOrder.Sort(kv.Value.Reports) })
             .ToList();
     }
 

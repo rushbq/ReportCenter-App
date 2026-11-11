@@ -371,7 +371,7 @@ x-data="deptPage()"
 - 報表名稱 + 說明 + 更新日期
 - 依 `ReportTool` 連至 SmartQuery / SSRS，另開新視窗
 - 搜尋與分類共用同一份 `filtered` 計算結果
-- 固定依更新日期新到舊排序
+- 依自訂排序 (`SortOrder`) → 報表名稱排序（後端排好，前端不另排）
 
 ---
 
@@ -423,8 +423,8 @@ x-data="{ expanded: '@currentDept' }"
    - 展開時顯示 `chevron-down`，收合時 `chevron-right`
    - 子分類連結: `/Department?dept=@d.Id&cat=@sub`
 
-3. **快速存取**
-   - 「我的收藏」(star icon，數量由目前使用者收藏資料計算)
+3. **我的收藏**（位於「首頁總覽」正下方）
+   - 星號 + 收藏數 badge，連到 `/Favorites`（主畫面依部門分組的卡片清單）；`fav-changed` 事件即時加減數量
 
 4. **Footer**
    - 狀態燈: `w-1.5 h-1.5 rounded-full bg-ok`

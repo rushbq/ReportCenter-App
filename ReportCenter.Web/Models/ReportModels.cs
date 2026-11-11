@@ -72,6 +72,24 @@ public class Report
     public string ReportTool { get; set; } = "Internal";  // Internal / SmartQuery / SSRS
     public string ReportCode { get; set; } = "";           // URL path 或內部路由
     public bool UseCompanyParam { get; set; }              // 是否帶公司別參數 (dbs)
+    public int SortOrder { get; set; } = 999;              // 自訂排序 (小的在前)
+}
+
+/// <summary>收藏報表 (含所屬部門與完整連結)，供側欄計數與「我的收藏」頁使用</summary>
+public class FavoriteReport
+{
+    public Report Report { get; set; } = new();
+    public string DeptId { get; set; } = "";
+    public string DeptLabel { get; set; } = "";
+    public string Href { get; set; } = "";
+}
+
+/// <summary>「我的收藏」頁的部門分組資訊</summary>
+public class FavoriteDeptGroup
+{
+    public string DeptId { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Icon { get; set; } = "";
 }
 
 public class MaterialRow
@@ -136,6 +154,7 @@ public class ReportCatalogItem
     public string Remarks { get; set; } = "";              // 報表描述
     public bool UseCompanyParam { get; set; }               // 是否帶公司別參數
     public int? CategoryID { get; set; }
+    public int SortOrder { get; set; } = 999;              // 自訂排序 (小的在前)；顯示順序 SortOrder → ReportName
     public string CategoryName { get; set; } = "";         // 顯示用，由 JOIN 帶出
     public List<DeptAssignment> Departments { get; set; } = [];
     public List<string> Dependencies { get; set; } = [];

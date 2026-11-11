@@ -40,6 +40,12 @@ public interface IReportService
     // 收藏
     List<int> GetUserFavorites();
 
+    /// <summary>
+    /// 取得目前使用者可見的收藏報表 (依 ReportID 去重、附所屬部門與完整連結)。
+    /// 依側欄部門順序分組，部門內沿用報表顯示順序 (自訂排序 → 報表名稱)。
+    /// </summary>
+    List<FavoriteReport> GetFavoriteReports();
+
     /// <summary>切換收藏；回傳 false 代表報表不存在或使用者無權限 (未變更任何資料)</summary>
     bool ToggleFavorite(int reportId);
 
