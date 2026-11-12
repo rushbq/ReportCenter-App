@@ -3,6 +3,7 @@
 企業報表中心 (Enterprise Report Center) - 台灣寶工營運數據視覺化儀表板
 
 ASP.NET Core 10 Razor Pages + Dapper；前端 Tailwind 3.4.17 (CDN) + Alpine.js + Chart.js + HTMX + Lucide，**不使用 npm/webpack，所有前端依賴以固定版本走 CDN**。
+唯一例外：`wwwroot/js/zh-t2s.js`（繁→簡逐字字典）自架在站內，因上海連外 CDN 慢且不穩；以 `python tools/gen-zh-t2s.py <OpenCC TSCharacters.txt>` 重新產生，勿手改。
 
 ## 文件索引（用到時再讀）
 
@@ -39,6 +40,7 @@ Development 環境首頁戰情固定用 Mock Repository、身分由 `DevWindowsA
 - 複雜 Alpine 邏輯抽成 `function xxxPage()` 放在 `@section Scripts` 內，避免 Razor `@` 衝突
 - `<script>` 區塊內的中文字串須透過 `@Html.Raw(JsonSerializer.Serialize(..., jsonOpts))` 注入，避免 Razor HTML 編碼產生亂碼
 - JSON 序列化統一使用 `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` 避免中文被轉義為 `\uXXXX`
+- 前端搜尋 / 篩選一律用 `zh.match(q, ...fields)`（簡繁互通），不可直接 `toLowerCase().includes()`；不需轉簡體顯示的元素加 `data-no-zh`（見 `docs/02` §1.8）
 - 動態圖示（如收藏星號）、`x-for` 重建的列內圖示一律 inline SVG（搭配 Alpine `:class`）。`lucide.createIcons()` 不會對重建的列再跑，用 `data-lucide` 篩選後圖示會消失
 - 管理頁 UI 改版時，同步更新 `/Admin/Help` 管理者使用手冊（截圖在 `wwwroot/images/help/`，用 `python tools/help-screenshots.py` 重拍，見 `docs/05` §1.7）
 

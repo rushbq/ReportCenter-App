@@ -257,7 +257,7 @@ font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
 
 ### 5.2 _Layout.cshtml 結構
 
-- `<html lang="zh-TW">`
+- `<html lang="zh-TW">`；cookie `rc_lang=zh-CN` 時由 `<head>` inline script 改為 `zh-CN` 並整頁轉簡體（見 `docs/02` §1.8）
 - Body: `flex flex-col min-h-screen`
 - Sidebar + Main 容器: flex 排列
 - 手機版 Sidebar: `fixed inset-0 z-30` + 黑色半透明覆蓋 (`bg-black/40`)

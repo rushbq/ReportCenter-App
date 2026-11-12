@@ -426,11 +426,11 @@ function permissionPage() {
         // ─── 報表樹 ───
 
         get filteredReportTree() {
-            const q = this.reportSearch.toLowerCase().trim();
+            const q = this.reportSearch.trim();
             if (!q) return this.reportTree;
             return this.reportTree.map(cat => ({
                 ...cat,
-                reports: cat.reports.filter(r => r.reportName.toLowerCase().includes(q))
+                reports: cat.reports.filter(r => zh.match(q, r.reportName))
             })).filter(cat => cat.reports.length > 0);
         },
 
@@ -471,7 +471,7 @@ function permissionPage() {
                 const areaName = dept.area;
                 if (!areas[areaName]) areas[areaName] = { name: areaName, depts: [] };
                 const filteredUsers = q
-                    ? dept.users.filter(u => u.accountName.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q))
+                    ? dept.users.filter(u => zh.match(q, u.accountName, u.displayName))
                     : dept.users;
                 if (filteredUsers.length > 0) {
                     areas[areaName].depts.push({ ...dept, users: filteredUsers });
@@ -611,11 +611,11 @@ function permissionPage() {
         },
 
         get filteredAddReportTree() {
-            const q = this.addReportSearch.toLowerCase().trim();
+            const q = this.addReportSearch.trim();
             if (!q) return this.reportTree;
             return this.reportTree.map(cat => ({
                 ...cat,
-                reports: cat.reports.filter(r => r.reportName.toLowerCase().includes(q))
+                reports: cat.reports.filter(r => zh.match(q, r.reportName))
             })).filter(cat => cat.reports.length > 0);
         },
 

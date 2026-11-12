@@ -467,10 +467,7 @@ function catalogPage() {
                 if (this.activeFilter === 'false' && i.isActive) return false;
                 if (this.pathFilter && i.reportPath !== this.pathFilter) return false;
                 if (this.search) {
-                    const q = this.search.toLowerCase();
-                    return i.reportName.toLowerCase().includes(q) ||
-                           (i.sourceName || '').toLowerCase().includes(q) ||
-                           (i.reportPath || '').toLowerCase().includes(q);
+                    return zh.match(this.search, i.reportName, i.sourceName, i.reportPath);
                 }
                 return true;
             });
@@ -499,9 +496,8 @@ function catalogPage() {
 
         get depSuggestions() {
             if (!this.depInput) return [];
-            const q = this.depInput.toLowerCase();
             return this.allDepObjects.filter(d =>
-                d.toLowerCase().includes(q) && !this.deps.includes(d)
+                zh.match(this.depInput, d) && !this.deps.includes(d)
             );
         },
 

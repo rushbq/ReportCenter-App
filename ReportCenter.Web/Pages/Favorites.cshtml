@@ -153,14 +153,9 @@ function favoritesPage() {
         },
 
         searchFiltered() {
-            const q = this.searchQuery.trim().toLowerCase();
+            const q = this.searchQuery.trim();
             if (!q) return this.items;
-            return this.items.filter(r =>
-                r.name.toLowerCase().includes(q) ||
-                (r.desc || '').toLowerCase().includes(q) ||
-                (r.cat || '').toLowerCase().includes(q) ||
-                r.dept.toLowerCase().includes(q)
-            );
+            return this.items.filter(r => zh.match(q, r.name, r.desc, r.cat, r.dept));
         },
 
         deptCount(deptId) {

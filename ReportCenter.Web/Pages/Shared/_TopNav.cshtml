@@ -61,6 +61,18 @@
                 class="sm:hidden flex h-11 w-11 items-center justify-center cursor-pointer bg-transparent border-0 text-white">
             <i data-lucide="search" class="w-[18px] h-[18px] opacity-80"></i>
         </button>
+        <!-- 語言切換 (繁／简)：記在 rc_lang cookie，畫面文字由 site.js 逐字轉換；按鈕本身不轉換 -->
+        <div data-no-zh x-data="{ cn: zh.isCn() }" role="group" aria-label="顯示語言 / 显示语言"
+             class="flex items-center rounded-md border border-white/20 bg-white/10 p-0.5 text-[12px] font-semibold">
+            <button type="button" lang="zh-TW" title="繁體中文" :aria-pressed="!cn"
+                    @@click="cn && zh.setLang('zh-TW')"
+                    :class="cn ? 'bg-transparent text-white/70 hover:text-white' : 'bg-white text-pri'"
+                    class="h-9 w-9 md:h-7 md:w-7 rounded cursor-pointer border-0">繁</button>
+            <button type="button" lang="zh-CN" title="简体中文" :aria-pressed="cn"
+                    @@click="!cn && zh.setLang('zh-CN')"
+                    :class="cn ? 'bg-white text-pri' : 'bg-transparent text-white/70 hover:text-white'"
+                    class="h-9 w-9 md:h-7 md:w-7 rounded cursor-pointer border-0">简</button>
+        </div>
         <!-- User Info -->
         <div class="flex items-center gap-2">
             <div class="hidden md:flex flex-col leading-tight">

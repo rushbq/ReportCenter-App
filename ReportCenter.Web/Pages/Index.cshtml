@@ -283,8 +283,8 @@
                         全部報表（<span x-text="allReports.length"></span>）
                     </button>
                 </div>
-                <label for="pin-report-search" class="sr-only">搜尋報表名稱、部門或分類</label>
-                <input id="pin-report-search" x-ref="pinSearchInput" type="search" placeholder="搜尋報表名稱、部門或分類…"
+                <label for="pin-report-search" class="sr-only">搜尋報表名稱、描述、部門或分類</label>
+                <input id="pin-report-search" x-ref="pinSearchInput" type="search" placeholder="搜尋報表名稱、描述、部門或分類…"
                        class="mt-3 w-full bg-surface border border-bdr rounded-lg px-3 py-2 text-[13px] text-txt placeholder:text-txt-ter outline-none focus:border-pri"
                        x-model="pinSearch" />
                 <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -454,15 +454,12 @@ function indexPage() {
         },
 
         get filteredPinItems() {
-            const q = this.pinSearch.trim().toLowerCase();
+            const q = this.pinSearch;
             return this.allReports.filter(r =>
                 (this.pinScope === 'all' || this.isPinned(r.reportId)) &&
                 (!this.pinDepartment || r.dept === this.pinDepartment) &&
                 (!this.pinCategory || r.cat === this.pinCategory) &&
-                (!q ||
-                    (r.name || '').toLowerCase().includes(q) ||
-                    (r.dept || '').toLowerCase().includes(q) ||
-                    (r.cat || '').toLowerCase().includes(q))
+                zh.match(q, r.name, r.desc, r.dept, r.cat)
             );
         },
 

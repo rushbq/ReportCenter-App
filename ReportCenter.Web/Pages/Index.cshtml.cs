@@ -42,6 +42,7 @@ public class IndexModel : PageModel
                 AllReports.Add(new {
                     reportId = report.ReportID,
                     name = report.Name,
+                    desc = report.Desc,
                     dept = dept.Label,
                     deptId = dept.Id,
                     cat = report.Cat,

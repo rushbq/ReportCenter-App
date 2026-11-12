@@ -14,6 +14,114 @@ window.catBadge = function (cat) {
     return palette[sum % palette.length];
 };
 
+// ─── 簡繁轉換 (字典 wwwroot/js/zh-t2s.js，須在本檔之前載入) ───
+// 搜尋：查詢字串與資料都轉成簡體再比對，輸入簡體或繁體都能命中。
+// 顯示：cookie rc_lang=zh-CN 時，整頁文字節點逐字轉簡體 (資料本身不變)。
+window.zh = (() => {
+    let map = null;
+    const getMap = () => {
+        if (map) return map;
+        map = new Map();
+        const s = window.ZH_T2S || '';
+        for (let i = 0; i + 1 < s.length; i += 2) map.set(s[i], s[i + 1]);
+        return map;
+    };
+
+    const toCn = (s) => {
+        if (!s) return s || '';
+        const m = getMap();
+        let out = '';
+        for (const ch of s) out += m.get(ch) || ch;
+        return out;
+    };
+
+    // 正規化結果快取：同一批資料每次按鍵都會比對，避免重複轉換
+    const normCache = new Map();
+    const norm = (s) => {
+        const key = String(s ?? '');
+        let v = normCache.get(key);
+        if (v === undefined) {
+            v = toCn(key.toLowerCase());
+            if (normCache.size > 20000) normCache.clear();
+            normCache.set(key, v);
+        }
+        return v;
+    };
+
+    return {
+        toCn,
+        norm,
+        /** 任一欄位包含查詢字串即命中 (簡繁、大小寫不分)；q 為空時回傳 true */
+        match(q, ...fields) {
+            const nq = norm(String(q ?? '').trim());
+            if (!nq) return true;
+            return fields.some(f => norm(f).includes(nq));
+        },
+        isCn: () => /(?:^|;\s*)rc_lang=zh-CN(?:;|$)/.test(document.cookie),
+        setLang(lang) {
+            document.cookie = 'rc_lang=' + lang + ';path=/;max-age=31536000';
+            location.reload();
+        }
+    };
+})();
+
+// 簡體顯示：初次整頁轉換後，以 MutationObserver 轉換 Alpine / HTMX 之後改寫的文字。
+// 略過 script/style/textarea 與標記 data-no-zh 的元素；input 的值不轉換 (使用者輸入)。
+(() => {
+    if (!window.zh.isCn()) return;
+    const SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'NOSCRIPT']);
+    const ATTRS = ['placeholder', 'title', 'aria-label'];
+    const toCn = window.zh.toCn;
+
+    const skipped = (el) => !el || SKIP.has(el.tagName) || !!el.closest('[data-no-zh]');
+
+    const convertText = (node) => {
+        if (skipped(node.parentElement)) return;
+        const v = node.nodeValue;
+        const c = toCn(v);
+        if (c !== v) node.nodeValue = c;   // 值相同不寫回，避免 Observer 無限觸發
+    };
+
+    const convertAttrs = (el) => {
+        if (skipped(el)) return;
+        for (const a of ATTRS) {
+            const v = el.getAttribute(a);
+            if (!v) continue;
+            const c = toCn(v);
+            if (c !== v) el.setAttribute(a, c);
+        }
+    };
+
+    const convertTree = (root) => {
+        if (root.nodeType === Node.TEXT_NODE) { convertText(root); return; }
+        if (root.nodeType !== Node.ELEMENT_NODE) return;
+        if (skipped(root)) return;
+        convertAttrs(root);
+        root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(convertAttrs);
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) convertText(n);
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            document.title = toCn(document.title);
+            convertTree(document.body);
+            new MutationObserver((records) => {
+                for (const r of records) {
+                    if (r.type === 'characterData') convertText(r.target);
+                    else if (r.type === 'attributes') convertAttrs(r.target);
+                    else r.addedNodes.forEach(convertTree);
+                }
+            }).observe(document.body, {
+                childList: true, characterData: true, subtree: true,
+                attributes: true, attributeFilter: ATTRS
+            });
+        } finally {
+            document.documentElement.classList.remove('zh-pending');
+        }
+    });
+})();
+
 // ─── 全站版面 Alpine 元件 ───
 window.appShell = function () {
     const sidebarMedia = window.matchMedia('(max-width: 1023px)');
@@ -124,15 +232,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         search() {
-            const q = this.query.trim().toLowerCase();
+            const q = this.query.trim();
             if (!q) { this.results = []; return; }
             this.results = this.index
-                .filter(item =>
-                    item.name.toLowerCase().includes(q) ||
-                    item.desc.toLowerCase().includes(q) ||
-                    item.dept.toLowerCase().includes(q) ||
-                    item.cat.toLowerCase().includes(q)
-                )
+                .filter(item => zh.match(q, item.name, item.desc, item.dept, item.cat))
                 .slice(0, 8);
         },
 

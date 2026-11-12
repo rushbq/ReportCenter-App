@@ -11,6 +11,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@SiteOptions.Value.Title</title>
+    <!-- 簡體模式：轉換完成前先隱藏 body，避免繁體閃一下；3 秒後無論如何都顯示 -->
+    <script>
+        if (/(?:^|;\s*)rc_lang=zh-CN(?:;|$)/.test(document.cookie)) {
+            document.documentElement.lang = 'zh-CN';
+            document.documentElement.classList.add('zh-pending');
+            setTimeout(() => document.documentElement.classList.remove('zh-pending'), 3000);
+        }
+    </script>
+    <style>html.zh-pending body { visibility: hidden; }</style>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png" />
     <!-- Tailwind CSS -->
@@ -42,6 +51,8 @@
             : "";
     }
     <script>window.rcAuth = { apiBaseUrl: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(DataHubAuthOptions.Value.ApiBaseUrl)), account: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(rcAccount)) };</script>
+    <!-- 繁→簡逐字字典 (自架，不走 CDN；由 tools/gen-zh-t2s.py 產生，須在 site.js 之前載入) -->
+    <script src="~/js/zh-t2s.js" asp-append-version="true"></script>
     <!-- Site JS (Alpine Store 初始化，須在 Alpine 之前載入) -->
     <script src="/js/site.js"></script>
     <!-- Alpine.js -->
@@ -60,7 +71,7 @@
             --chart-cn: #6366f1;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Noto Sans TC', 'Microsoft YaHei', 'PingFang SC', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         [x-cloak] { display: none !important; }
         /* 全站鍵盤焦點環（僅鍵盤操作時顯示，滑鼠點擊不觸發） */
         :focus-visible { outline: 2px solid #00b4b6; outline-offset: 2px; border-radius: 4px; }
