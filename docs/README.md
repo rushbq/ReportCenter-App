@@ -33,7 +33,8 @@ ReportCenter（瀏覽器標題「報表中心入口網站」）是**台灣寶工
 | `/` | 年度目標戰情（三區 KPI、逐月走勢）＋快速存取（釘選報表） | 全員 |
 | `/Department?dept={DeptID}` | 部門報表清單（分類 Tab、搜尋、收藏、開啟外部報表） | 全員 |
 | `/Favorites` | 我的收藏（依部門分組卡片、搜尋、部門篩選、取消收藏） | 全員 |
-| 頂欄搜尋 / `Ctrl+K`、`⌘K` | 全站報表搜尋 Dialog | 全員 |
+| 頂欄搜尋 / `Ctrl+K`、`⌘K` | 全站報表搜尋 Dialog（簡繁互通） | 全員 |
+| 頂欄「繁 / 简」 | 切換繁體 / 簡體顯示（個人設定，記在 cookie） | 全員 |
 | `/Admin` | 管理總覽（KPI、部門矩陣、孤立報表、冷門報表） | 管理員 |
 | `/Admin/Catalog` | 報表目錄 CRUD、啟停用 | 管理員 |
 | `/Admin/Usage` | 使用分析（總覽 / 明細查詢） | 管理員 |
@@ -45,7 +46,8 @@ ReportCenter（瀏覽器標題「報表中心入口網站」）是**台灣寶工
 ## 技術概要
 
 - ASP.NET Core 10 Razor Pages、Dapper、SQL Server（**正式環境 2008 R2**）
-- 前端全走 CDN：Tailwind CSS 3.4.17、Alpine.js 3.15.12、Chart.js 4.5.1、HTMX 2.0.4、Lucide 1.25.0
+- 前端（全部自架，不引用外部 CDN）：Tailwind CSS 3.4.17（build 時預先編譯）、Alpine.js 3.15.12、Chart.js 4.5.1、HTMX 2.0.4、Lucide 1.25.0、Noto Sans TC
+- 簡體支援：搜尋簡繁互通、整頁簡體顯示（前端逐字轉換，資料仍為繁體）
 - 登入：DataHubApi JWT（RS256，與 PKPortal 共用）+ 本站 Cookie，見 [內部站台登入規格](內部站台登入規格.md)；開發環境以設定檔模擬使用者
 - Serilog（Console / File / Seq）
 - 兩個資料庫：`ReportCenter`（本系統）、`PKSYS`（人事組織，唯讀）
