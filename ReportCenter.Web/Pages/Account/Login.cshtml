@@ -12,27 +12,8 @@
     <title>登入 - @Model.SiteTitle</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png" />
-    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        pri: { DEFAULT: '#005758', hover: '#006d6e', light: '#e8f4f4' },
-                        acc: '#00b4b6',
-                        surface: { DEFAULT: '#f5f7f8', hover: '#fafcfc' },
-                        txt: { DEFAULT: '#1a2e2f', sec: '#4a6465', ter: '#5c7576' },
-                        ok: '#087a55',
-                        bad: '#b93838',
-                        bdr: { DEFAULT: '#e2e8ea', light: '#eef2f3' },
-                    }
-                }
-            }
-        }
-    </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script defer src="~/lib/alpinejs/3.15.12/cdn.min.js" asp-append-version="true"></script>
+    <link rel="stylesheet" href="~/lib/fonts/noto-sans-tc/noto-sans-tc.css" asp-append-version="true" />
     <style>
         body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         [x-cloak] { display: none !important; }
@@ -41,6 +22,8 @@
             *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
         }
     </style>
+    <!-- Tailwind CSS：由 Styles/input.css 於 dotnet build 時預先編譯 -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body class="bg-surface min-h-screen flex flex-col">
     <header class="h-14 bg-pri flex items-center px-4 md:px-5 shadow-[0_2px_8px_rgba(0,87,88,0.15)]">

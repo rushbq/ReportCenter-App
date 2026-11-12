@@ -19,4 +19,18 @@
 		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
 	</ItemGroup>
 
+	<!-- Tailwind 預先編譯：以 standalone CLI (v3.4.17，不需 Node/npm) 將 Styles/input.css 編譯為 wwwroot/css/site.css -->
+	<PropertyGroup>
+		<TailwindCli Condition="'$(TailwindCli)' == ''">$(MSBuildProjectDirectory)\..\tools\tailwindcss\tailwindcss-windows-x64.exe</TailwindCli>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<TailwindInput Include="Styles\input.css;tailwind.config.js;Pages\**\*.cshtml;wwwroot\js\**\*.js" />
+	</ItemGroup>
+
+	<Target Name="BuildTailwindCss" BeforeTargets="BeforeBuild" Inputs="@(TailwindInput)" Outputs="wwwroot\css\site.css">
+		<Error Condition="!Exists('$(TailwindCli)')" Text="找不到 Tailwind CLI：$(TailwindCli)。請下載 https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-windows-x64.exe 放到 tools\tailwindcss\ (步驟見 docs/05-開發與部署.md)，或以 /p:TailwindCli=路徑 指定。" />
+		<Exec Command="&quot;$(TailwindCli)&quot; -c tailwind.config.js -i Styles\input.css -o wwwroot\css\site.css --minify" WorkingDirectory="$(MSBuildProjectDirectory)" />
+	</Target>
+
 </Project>

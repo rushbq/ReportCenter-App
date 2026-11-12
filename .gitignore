@@ -11,3 +11,6 @@ logs/
 .codex/
 .impeccable/
 .claude/projects/
+
+# Tailwind standalone CLI（約 40 MB，依 docs/05 §1.6 下載）
+tools/tailwindcss/

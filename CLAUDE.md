@@ -2,8 +2,10 @@
 
 企業報表中心 (Enterprise Report Center) - 台灣寶工營運數據視覺化儀表板
 
-ASP.NET Core 10 Razor Pages + Dapper；前端 Tailwind 3.4.17 (CDN) + Alpine.js + Chart.js + HTMX + Lucide，**不使用 npm/webpack，所有前端依賴以固定版本走 CDN**。
-唯一例外：`wwwroot/js/zh-t2s.js`（繁→簡逐字字典）自架在站內，因上海連外 CDN 慢且不穩；以 `python tools/gen-zh-t2s.py <OpenCC TSCharacters.txt>` 重新產生，勿手改。
+ASP.NET Core 10 Razor Pages + Dapper；前端 Tailwind 3.4.17 + Alpine.js + Chart.js + HTMX + Lucide，**不使用 npm/webpack，也不引用任何外部 CDN**（上海連外 CDN 慢且不穩）：
+- Tailwind 由 standalone CLI（`tools/tailwindcss/tailwindcss-windows-x64.exe`）在 `dotnet build` 時把 `Styles/input.css` 編譯成 `wwwroot/css/site.css`；設定在 `tailwind.config.js`，**不要手改 `site.css`**。以字串組合出來的 class（如 `CategoryPalette.cs`、`site.js` 的 `catBadge`）掃描不到，須加進 `safelist`
+- 其他套件以固定版本放在 `wwwroot/lib/<套件>/<版本>/`，字型 Noto Sans TC 自架在 `wwwroot/lib/fonts/noto-sans-tc/`；升版時下載新版到新的版本資料夾再改引用
+- `wwwroot/js/zh-t2s.js`（繁→簡逐字字典）以 `python tools/gen-zh-t2s.py <OpenCC TSCharacters.txt>` 重新產生，勿手改
 
 ## 文件索引（用到時再讀）
 

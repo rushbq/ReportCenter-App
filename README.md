@@ -14,11 +14,13 @@
 ## 技術
 
 - .NET 10 Razor Pages
-- Tailwind CSS 3.4.17（CDN）
+- Tailwind CSS 3.4.17（standalone CLI 於 build 時預先編譯，不需 npm）
 - Alpine.js 3.15.12（輕量互動）
 - Chart.js 4.5.1（圖表）
 - HTMX 2.0.4（局部更新）
 - Lucide Icons 1.25.0
+
+前端套件與 Noto Sans TC 字型皆放在 `wwwroot/lib`，不引用外部 CDN。
 
 ## 開發
 

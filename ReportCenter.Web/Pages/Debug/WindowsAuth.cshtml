@@ -12,38 +12,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>登入身分診斷</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        pri: '#005758',
-                        surface: '#f5f7f8',
-                        txt: '#1a2e2f',
-                        txtsec: '#5c7576',
-                        ok: '#087a55',
-                        bad: '#b93838',
-                        bdr: '#e2e8ea'
-                    }
-                }
-            }
-        }
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind 預先編譯 (Styles/input.css → site.css) 與自架字型，不走外部 CDN -->
+    <link rel="stylesheet" href="~/lib/fonts/noto-sans-tc/noto-sans-tc.css" asp-append-version="true" />
     <style>
         body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; }
     </style>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body class="bg-surface text-txt">
     <main class="max-w-[1280px] mx-auto px-4 md:px-6 py-6 md:py-8">
         <header class="mb-6">
             <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                    <div class="text-[12px] text-txtsec">Login Identity Diagnostic</div>
+                    <div class="text-[12px] text-txt-ter">Login Identity Diagnostic</div>
                     <h1 class="text-[26px] font-bold mt-1">登入身分診斷頁</h1>
-                    <p class="text-[13px] text-txtsec mt-2">
+                    <p class="text-[13px] text-txt-ter mt-2">
                         此頁直接顯示目前 `HttpContext.User`，以及 `SqlReportService.GetCurrentUser()` 經過
                         Claims、PKSYS 補值、fallback 後的最終結果，用來確認正式區的登入身分是否正確。
                     </p>
@@ -51,7 +34,7 @@
                 <div class="rounded-xl border border-bdr bg-white px-4 py-3 text-[12px] min-w-[280px]">
                     <div class="font-semibold text-pri">存取路徑</div>
                     <div class="mt-1 font-mono break-all">/_diag/windows-auth</div>
-                    <div class="mt-3 text-txtsec">
+                    <div class="mt-3 text-txt-ter">
                         設定檔需啟用 `WindowsAuthDebug:Enabled = true`，未啟用時會回 `404`。
                     </div>
                 </div>
@@ -62,7 +45,7 @@
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <div class="text-[18px] font-bold">驗證狀態</div>
-                    <div class="text-[12px] text-txtsec mt-1">先看這一區，能最快判斷登入 Cookie 是否真的有把身分帶進 ASP.NET Core。</div>
+                    <div class="text-[12px] text-txt-ter mt-1">先看這一區，能最快判斷登入 Cookie 是否真的有把身分帶進 ASP.NET Core。</div>
                 </div>
                 <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-semibold @(Model.AuthInfo.IsAuthenticated ? "bg-ok/10 text-ok" : "bg-bad/10 text-bad")">
                     <span class="w-2 h-2 rounded-full @(Model.AuthInfo.IsAuthenticated ? "bg-ok" : "bg-bad")"></span>
@@ -72,42 +55,42 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
                 <div class="rounded-xl border border-bdr bg-surface px-4 py-3">
-                    <div class="text-[11px] text-txtsec">Environment</div>
+                    <div class="text-[11px] text-txt-ter">Environment</div>
                     <div class="text-[14px] font-semibold mt-1">@Show(Model.EnvironmentName)</div>
                 </div>
                 <div class="rounded-xl border border-bdr bg-surface px-4 py-3">
-                    <div class="text-[11px] text-txtsec">MachineName</div>
+                    <div class="text-[11px] text-txt-ter">MachineName</div>
                     <div class="text-[14px] font-semibold mt-1">@Show(Model.MachineName)</div>
                 </div>
                 <div class="rounded-xl border border-bdr bg-surface px-4 py-3">
-                    <div class="text-[11px] text-txtsec">TraceId</div>
+                    <div class="text-[11px] text-txt-ter">TraceId</div>
                     <div class="text-[14px] font-mono break-all mt-1">@Show(Model.TraceId)</div>
                 </div>
                 <div class="rounded-xl border border-bdr bg-surface px-4 py-3">
-                    <div class="text-[11px] text-txtsec">ServerTime</div>
+                    <div class="text-[11px] text-txt-ter">ServerTime</div>
                     <div class="text-[14px] font-semibold mt-1">@Model.ServerTime.ToString("yyyy/MM/dd HH:mm:ss")</div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-3">
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">AuthenticationType</div>
+                    <div class="text-[11px] text-txt-ter">AuthenticationType</div>
                     <div class="text-[14px] font-semibold mt-1">@Show(Model.AuthInfo.AuthenticationType)</div>
                 </div>
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">Identity.Name</div>
+                    <div class="text-[11px] text-txt-ter">Identity.Name</div>
                     <div class="text-[14px] font-mono break-all mt-1">@Show(Model.AuthInfo.IdentityName)</div>
                 </div>
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">NormalizedAccount</div>
+                    <div class="text-[11px] text-txt-ter">NormalizedAccount</div>
                     <div class="text-[14px] font-mono break-all mt-1">@Show(Model.AuthInfo.NormalizedAccountName)</div>
                 </div>
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">NameClaimType</div>
+                    <div class="text-[11px] text-txt-ter">NameClaimType</div>
                     <div class="text-[14px] font-mono break-all mt-1">@Show(Model.AuthInfo.NameClaimType)</div>
                 </div>
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">RoleClaimType</div>
+                    <div class="text-[11px] text-txt-ter">RoleClaimType</div>
                     <div class="text-[14px] font-mono break-all mt-1">@Show(Model.AuthInfo.RoleClaimType)</div>
                 </div>
             </div>
@@ -117,9 +100,9 @@
             <div class="flex items-center justify-between gap-3">
                 <div>
                     <h2 class="text-[18px] font-bold">PKSYS 補值狀態</h2>
-                    <p class="text-[12px] text-txtsec mt-1">正式區若沒有 AD 額外 claims，系統會用去網域後的帳號到 PKSYS.User_Profile 補齊姓名與部門。</p>
+                    <p class="text-[12px] text-txt-ter mt-1">正式區若沒有 AD 額外 claims，系統會用去網域後的帳號到 PKSYS.User_Profile 補齊姓名與部門。</p>
                 </div>
-                <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-semibold @(Model.AuthInfo.PksysUserFound ? "bg-ok/10 text-ok" : "bg-surface text-txtsec")">
+                <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-semibold @(Model.AuthInfo.PksysUserFound ? "bg-ok/10 text-ok" : "bg-surface text-txt-ter")">
                     <span class="w-2 h-2 rounded-full @(Model.AuthInfo.PksysUserFound ? "bg-ok" : "bg-bdr")"></span>
                     @(Model.AuthInfo.PksysUserFound ? "已找到 PKSYS 使用者" : "未找到 PKSYS 使用者")
                 </div>
@@ -127,11 +110,11 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-[13px]">
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">LookupAccount</div>
+                    <div class="text-[11px] text-txt-ter">LookupAccount</div>
                     <div class="mt-1 font-mono break-all">@Show(Model.AuthInfo.PksysLookupAccount)</div>
                 </div>
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">LookupError</div>
+                    <div class="text-[11px] text-txt-ter">LookupError</div>
                     <div class="mt-1 font-mono break-all text-[12px]">@Show(Model.AuthInfo.PksysLookupError)</div>
                 </div>
             </div>
@@ -141,15 +124,15 @@
             <div class="flex items-center justify-between gap-3">
                 <div>
                     <h2 class="text-[18px] font-bold">SqlReportService 解析結果</h2>
-                    <p class="text-[12px] text-txtsec mt-1">這一區就是畫面上 `GetCurrentUser()` 實際採用的最終欄位來源與 fallback 規則。</p>
+                    <p class="text-[12px] text-txt-ter mt-1">這一區就是畫面上 `GetCurrentUser()` 實際採用的最終欄位來源與 fallback 規則。</p>
                 </div>
-                <div class="text-[12px] text-txtsec">Claims 數量：@Model.AuthInfo.Claims.Count</div>
+                <div class="text-[12px] text-txt-ter">Claims 數量：@Model.AuthInfo.Claims.Count</div>
             </div>
 
             <div class="overflow-x-auto mt-4">
                 <table class="w-full text-[13px]">
                     <thead>
-                        <tr class="bg-surface text-txtsec text-[11px]">
+                        <tr class="bg-surface text-txt-ter text-[11px]">
                             <th class="px-4 py-2.5 text-left font-semibold">欄位</th>
                             <th class="px-4 py-2.5 text-left font-semibold">值</th>
                             <th class="px-4 py-2.5 text-left font-semibold">來源</th>
@@ -161,7 +144,7 @@
                             <tr class="border-t border-bdr">
                                 <td class="px-4 py-3 font-mono font-semibold">@field.Label</td>
                                 <td class="px-4 py-3 break-all">@Show(field.Value)</td>
-                                <td class="px-4 py-3 text-txtsec">@field.Source</td>
+                                <td class="px-4 py-3 text-txt-ter">@field.Source</td>
                             </tr>
                         }
                     </tbody>
@@ -173,23 +156,23 @@
             <h2 class="text-[18px] font-bold">請求資訊</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-[13px]">
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">Scheme / Host</div>
+                    <div class="text-[11px] text-txt-ter">Scheme / Host</div>
                     <div class="mt-1 font-mono break-all">@Show(Model.RequestScheme)://@Show(Model.RequestHost)</div>
                 </div>
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">Path</div>
+                    <div class="text-[11px] text-txt-ter">Path</div>
                     <div class="mt-1 font-mono break-all">@Show(Model.RequestPath)</div>
                 </div>
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">RemoteIp</div>
+                    <div class="text-[11px] text-txt-ter">RemoteIp</div>
                     <div class="mt-1 font-mono break-all">@Show(Model.RemoteIp)</div>
                 </div>
                 <div class="rounded-xl border border-bdr px-4 py-3">
-                    <div class="text-[11px] text-txtsec">X-Forwarded-For</div>
+                    <div class="text-[11px] text-txt-ter">X-Forwarded-For</div>
                     <div class="mt-1 font-mono break-all">@Show(Model.ForwardedFor)</div>
                 </div>
                 <div class="rounded-xl border border-bdr px-4 py-3 md:col-span-2">
-                    <div class="text-[11px] text-txtsec">User-Agent</div>
+                    <div class="text-[11px] text-txt-ter">User-Agent</div>
                     <div class="mt-1 font-mono break-all text-[12px]">@Show(Model.UserAgent)</div>
                 </div>
             </div>
@@ -199,14 +182,14 @@
             <div class="flex items-center justify-between gap-3">
                 <div>
                     <h2 class="text-[18px] font-bold">Claims 明細</h2>
-                    <p class="text-[12px] text-txtsec mt-1">若 `DisplayName`、`EmployeeId`、`Department`、`DepartmentId` 由 PKSYS 補值。</p>
+                    <p class="text-[12px] text-txt-ter mt-1">若 `DisplayName`、`EmployeeId`、`Department`、`DepartmentId` 由 PKSYS 補值。</p>
                 </div>
-                <div class="text-[12px] text-txtsec">@Model.AuthInfo.Claims.Count 筆</div>
+                <div class="text-[12px] text-txt-ter">@Model.AuthInfo.Claims.Count 筆</div>
             </div>
 
             @if (Model.AuthInfo.Claims.Count == 0)
             {
-                <div class="mt-4 rounded-xl border border-dashed border-bdr bg-surface px-4 py-6 text-center text-[13px] text-txtsec">
+                <div class="mt-4 rounded-xl border border-dashed border-bdr bg-surface px-4 py-6 text-center text-[13px] text-txt-ter">
                     目前沒有任何 claims。
                 </div>
             }
@@ -215,7 +198,7 @@
                 <div class="overflow-x-auto mt-4">
                     <table class="w-full text-[12px]">
                         <thead>
-                            <tr class="bg-surface text-txtsec text-[11px]">
+                            <tr class="bg-surface text-txt-ter text-[11px]">
                                 <th class="px-4 py-2.5 text-left font-semibold">Type</th>
                                 <th class="px-4 py-2.5 text-left font-semibold">Value</th>
                                 <th class="px-4 py-2.5 text-left font-semibold">ValueType</th>

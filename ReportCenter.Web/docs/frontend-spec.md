@@ -11,7 +11,7 @@
 
 1. [專案概覽](#1-專案概覽)
 2. [技術架構](#2-技術架構)
-3. [CDN 套件與版本](#3-cdn-套件與版本)
+3. [前端套件與版本（地端）](#3-前端套件與版本地端)
 4. [設計系統](#4-設計系統)
 5. [版面結構](#5-版面結構)
 6. [頁面規格](#6-頁面規格)
@@ -43,19 +43,34 @@ ReportCenter.Web 是一套企業內部報表中心系統的前端展示層，提
 | 層級 | 技術 | 說明 |
 |------|------|------|
 | **Server** | ASP.NET Core (.NET 10) | Razor Pages 架構 |
-| **CSS** | Tailwind CSS 3.4.17 (CDN) | 透過 `<script>` 標籤引入，含自訂 config |
+| **CSS** | Tailwind CSS 3.4.17 | standalone CLI 於 `dotnet build` 時預先編譯為 `wwwroot/css/site.css`，設定在 `tailwind.config.js` |
 | **JS 框架** | Alpine.js 3.15.12 | 輕量互動（sidebar、Dialog、篩選等） |
 | **圖表** | Chart.js 4.5.1 | 年度達成率與使用量折線圖 |
 | **圖標** | Lucide Icons 1.25.0 | SVG icon library |
 | **動態載入** | HTMX 2.0.4 | 已引入但尚未深度使用 |
-| **字體** | Noto Sans TC | Google Fonts，支援繁體中文 |
+| **字體** | Noto Sans TC | 自架 Google Fonts 的 unicode-range 切片（`wwwroot/lib/fonts/noto-sans-tc/`） |
 
 ---
 
-## 3. CDN 套件與版本
+## 3. 前端套件與版本（地端）
 
-| 套件 | 版本 | CDN URL |
+全站**不引用任何外部 CDN**（上海連外 CDN 慢且不穩，Google Fonts 在大陸也連不到），所有前端資源都由本站提供，版本固定：
+
+| 套件 | 版本 | 本站路徑 |
 |------|------|---------|
+| Tailwind CSS | 3.4.17 | `~/css/site.css`（由 `Styles/input.css` + `tailwind.config.js` 預先編譯，勿手改） |
+| Alpine.js | 3.15.12 | `~/lib/alpinejs/3.15.12/cdn.min.js` |
+| Chart.js | 4.5.1 | `~/lib/chart.js/4.5.1/chart.umd.min.js` |
+| Lucide Icons | 1.25.0 | `~/lib/lucide/1.25.0/lucide.min.js` |
+| HTMX | 2.0.4 | `~/lib/htmx/2.0.4/htmx.min.js` |
+| Noto Sans TC | 400-800 | `~/lib/fonts/noto-sans-tc/noto-sans-tc.css`（可變字型的 unicode-range 切片，共約 5 MB，瀏覽器只下載用到的切片） |
+| 繁→簡字典 | — | `~/js/zh-t2s.js`（`tools/gen-zh-t2s.py` 產生） |
+
+- 引用時一律加 `asp-append-version="true"`，更新檔案後瀏覽器會自動抓新版
+- 套件升版：把新版下載到新的版本資料夾（如 `lib/htmx/2.0.5/`），再改 `_Layout.cshtml` 的引用
+- Tailwind 編譯方式、CLI 下載與 safelist 規則見 `docs/05-開發與部署.md` §1.6
+
+------|------|---------|
 | Tailwind CSS | 3.4.17 | `https://cdn.tailwindcss.com/3.4.17` |
 | Alpine.js | 3.15.12 | `https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js` |
 | Chart.js | 4.5.1 | `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js` |
@@ -69,7 +84,7 @@ ReportCenter.Web 是一套企業內部報表中心系統的前端展示層，提
 
 ### 4.1 色彩配置
 
-Tailwind `extend.colors` 自訂色彩：
+Tailwind `extend.colors` 自訂色彩（定義在 `tailwind.config.js`）：
 
 | Token | 色碼 | 用途 |
 |-------|------|------|
@@ -186,22 +201,21 @@ font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
 
 ### 4.8 共用 Component Classes
 
-為避免重複的 Tailwind utility 組合散落各頁面，專案將常用組合抽取為 `@apply` component class，統一定義於 `Pages/Shared/_Layout.cshtml` 的 `<style type="text/tailwindcss">` 區塊（Tailwind Play CDN 支援 `@apply` 指令於 component layer）。
+為避免重複的 Tailwind utility 組合散落各頁面，專案將常用組合抽取為 `@apply` component class，統一定義於 `Styles/input.css` 的 `@layer components`，build 時由 Tailwind CLI 編譯進 `wwwroot/css/site.css`。
 
-```html
-<style type="text/tailwindcss">
-  @layer components {
-    /* 頁面外層容器：≥1536px (2xl) 自動延展 */
-    .page-container      { @apply p-4 md:p-6 pb-10 max-w-[1200px] 2xl:max-w-[1600px]; }
-    .page-container-wide { @apply p-4 md:p-6 pb-10 max-w-[1400px] 2xl:max-w-[1800px]; }
-    /* 下拉選單／彈出清單項目 (顏色與 hover 由 :class 或額外 class 指定) */
-    .menu-item           { @apply w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent; }
-    /* 白色區塊卡片 */
-    .card                { @apply bg-white border border-bdr rounded-xl p-5 shadow-sm; }
-    /* 徽章基本形狀（10px chip，顏色自行補） */
-    .badge               { @apply text-[10px] font-semibold px-2 py-0.5 rounded-full; }
-  }
-</style>
+```css
+/* Styles/input.css */
+@layer components {
+  /* 頁面外層容器：≥1536px (2xl) 自動延展 */
+  .page-container      { @apply p-4 md:p-6 pb-10 max-w-[1200px] 2xl:max-w-[1600px]; }
+  .page-container-wide { @apply p-4 md:p-6 pb-10 max-w-[1400px] 2xl:max-w-[1800px]; }
+  /* 下拉選單／彈出清單項目 (顏色與 hover 由 :class 或額外 class 指定) */
+  .menu-item           { @apply w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent; }
+  /* 白色區塊卡片 */
+  .card                { @apply bg-white border border-bdr rounded-xl p-5 shadow-sm; }
+  /* 徽章基本形狀（10px chip，顏色自行補） */
+  .badge               { @apply text-[10px] font-semibold px-2 py-0.5 rounded-full; }
+}
 ```
 
 | Class | 用途 | 備註 |
@@ -264,7 +278,7 @@ font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
 - 桌面版 Sidebar: `lg:relative lg:top-0 lg:translate-x-0`
 - Transition: `duration-200 ease-out`
 - Section 插槽: `@RenderSectionAsync("Styles")` 和 `@RenderSectionAsync("Scripts")`
-- **共用 component class 定義區塊**: `<style type="text/tailwindcss">` 含 `.page-container`、`.menu-item`、`.card`、`.badge` 等（見 4.8）
+- **樣式載入**: inline `<style>`（全站基礎樣式）之後才載入 `~/css/site.css`，維持 utility 覆寫 inline 規則的順序；`.page-container`、`.menu-item`、`.card`、`.badge` 定義在 `Styles/input.css`（見 4.8）
 
 ### 5.3 Lucide Icons 初始化
 
@@ -646,13 +660,17 @@ ReportCenter.Web/
 │   ├── Error.cshtml                    # 錯誤頁面
 │   ├── Error.cshtml.cs                 # 錯誤 PageModel
 │   └── Shared/
-│       ├── _Layout.cshtml              # 主版面、CDN、Sidebar、搜尋 Dialog
+│       ├── _Layout.cshtml              # 主版面、前端資源引用、Sidebar、搜尋 Dialog
 │       ├── _TopNav.cshtml              # 頂部導航列（Partial）
 │       ├── _Sidebar.cshtml             # 側邊欄（Partial）
 │       └── _KpiCard.cshtml             # KPI 卡片（Partial）
+├── Styles/input.css                    # Tailwind 原始檔（含共用 component class）
+├── tailwind.config.js                  # Tailwind 設定（色彩 Token、content、safelist）
 ├── wwwroot/
-│   ├── css/site.css                    # 自訂 CSS
-│   └── js/site.js                      # Alpine Store、版面互動與使用埋點
+│   ├── css/site.css                    # Tailwind 編譯產物（build 時產生，勿手改）
+│   ├── js/site.js                      # Alpine Store、版面互動與使用埋點
+│   ├── js/zh-t2s.js                    # 繁→簡字典
+│   └── lib/                            # 地端前端套件與 Noto Sans TC 字型
 └── docs/
     └── frontend-spec.md                # 本文件
 ```

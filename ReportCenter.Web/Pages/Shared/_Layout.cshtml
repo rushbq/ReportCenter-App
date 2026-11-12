@@ -22,28 +22,8 @@
     <style>html.zh-pending body { visibility: hidden; }</style>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png" />
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        pri: { DEFAULT: '#005758', hover: '#006d6e', light: '#e8f4f4' },
-                        acc: '#00b4b6',
-                        surface: { DEFAULT: '#f5f7f8', hover: '#fafcfc' },
-                        star: '#f5a623',
-                        txt: { DEFAULT: '#1a2e2f', sec: '#4a6465', ter: '#5c7576' },
-                        ok: '#087a55',
-                        bad: '#b93838',
-                        bdr: { DEFAULT: '#e2e8ea', light: '#eef2f3' },
-                    }
-                }
-            }
-        }
-    </script>
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@1.25.0/dist/umd/lucide.min.js"></script>
+    <script src="~/lib/lucide/1.25.0/lucide.min.js" asp-append-version="true"></script>
     <!-- 登出時要呼叫 DataHubApi 撤銷共用的 Refresh Token；account 只在真正登入（非開發模擬身分）時才有，用來檢查是否已在其他站台登出 -->
     @{
         var rcAccount = User.Identity?.AuthenticationType == Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme
@@ -56,14 +36,13 @@
     <!-- Site JS (Alpine Store 初始化，須在 Alpine 之前載入) -->
     <script src="/js/site.js"></script>
     <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
+    <script defer src="~/lib/alpinejs/3.15.12/cdn.min.js" asp-append-version="true"></script>
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <script src="~/lib/chart.js/4.5.1/chart.umd.min.js" asp-append-version="true"></script>
     <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
-    <!-- Noto Sans TC -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="~/lib/htmx/2.0.4/htmx.min.js" asp-append-version="true"></script>
+    <!-- Noto Sans TC (自架 Google Fonts 的 unicode-range 切片，瀏覽器只下載用到的字) -->
+    <link rel="stylesheet" href="~/lib/fonts/noto-sans-tc/noto-sans-tc.css" asp-append-version="true" />
     <style>
         :root {
             --chart-export: #005758;
@@ -83,19 +62,8 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
-    <style type="text/tailwindcss">
-        @@layer components {
-            /* 頁面外層容器：大於 2xl (≥1536px) 自動延展 */
-            .page-container { @@apply p-4 md:p-6 pb-10 max-w-[1200px] 2xl:max-w-[1600px]; }
-            .page-container-wide { @@apply p-4 md:p-6 pb-10 max-w-[1400px] 2xl:max-w-[1800px]; }
-            /* 下拉選單／彈出清單項目 (顏色與 hover 由 :class 或額外 class 指定) */
-            .menu-item { @@apply w-full text-left px-4 py-2 text-[13px] cursor-pointer border-0 bg-transparent; }
-            /* 白色卡片（區塊容器） */
-            .card { @@apply bg-white border border-bdr rounded-xl p-5 shadow-sm; }
-            /* 徽章基本形狀（顏色自行補：bg-pri-light text-pri / bg-bdr-light text-txt-ter 等） */
-            .badge { @@apply text-[10px] font-semibold px-2 py-0.5 rounded-full; }
-        }
-    </style>
+    <!-- Tailwind CSS：由 Styles/input.css 於 dotnet build 時預先編譯；放在 inline style 之後以維持 utility 的覆寫順序 -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="bg-surface h-screen overflow-hidden flex flex-col"
