@@ -209,6 +209,50 @@ document.addEventListener('keydown', (e) => {
     };
 })();
 
+// 共用登出偵測：在 PKPortal 或其他站台登出（或換人登入）後，本站也要跟著登出。
+// 向 DataHubApi /Auth/Status 確認共用登入仍有效；同一瀏覽器所有分頁共用 5 分鐘節流，
+// 所以登出最多晚 5 分鐘生效。DataHubApi 連不到時不登出，避免服務中斷就把所有人踢掉。
+(() => {
+    const auth = window.rcAuth;
+    if (!auth?.apiBaseUrl || !auth.account) return;   // 未登入或開發模擬身分
+    const KEY = 'rc_session_checked_at';
+    const INTERVAL = 5 * 60 * 1000;
+
+    async function signOut() {
+        const fd = new FormData();
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        if (token) fd.append('__RequestVerificationToken', token);
+        try { await fetch('/Account/Logout', { method: 'POST', body: fd }); } catch { /* 仍導向登入頁 */ }
+        // 不帶 loggedOut：換人登入的情況，登入頁會以新帳號自動登入
+        location.href = '/Account/Login?returnUrl=' + encodeURIComponent(location.pathname + location.search);
+    }
+
+    async function check() {
+        let last = 0;
+        try { last = Number(localStorage.getItem(KEY)) || 0; } catch { /* 無法存取 storage 時每次都檢查 */ }
+        if (Date.now() - last < INTERVAL) return;
+        try { localStorage.setItem(KEY, String(Date.now())); } catch { }
+
+        let res;
+        try {
+            res = await fetch(auth.apiBaseUrl + '/Auth/Status', { method: 'POST', credentials: 'include' });
+        } catch {
+            return;
+        }
+        if (res.status === 401) return signOut();
+        if (res.ok) {
+            const body = await res.json().catch(() => null);
+            const user = body?.data?.username;
+            if (user && user.toLowerCase() !== auth.account.toLowerCase()) return signOut();
+        }
+    }
+
+    check();
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') check();
+    });
+})();
+
 // 登出：清本站 Cookie → 撤銷 DataHubApi 共用的 Refresh Token (PKPortal 等站台一起登出) → 回登入頁。
 // 帶 loggedOut=true 時登入頁不做自動登入，避免 DataHubApi 登出失敗時又馬上登入回來。
 window.rcLogout = async function () {

@@ -35,8 +35,13 @@
     </script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@1.25.0/dist/umd/lucide.min.js"></script>
-    <!-- 登出時要呼叫 DataHubApi 撤銷共用的 Refresh Token -->
-    <script>window.rcAuth = { apiBaseUrl: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(DataHubAuthOptions.Value.ApiBaseUrl)) };</script>
+    <!-- 登出時要呼叫 DataHubApi 撤銷共用的 Refresh Token；account 只在真正登入（非開發模擬身分）時才有，用來檢查是否已在其他站台登出 -->
+    @{
+        var rcAccount = User.Identity?.AuthenticationType == Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme
+            ? User.Identity.Name ?? ""
+            : "";
+    }
+    <script>window.rcAuth = { apiBaseUrl: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(DataHubAuthOptions.Value.ApiBaseUrl)), account: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(rcAccount)) };</script>
     <!-- Site JS (Alpine Store 初始化，須在 Alpine 之前載入) -->
     <script src="/js/site.js"></script>
     <!-- Alpine.js -->
