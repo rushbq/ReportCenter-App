@@ -31,6 +31,9 @@ dotnet run
 
 ## 建置
 
+> [!IMPORTANT]
+> **⚠️ 執行 `dotnet build` / `dotnet publish` 的電腦，必須先下載 Tailwind CLI** 到 `tools\tailwindcss\`（不在版控），否則建置失敗。步驟見 [docs/05 §1.6](docs/05-開發與部署.md#16-建置)。
+
 ```bash
 cd ReportCenter.Web
 dotnet build
