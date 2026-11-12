@@ -25,7 +25,7 @@ cd ReportCenter.Web && dotnet run    # http://localhost:5276
 cd ReportCenter.Web && dotnet build
 ```
 
-Development 環境首頁戰情固定用 Mock Repository、身分由 `DevWindowsAuthMiddleware` 讀 `appsettings.Development.json` 的 `MockWindowsAuth` 模擬；目前沒有自動化測試專案。
+Development 環境首頁戰情固定用 Mock Repository、身分由 `DevWindowsAuthMiddleware` 讀 `appsettings.Development.json` 的 `MockWindowsAuth` 模擬（`UserName` 留空即改走真正的登入頁，見 `docs/05` §1.5）；目前沒有自動化測試專案。
 
 ## 開發規範
 
@@ -40,10 +40,12 @@ Development 環境首頁戰情固定用 Mock Repository、身分由 `DevWindowsA
 - `<script>` 區塊內的中文字串須透過 `@Html.Raw(JsonSerializer.Serialize(..., jsonOpts))` 注入，避免 Razor HTML 編碼產生亂碼
 - JSON 序列化統一使用 `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` 避免中文被轉義為 `\uXXXX`
 - 動態圖示（如收藏星號）、`x-for` 重建的列內圖示一律 inline SVG（搭配 Alpine `:class`）。`lucide.createIcons()` 不會對重建的列再跑，用 `data-lucide` 篩選後圖示會消失
-- 管理頁 UI 改版時，同步更新 `/Admin/Help` 管理者使用手冊（截圖在 `wwwroot/images/help/`，用 `python tools/help-screenshots.py` 重拍，見 `docs/05` §1.6）
+- 管理頁 UI 改版時，同步更新 `/Admin/Help` 管理者使用手冊（截圖在 `wwwroot/images/help/`，用 `python tools/help-screenshots.py` 重拍，見 `docs/05` §1.7）
 
 ## 身分、權限與公司別
 
+- 登入：DataHubApi JWT（RS256，與 PKPortal 共用）換本站 Cookie `rc_auth`，**不使用 Windows 驗證**；規格見 `docs/內部站台登入規格.md`。全站 FallbackPolicy 須登入，新增免登入頁面必須明確加 `[AllowAnonymous]`
+- 未登入的 fetch / sendBeacon 回 401（不轉址），由 `site.js` 的 fetch 包裝函式重新整理頁面；新增 AJAX 不要自行處理轉址
 - 未通過驗證時 `GetCurrentUser()` 回傳空使用者 (Id = "")：非管理員、無任何權限。**不可退回固定的 Mock 使用者**
 - 所有 `Pages/Admin/*` 繼承 `AdminPageModel`（GET 顯示權限不足、POST 回 403 JSON）。新增管理頁務必繼承它
 - 新增收藏 / 釘選前檢查報表存在、啟用且使用者有權限 (`SqlReportService.CanAccessReport`)；取消一律允許
@@ -67,7 +69,8 @@ DeptID 必須為數字（`ReportDepartment.DeptID` 為 INT），`DepartmentDispl
 
 - `ReportCategory` **刻意不提供管理 UI**（僅 3 個、由 IT 以 SQL 維護；理由見 `ICatalogService` 註解與 `docs/06` P3）
 - `Internal` 報表類型的 DB 欄位、`AdminStats.InternalCount`、badge 配色、`IReportService` 的 Mock 方法保留給未來重啟內部報表開發，不要當死碼刪除
-- 不在 `web.config` 寫 Windows 驗證 / 匿名驗證設定（`<security><authentication>` 預設鎖定，寫入會 HTTP 500.19）；由 IIS 管理員設定 + `FallbackPolicy` 兜底
+- 不在 `web.config` 寫 Windows 驗證 / 匿名驗證設定（`<security><authentication>` 預設鎖定，寫入會 HTTP 500.19）；IIS 管理員設定為只開匿名驗證 + `FallbackPolicy` 兜底
+- `DevWindowsAuthMiddleware`、`MockWindowsAuth`、`WindowsAuthDebug`、`/_diag/windows-auth` 是舊命名，刻意保留，不要為了改名而改動
 - 首頁戰情 SP `usp_Rpt_Home_YtdTarget` 以 `INSERT…EXEC` **依欄位位置**擷取底層 YTD SP，底層 SP 欄位異動時必須同步修改（`docs/06` S1）
 
 ## SQL Server 相容性規範 ⚠️

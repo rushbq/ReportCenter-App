@@ -5,9 +5,10 @@ using ReportCenter.Web.Models.Settings;
 namespace ReportCenter.Web.Middleware;
 
 /// <summary>
-/// 開發環境專用：模擬 Windows AD 驗證，將 appsettings.Development.json 中
-/// MockWindowsAuth 區段的設定注入為 ClaimsPrincipal，使 macOS 開發環境
-/// 也能擁有與 IIS Windows 驗證相同的 HttpContext.User 結構。
+/// 開發環境專用：尚未登入時，將 appsettings.Development.json 中 MockWindowsAuth 區段的設定
+/// 注入為 ClaimsPrincipal，本機不必連 DataHubApi 也能以指定身分操作。
+/// 已透過登入頁取得 Cookie 時不覆蓋；清空 UserName 即可在本機測試真正的登入流程。
+/// （類別與設定名稱沿用舊的 Windows 驗證命名）
 /// </summary>
 public class DevWindowsAuthMiddleware
 {
@@ -22,7 +23,7 @@ public class DevWindowsAuthMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!string.IsNullOrEmpty(_settings.UserName))
+        if (!string.IsNullOrEmpty(_settings.UserName) && context.User.Identity?.IsAuthenticated != true)
         {
             var claims = new List<Claim>
             {
@@ -33,8 +34,7 @@ public class DevWindowsAuthMiddleware
                 new("DepartmentId", _settings.DepartmentId),
             };
 
-            // 使用 "Negotiate" 作為 AuthenticationType，模擬 Windows 驗證行為
-            var identity = new ClaimsIdentity(claims, "Negotiate");
+            var identity = new ClaimsIdentity(claims, "DevMock");
             context.User = new ClaimsPrincipal(identity);
         }
 

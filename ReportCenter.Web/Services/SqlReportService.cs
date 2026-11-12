@@ -73,7 +73,7 @@ public class SqlReportService : IReportService
     }
 
     /// <summary>
-    /// 取得目前登入者的 Windows 驗證診斷資訊。
+    /// 取得目前登入者的身分診斷資訊。
     /// 此方法與 GetCurrentUser() 共用相同解析規則，供 IIS 正式環境除錯頁使用。
     /// </summary>
     public WindowsAuthDebugInfo GetCurrentUserDebugInfo()
@@ -228,10 +228,10 @@ public class SqlReportService : IReportService
         {
             return
             [
-                new() { Label = "UserInfo.Id", Value = "", Source = "未通過 Windows 驗證" },
-                new() { Label = "UserInfo.Name", Value = "", Source = "未通過 Windows 驗證" },
-                new() { Label = "UserInfo.DeptId", Value = "", Source = "未通過 Windows 驗證" },
-                new() { Label = "UserInfo.DeptName", Value = "", Source = "未通過 Windows 驗證" },
+                new() { Label = "UserInfo.Id", Value = "", Source = "未登入" },
+                new() { Label = "UserInfo.Name", Value = "", Source = "未登入" },
+                new() { Label = "UserInfo.DeptId", Value = "", Source = "未登入" },
+                new() { Label = "UserInfo.DeptName", Value = "", Source = "未登入" },
             ];
         }
 

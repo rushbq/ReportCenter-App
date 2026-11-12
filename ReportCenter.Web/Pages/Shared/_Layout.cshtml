@@ -4,6 +4,7 @@
 @using ReportCenter.Web.Services
 @inject IReportService ReportService
 @inject IOptions<SiteSettings> SiteOptions
+@inject IOptions<DataHubAuthSettings> DataHubAuthOptions
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -34,6 +35,8 @@
     </script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@1.25.0/dist/umd/lucide.min.js"></script>
+    <!-- 登出時要呼叫 DataHubApi 撤銷共用的 Refresh Token -->
+    <script>window.rcAuth = { apiBaseUrl: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(DataHubAuthOptions.Value.ApiBaseUrl)) };</script>
     <!-- Site JS (Alpine Store 初始化，須在 Alpine 之前載入) -->
     <script src="/js/site.js"></script>
     <!-- Alpine.js -->

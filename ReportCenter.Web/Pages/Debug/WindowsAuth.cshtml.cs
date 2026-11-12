@@ -8,7 +8,7 @@ using ReportCenter.Web.Services;
 namespace ReportCenter.Web.Pages.Debug;
 
 /// <summary>
-/// Windows 驗證診斷頁 — 顯示目前 HttpContext.User 與 SqlReportService 的解析結果，供 IIS 正式環境除錯。
+/// 登入身分診斷頁 — 顯示目前 HttpContext.User 與 SqlReportService 的解析結果，供正式環境除錯。
 /// 預設關閉，需於設定檔啟用 WindowsAuthDebug:Enabled。
 /// </summary>
 public class WindowsAuthModel : PageModel
@@ -27,7 +27,7 @@ public class WindowsAuthModel : PageModel
         _reportService = reportService;
     }
 
-    /// <summary>Windows 驗證 principal 與 SqlReportService 解析後的資訊</summary>
+    /// <summary>登入 principal 與 SqlReportService 解析後的資訊</summary>
     public WindowsAuthDebugInfo AuthInfo { get; private set; } = new();
 
     /// <summary>目前請求 TraceId</summary>

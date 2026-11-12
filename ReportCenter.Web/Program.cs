@@ -1,4 +1,5 @@
-using Microsoft.AspNetCore.Authentication.Negotiate;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using ReportCenter.Web.Middleware;
 using ReportCenter.Web.Models.Settings;
 using ReportCenter.Web.Repositories;
@@ -105,20 +106,60 @@ try
     builder.Services.Configure<WindowsAuthDebugSettings>(
         builder.Configuration.GetSection(WindowsAuthDebugSettings.SectionName));
 
-    // ── Windows 驗證設定 ─────────────────────────────────────
+    // ── 登入驗證 (DataHubApi JWT → 本站 Cookie) ──────────────
+    // 帳密與 Refresh Token 由 DataHubApi 負責 (與 PKPortal 共用，在任一站登入過即可免登)；
+    // 登入頁取得 JWT 後交給本站驗證，再發本站自己的 HttpOnly Cookie。規格見 docs/內部站台登入規格.md
     if (builder.Environment.IsDevelopment())
     {
         builder.Services.Configure<MockWindowsAuthSettings>(
             builder.Configuration.GetSection(MockWindowsAuthSettings.SectionName));
     }
-    else
+
+    builder.Services.AddOptions<DataHubAuthSettings>()
+        .Bind(builder.Configuration.GetSection(DataHubAuthSettings.SectionName))
+        .Validate(s => builder.Environment.IsDevelopment() || s.IsValidForProduction(),
+            "DataHubAuth 設定錯誤：ApiBaseUrl 必須是 https 網址，PublicKeyPem 必須是 DataHubApi 的 RSA 公鑰")
+        .ValidateOnStart();
+    builder.Services.AddSingleton<IDataHubTokenValidator, DataHubTokenValidator>();
+
+    var cookieHours = builder.Configuration.GetValue($"{DataHubAuthSettings.SectionName}:CookieHours", 8);
+    builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        .AddCookie(options =>
+        {
+            options.Cookie.Name = "rc_auth";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            // 本機 http://localhost 開發時 Safari 不收 Secure Cookie，其餘環境一律 Secure
+            options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+                ? CookieSecurePolicy.SameAsRequest
+                : CookieSecurePolicy.Always;
+            options.ExpireTimeSpan = TimeSpan.FromHours(cookieHours);
+            options.SlidingExpiration = true;
+            options.LoginPath = "/Account/Login";
+            // 只有一般換頁才轉到登入頁；fetch / sendBeacon 等請求回 401，由前端重新整理頁面走自動登入
+            options.Events.OnRedirectToLogin = ctx =>
+            {
+                if (IsPageNavigation(ctx.Request))
+                    ctx.Response.Redirect(ctx.RedirectUri);
+                else
+                    ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            };
+        });
+
+    // 全站預設須登入 (Fail-closed)；登入頁、錯誤頁、靜態檔以 [AllowAnonymous] 排除
+    builder.Services.AddAuthorization(options =>
+        options.FallbackPolicy = options.DefaultPolicy);
+
+    // Cookie 與 Antiforgery Token 以 Data Protection 金鑰加密；金鑰須存到固定資料夾，
+    // 否則應用程式集區回收後所有人都會被登出
+    var dataProtection = builder.Services.AddDataProtection().SetApplicationName("ReportCenter");
+    var keysPath = builder.Configuration["DataProtection:KeysPath"];
+    if (!string.IsNullOrWhiteSpace(keysPath))
     {
-        builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
-            .AddNegotiate();
-        // 全站預設須通過 Windows 驗證 — 不依賴 IIS 是否關閉匿名驗證，
-        // 避免匿名請求進入頁面 (Fail-closed)
-        builder.Services.AddAuthorization(options =>
-            options.FallbackPolicy = options.DefaultPolicy);
+        dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        if (OperatingSystem.IsWindows())
+            dataProtection.ProtectKeysWithDpapi(protectToLocalMachine: true);
     }
 
     // 三層式架構 DI 註冊
@@ -187,19 +228,19 @@ try
     app.UseRouting();
 
     // ── 驗證中介層 ───────────────────────────────────────────
+    app.UseAuthentication();
+
+    // 開發環境：未登入時注入 MockWindowsAuth 模擬身分 (清空 UserName 即可測試真正的登入頁)
     if (app.Environment.IsDevelopment())
     {
         app.UseMiddleware<DevWindowsAuthMiddleware>();
-    }
-    else
-    {
-        app.UseAuthentication();
     }
 
     app.UseAuthorization();
     app.UseMiddleware<UnhandledExceptionLoggingMiddleware>();
 
-    app.MapStaticAssets();
+    // 靜態檔不需登入：登入頁要用到 logo、favicon
+    app.MapStaticAssets().AllowAnonymous();
     app.MapRazorPages()
        .WithStaticAssets();
 
@@ -211,6 +252,8 @@ try
             throw new InvalidOperationException("缺少 ConnectionStrings:ReportCenter 設定，請檢查外部機密設定檔。");
         if (string.IsNullOrWhiteSpace(cs["PKSYS"]))
             throw new InvalidOperationException("缺少 ConnectionStrings:PKSYS 設定，請檢查外部機密設定檔。");
+        if (string.IsNullOrWhiteSpace(app.Configuration["DataProtection:KeysPath"]))
+            throw new InvalidOperationException("缺少 DataProtection:KeysPath 設定，應用程式集區回收後所有人都會被登出。");
     }
 
     Log.Information("ReportCenter.Web 啟動完成 [{Environment}]", app.Environment.EnvironmentName);
@@ -237,4 +280,16 @@ static void LoadExternalConfig(ConfigurationManager config, string envVarName, s
         throw new FileNotFoundException($"{label}不存在: {path} (環境變數 {envVarName})");
 
     config.AddJsonFile(path, optional: false, reloadOnChange: false);
+}
+
+/// <summary>
+/// 是否為瀏覽器的一般換頁 (網址列、連結、表單送出)。fetch / sendBeacon 的 Sec-Fetch-Mode 不是 navigate；
+/// 不支援 Sec-Fetch-Mode 的舊瀏覽器以 Accept 是否要求 HTML 判斷。
+/// </summary>
+static bool IsPageNavigation(HttpRequest request)
+{
+    var mode = request.Headers["Sec-Fetch-Mode"].ToString();
+    return mode.Length > 0
+        ? mode == "navigate"
+        : request.Headers.Accept.ToString().Contains("text/html", StringComparison.OrdinalIgnoreCase);
 }

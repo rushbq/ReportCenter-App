@@ -11,7 +11,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Windows 驗證診斷</title>
+    <title>登入身分診斷</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -41,11 +41,11 @@
         <header class="mb-6">
             <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                    <div class="text-[12px] text-txtsec">IIS / Windows Authentication Diagnostic</div>
-                    <h1 class="text-[26px] font-bold mt-1">Windows 驗證診斷頁</h1>
+                    <div class="text-[12px] text-txtsec">Login Identity Diagnostic</div>
+                    <h1 class="text-[26px] font-bold mt-1">登入身分診斷頁</h1>
                     <p class="text-[13px] text-txtsec mt-2">
                         此頁直接顯示目前 `HttpContext.User`，以及 `SqlReportService.GetCurrentUser()` 經過
-                        Claims、PKSYS 補值、fallback 後的最終結果，用來確認正式區 IIS 的 Windows 驗證是否正確。
+                        Claims、PKSYS 補值、fallback 後的最終結果，用來確認正式區的登入身分是否正確。
                     </p>
                 </div>
                 <div class="rounded-xl border border-bdr bg-white px-4 py-3 text-[12px] min-w-[280px]">
@@ -62,7 +62,7 @@
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <div class="text-[18px] font-bold">驗證狀態</div>
-                    <div class="text-[12px] text-txtsec mt-1">先看這一區，能最快判斷 IIS 是否真的有把 Windows 身分帶進 ASP.NET Core。</div>
+                    <div class="text-[12px] text-txtsec mt-1">先看這一區，能最快判斷登入 Cookie 是否真的有把身分帶進 ASP.NET Core。</div>
                 </div>
                 <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-semibold @(Model.AuthInfo.IsAuthenticated ? "bg-ok/10 text-ok" : "bg-bad/10 text-bad")">
                     <span class="w-2 h-2 rounded-full @(Model.AuthInfo.IsAuthenticated ? "bg-ok" : "bg-bad")"></span>

@@ -1,7 +1,7 @@
 namespace ReportCenter.Web.Models.Settings;
 
 /// <summary>
-/// 開發環境模擬 Windows AD 身份的設定 — 對應 appsettings.Development.json 中的 MockWindowsAuth 區段
+/// 開發環境模擬登入身分的設定 — 對應 appsettings.Development.json 中的 MockWindowsAuth 區段 (UserName 留空即停用模擬)
 /// </summary>
 public class MockWindowsAuthSettings
 {

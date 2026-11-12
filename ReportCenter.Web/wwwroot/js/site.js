@@ -192,3 +192,38 @@ document.addEventListener('keydown', (e) => {
         store.openDialog(document.activeElement);
     }
 });
+
+// ─── 登入工作階段 ───
+// 本站 Cookie 過期時，fetch 會收到 401 (伺服器只對一般換頁轉址到登入頁)。
+// 重新整理頁面即可走「登入頁 → DataHubApi Refresh 自動登入 → 導回原頁」，各頁的 AJAX 不必個別處理。
+(() => {
+    const nativeFetch = window.fetch.bind(window);
+    let reloading = false;
+    window.fetch = async (input, init) => {
+        const res = await nativeFetch(input, init);
+        if (res.status === 401 && !reloading && new URL(res.url, location.href).origin === location.origin) {
+            reloading = true;
+            location.reload();
+        }
+        return res;
+    };
+})();
+
+// 登出：清本站 Cookie → 撤銷 DataHubApi 共用的 Refresh Token (PKPortal 等站台一起登出) → 回登入頁。
+// 帶 loggedOut=true 時登入頁不做自動登入，避免 DataHubApi 登出失敗時又馬上登入回來。
+window.rcLogout = async function () {
+    const fd = new FormData();
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    if (token) fd.append('__RequestVerificationToken', token);
+    try {
+        await fetch('/Account/Logout', { method: 'POST', body: fd });
+    } catch { /* 仍繼續撤銷 DataHubApi 登入 */ }
+
+    const apiBaseUrl = window.rcAuth?.apiBaseUrl;
+    if (apiBaseUrl) {
+        try {
+            await fetch(apiBaseUrl + '/Auth/Logout', { method: 'POST', credentials: 'include' });
+        } catch { /* 網路錯誤時仍導向登入頁 */ }
+    }
+    location.href = '/Account/Login?loggedOut=true';
+};
